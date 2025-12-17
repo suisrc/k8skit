@@ -1,0 +1,14 @@
+@BASE=http://127.0.0.1:80
+
+### 
+GET {{BASE}}/healthz
+Content-Type: application/json
+
+
+### 
+POST {{BASE}}/mutate
+Content-Type: application/json
+
+{
+    
+}

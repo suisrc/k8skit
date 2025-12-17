@@ -26,7 +26,9 @@ var _ IConfig = (*EConfig)(nil)
  */
 type EConfig struct {
 	Config
-	Token string
+	Token            string
+	InjectAnnotation string
+	InjectDefaultKey string
 }
 
 func (aa *EConfig) B() *Config {
@@ -37,6 +39,10 @@ func (aa *EConfig) V(key string) any {
 	switch key {
 	case "Token":
 		return aa.Token
+	case "InjectAnnotation":
+		return aa.InjectAnnotation
+	case "InjectDefaultKey":
+		return aa.InjectDefaultKey
 	default:
 		return aa.Config.V(key)
 	}
@@ -57,6 +63,8 @@ type Server struct {
 func (aa *Server) ParseFlags() {
 	conf := &EConfig{}
 	flag.StringVar(&conf.Token, "token", "", "http server api token")
+	flag.StringVar(&conf.InjectAnnotation, "injectAnnotation", "sidecar/configmap", "Injector Annotation")
+	flag.StringVar(&conf.InjectDefaultKey, "injectDefaultKey", "sidecar.yml", "Injector Default Key")
 	aa.Serve0.ParseFlags(conf, aa) // 解析命令行参数， 只有最终的实现 Server 才能调用
 }
 

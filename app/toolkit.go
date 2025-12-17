@@ -5,24 +5,30 @@ import (
 	"kube-sidecar/z"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
-	"errors"
+	"github.com/pkg/errors"
+
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog/v2"
 )
 
-// func init() {
-// 	z.Register("11-app.init", func(svc z.SvcKit, enr z.Enroll) z.Closed {
-// 		// 创建 k8sclient
-// 		client, err := CreateClient(svc.Srv().GetConfig().B().Local)
-// 		if err != nil {
-// 			klog.Error("create k8s client error: ", err.Error())
-// 			svc.Srv().ServeStop() // 初始化失败，直接退出
-// 			return nil
-// 		}
-// 		svc.Set("k8sclient", client) // 注册 k8sclient
-// 		return nil
-// 	})
-// }
+func init() {
+	z.Register("11-app.init", func(svc z.SvcKit, enr z.Enroll) z.Closed {
+		// 创建 k8sclient
+		client, err := CreateClient(svc.Srv().GetConfig().B().Local)
+		if err != nil {
+			klog.Error("create k8s client error: ", err.Error())
+			svc.Srv().ServeStop() // 初始化失败，直接退出
+			return nil
+		}
+		svc.Set("k8sclient", client) // 注册 k8sclient
+		return nil
+	})
+}
 
 // -----------------------------------------------------------------------
 
@@ -37,7 +43,7 @@ func K8sNs() string {
 	}
 	ns, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 	if err != nil {
-		z.Printf("unable to read namespace: %s, return 'default'", err.Error())
+		klog.Errorf("unable to read namespace: %s, return 'default'", err.Error())
 		namespace = "default"
 	} else {
 		namespace = string(ns)
@@ -45,25 +51,25 @@ func K8sNs() string {
 	return namespace
 }
 
-// // CreateClient Create the server
-// func CreateClient(local bool) (*kubernetes.Clientset, error) {
-// 	cfg, err := BuildConfig(local)
-// 	if err != nil {
-// 		return nil, errors.Wrapf(err, "error setting up cluster config")
-// 	}
-// 	return kubernetes.NewForConfig(cfg)
-// }
+// CreateClient Create the server
+func CreateClient(local bool) (*kubernetes.Clientset, error) {
+	cfg, err := BuildConfig(local)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error setting up cluster config")
+	}
+	return kubernetes.NewForConfig(cfg)
+}
 
-// // BuildConfig Build the config
-// func BuildConfig(local bool) (*rest.Config, error) {
-// 	if local {
-// 		klog.Info("using local kubeconfig.")
-// 		kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
-// 		return clientcmd.BuildConfigFromFlags("", kubeconfig)
-// 	}
-// 	klog.Info("using in cluster kubeconfig.")
-// 	return rest.InClusterConfig()
-// }
+// BuildConfig Build the config
+func BuildConfig(local bool) (*rest.Config, error) {
+	if local {
+		klog.Info("using local kubeconfig.")
+		kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
+		return clientcmd.BuildConfigFromFlags("", kubeconfig)
+	}
+	klog.Info("using in cluster kubeconfig.")
+	return rest.InClusterConfig()
+}
 
 // -----------------------------------------------------------------------
 

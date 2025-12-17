@@ -6,9 +6,9 @@ import (
 	"kube-sidecar/z"
 )
 
-func init() {
-	Init0()
-}
+// func init() {
+// 	Init0()
+// }
 
 func Init0() {
 	z.Register("00-hello", func(svc z.SvcKit, enr z.Enroll) z.Closed {

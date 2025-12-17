@@ -5,6 +5,8 @@ import (
 	"kube-sidecar/z"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_cert(t *testing.T) {
@@ -15,16 +17,10 @@ func Test_cert(t *testing.T) {
 
 	// 生成证书
 	ca, err := z.CreateCA(cfg)
-	if err != nil {
-		panic(err)
-	}
-	// assert.Nil(t, err)
+	assert.Nil(t, err)
 
 	ct, err := z.CreateCE(cfg, "dev1", "", 0, []string{"sso.dev1.com"}, nil, []byte(ca.Crt), []byte(ca.Key))
-	if err != nil {
-		panic(err)
-	}
-	// assert.Nil(t, err)
+	assert.Nil(t, err)
 
 	// os.Mkdir("../_out/cert", 0644)
 	// 保存证书
@@ -39,10 +35,7 @@ func Test_cert(t *testing.T) {
 
 func Test_cer1(t *testing.T) {
 	crt, err := z.CreateCE(nil, "dev1", "", 0, []string{"sso.dev1.com"}, nil, nil, nil)
-	if err != nil {
-		panic(err)
-	}
-	// assert.Nil(t, err)
+	assert.Nil(t, err)
 
 	os.WriteFile("../_out/cert/dev2.crt", []byte(crt.Crt), 0644)
 	os.WriteFile("../_out/cert/dev2.key", []byte(crt.Key), 0644)

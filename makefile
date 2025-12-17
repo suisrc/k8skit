@@ -55,7 +55,7 @@ test-custom:
 	go test -v app/custom_test.go
 
 test-copy:
-	go test -v cpy/zcpy_test.go
+	go test -v cpy/z_cpy_test.go
 
 test-cert:
 	go test -v app/cert_test.go -run Test_cer1
