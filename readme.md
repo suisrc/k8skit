@@ -1,5 +1,5 @@
-![helm-release-gha](https://github.com/suisrc/kube-sidecar/actions/workflows/ci.yaml/badge.svg?branch=sidecar)
-[![License](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg)](https://github.com/suisrc/kube-sidecar/blob/main/LICENSE)
+![helm-release-gha](https://github.com/suisrc/k8skit/actions/workflows/ci.yaml/badge.svg?branch=sidecar)
+[![License](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg)](https://github.com/suisrc/k8skit/blob/main/LICENSE)
 
 # Kube Sidecar
 
