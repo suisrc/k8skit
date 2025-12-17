@@ -19,6 +19,7 @@
 自动注入wire?  
 wire 是一个依赖注入框架， 但是考虑到框架本身就比较小，本身不依赖任何第三方库，所以不会集成wire， 如果需要，可以考虑自行增加。  
 但是，实现了一个简单的注入封装，`svckit:"auto"`, 可以自动注入依赖。例如：
+
 ```go
 package app
 
@@ -57,15 +58,12 @@ type HelloApi struct {
 
 
 
- 这是一极精简的 web 服务框架， 默认没有 routing， 使用 map 进行 action 检索 ，为单接口而生。
- 通过 query.action(query参数) 或者 path=action(path就是action) 两种方式确定 handle 函数。
- 但是，可以通过 '-mux' 参数切换使用 net/http.mux 标准库的 http.router 完成标准 web 服务切换。
-
- 这是一个标准实现，如果需要自定义实现，可以以该代码为基础，重写该模块
- 这是一个标准实现，如果需要自定义实现，可以以该代码为基础，重写该模块
- 这是一个标准实现，如果需要自定义实现，可以以该代码为基础，重写该模块
-
- 当前包为 zgg(z? google golang) 服务抽象层，尽量不要修改，以免出现兼容性问题
+这是一极精简的 web 服务框架， 默认没有 routing， 使用 map 进行 action 检索 ，为单接口而生。  
+通过 query.action(query参数) 或者 path=action(path就是action) 两种方式确定 handle 函数。  
+但是，可以通过 '-mux' 参数切换使用 net/http.mux 标准库的 http.router 完成标准 web 服务切换。  
+  
+[z]包为 zgg(z? google golang) 框架抽象层，尽量不要修改，以免出现兼容性问题  
+  
 ## 快速开始
 
 ```sh
@@ -73,29 +71,39 @@ type HelloApi struct {
 xxx [command] [arguments]
 
 xxx web (default)
-  -addr string # 服务绑定的ip
-        http server addr (default "0.0.0.0")
-  -api string # 服务绑定的 api path
-        http server api path
-  -cer string # 服务绑定的 cer file，https 模式
-        http server cer file
-  -key string # 服务绑定的 key file，https 模式
-        http server key file
   -debug bool # debug mode
         debug mode
   -local bool # local mode， addr = 127.0.0.1
         http server local mode
-  -mux   bool # http server with mux， 默认为 false， 使用 net/http.mux 作为服务
-        http server with mux
+  -addr string # 服务绑定的ip
+        http server addr (default "0.0.0.0")
   -port int # 服务绑定的 port
         http server Port (default 80)
+  -crtPath string # 服务绑定的 cer file，https 模式
+        http server cer file
+  -keyPath string # 服务绑定的 key file，https 模式
+        http server key file
+  -mux   bool # http server with mux， 默认为 false， 使用 net/http.mux 作为服务
+        http server with mux
+  -apiPath string # 服务绑定的 api path
+        http server api path
   -token string # 服务绑定的 api token
         http server api token
 
 xxx version # 查看应用版本
+
+xxx cert # 生成证书
+
+xxx hello # 测试 hello world
+
 xxx -h # 查看帮助(仅限web模式)
 
 
-# 示例
+# 示例, 默认 web 模式
 xxx -debug -local
+
 ```
+
+## 其他说明
+
+核心包 [z]， 其他都可以删除， [z/serve.go] 是一个 server 的标准实现，可以自行修改，增加启动参数。[app] 增加 web 服务， [cmd] 增加 命令行服务。

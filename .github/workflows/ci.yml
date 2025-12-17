@@ -5,8 +5,8 @@ on:
     # branches: [ main ]
     tags: [ "v*" ]
 
-#  https://github.com/suisrc/zgg/
-#  https://github.com/suisrc/zgg/pkgs/container/k8s
+#  https://github.com/suisrc/k8skit/
+#  https://github.com/suisrc/k8skit/pkgs/container/k8s
 
 env:
   IMAGE_NAME: suisrc/k8s
