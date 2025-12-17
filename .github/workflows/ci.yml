@@ -9,7 +9,7 @@ on:
 #  https://github.com/suisrc/zgg/pkgs/container/k8s
 
 env:
-  IMAGE_NAME: suisrc/k8s
+  IMAGE_NAME: suisrc/k8skit
   IMAGE_VERSION: '1.0.0-sidecar'
   GITHUB_REGISTRY: ghcr.io
   DOCKER_REGISTRY: docker.io
