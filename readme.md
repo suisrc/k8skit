@@ -1,101 +1,115 @@
-# kube-sidecar
+![helm-release-gha](https://github.com/suisrc/kube-sidecar/actions/workflows/ci.yaml/badge.svg?branch=sidecar)
+[![License](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg)](https://github.com/suisrc/kube-sidecar/blob/main/LICENSE)
 
-## 框架介绍
+# Kube Sidecar
 
-这是一极精简的 基于 基于 net/http web 服务框架， 没有 router ，为单接口而生。  
-通过 query.action(query参数) 或者 path=action(path就是action) 两种方式确定 handle 函数。  
+Kubernetes Mutating Webhook
+
+边车注入服务是使用kubernates中MutatingWebhookConfiguration，可对进入k8s的编排进行修改，简化k8s的编。  
+注意它只是辅助功能，没有它也可以，只不过配置更复杂，关于权限的编排没有办法统一管理而已。  
+
+1. 边车注入服务
+2. 虚拟证书签发服务
 
 
-这是一极精简的 web 服务框架， 默认没有 routing， 使用 map 进行 action 检索 ，为单接口而生。  
-通过 query.action(query参数) 或者 path=action(path就是action) 两种方式确定 handle 函数。  
-但是，可以通过 '-mux' 参数切换使用 net/http.mux 标准库的 http.router 完成标准 web 服务切换。  
-当前框架不依赖任何第三方库， 纯原生实现。  
+## Using this webhook
 
-  
-为什么需要它？  
-在很多项目中，可能只需要几个接口， 而为这些接口无论使用 gin, echo, iris, fasthttp...我认为都是不值当的。因此它就诞生了。  
+### 定义注入配置
 
-  
-自动注入wire?  
-wire 是一个依赖注入框架， 但是考虑到框架本身就比较小，本身不依赖任何第三方库，所以不会集成wire， 如果需要，可以考虑自行增加。  
-但是，实现了一个简单的注入封装，`svckit:"auto"`, 可以自动注入依赖。例如：
-```go
-package app
-
-import (
-	"kube-sidecar/z"
-)
-
-func init() {
-	z.Register("00-hello", func(svc z.SvcKit, enr z.Enroll) z.Closed {
-		api := z.RegSvc(svc, "api-hello", &HelloApi{})
-		enr("hello", api.hello)
-		return func() {
-			z.Println("api-hello closed")
-		}
-	})
-	z.Register("zz-world", func(svc z.SvcKit, enr z.Enroll) z.Closed {
-		api := svc.Get("api-hello").(*HelloApi)
-		enr(z.GET("world"), api.world)
-		enr(z.GET("token"), z.TokenAuth(z.Ptr(""), api.token))
-		return nil
-	})
-}
-
-type HelloApi struct {
-	FA any                           // 标记不注入，默认
-	FB any      `svckit:"-"`         // 标记不注入，默认
-	CM z.Module `svckit:"type"`      // 根据【类型】自动注入
-	SK z.SvcKit `svckit:"type"`      // 根据【类型】自动注入
-	AH any      `svckit:"api-hello"` // 根据【名称】自动注入
-	AW any      `svckit:"api-world"` // 根据【名称】自动注入
-	TK z.TplKit `svckit:"auto"`      // 根据【类型】自动注入
-	tt z.TplKit `svckit:"auto"`      // 私有【属性】不能注入
-}
-
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dev-kwdog
+  namespace: dev-env
+data:
+  kwdog1: |
+    containers:
+      - name: kwdog
+        image: suisrc/openresty:1.21.4.1-az-32
+  proxyp: | 
+    containers:
+      - name: kwdog
+        env:
+          - name: KS_PROXYDOG
+            value: pxy_p
+  proxyh: |
+    containers:
+      - name: '[0]'
+        env:
+          - name: HTTP_PROXY
+            value: 127.0.0.1:12012
+          - name: HTTPS_PROXY
+            value: 127.0.0.1:12012
+      - name: kwdog
+        env:
+          - name: KS_PROXYDOG
+            value: pxy_p,pxy_h
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tst-kwdog
+  namespace: tst-env
+data:
+  kwdog1: |
+    containers:
+      - name: kwdog
+        image: suisrc/openresty:1.21.4.1-az-32
+  proxyp: | 
+    containers:
+      - name: kwdog
+        env:
+          - name: KS_PROXYDOG
+            value: pxy_p
+  proxyh: |
+    containers:
+      - name: '[0]'
+        env:
+          - name: HTTP_PROXY
+            value: 127.0.0.1:12012
+          - name: HTTPS_PROXY
+            value: 127.0.0.1:12012
+      - name: kwdog
+        env:
+          - name: KS_PROXYDOG
+            value: pxy_p,pxy_h
 ```
 
+1. 注入配置定义在ConfigMap中，可以在任意空间中定义。
+2. 定义配置会与提交的编排进行合并。
+3. 合并原则是 [name] 相同。
+4. [0], 表示第一个容器， [1], 表示第二个容器。
 
+### 标记注入配置
 
- 这是一极精简的 web 服务框架， 默认没有 routing， 使用 map 进行 action 检索 ，为单接口而生。
- 通过 query.action(query参数) 或者 path=action(path就是action) 两种方式确定 handle 函数。
- 但是，可以通过 '-mux' 参数切换使用 net/http.mux 标准库的 http.router 完成标准 web 服务切换。
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tst-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tst-app
+  template:
+    metadata:
+      labels:
+        app: tst-app
+        ksidecar/inject: enable
+      annotations:
+        ksidecar/configmap: >-
+          tst-kwdog#authx,
+          tst-kwdog#iam,
+          tst-kwdog#proxya,
+          kube-ksidecar/ca-tools#getter.dev,
+          kube-ksidecar/ca-tools#java11
 
- 这是一个标准实现，如果需要自定义实现，可以以该代码为基础，重写该模块
- 这是一个标准实现，如果需要自定义实现，可以以该代码为基础，重写该模块
- 这是一个标准实现，如果需要自定义实现，可以以该代码为基础，重写该模块
-
- 当前包为 zgg(z? google golang) 服务抽象层，尽量不要修改，以免出现兼容性问题
-## 快速开始
-
-```sh
-# 命令
-xxx [command] [arguments]
-
-xxx web (default)
-  -addr string # 服务绑定的ip
-        http server addr (default "0.0.0.0")
-  -api string # 服务绑定的 api path
-        http server api path
-  -cer string # 服务绑定的 cer file，https 模式
-        http server cer file
-  -key string # 服务绑定的 key file，https 模式
-        http server key file
-  -debug bool # debug mode
-        debug mode
-  -local bool # local mode， addr = 127.0.0.1
-        http server local mode
-  -mux   bool # http server with mux， 默认为 false， 使用 net/http.mux 作为服务
-        http server with mux
-  -port int # 服务绑定的 port
-        http server Port (default 80)
-  -token string # 服务绑定的 api token
-        http server api token
-
-xxx version # 查看应用版本
-xxx -h # 查看帮助(仅限web模式)
-
-
-# 示例
-xxx -debug -local
 ```
+使用 annotations:ksidecar/configmap 配置注入配置，多个配置用逗号隔开。  
+路径 [namespace]/[configmap]#[configmap-key]  
+
+## 鸣谢
+[ExpediaGroup](https://github.com/ExpediaGroup/kubernetes-sidecar-injector)
+

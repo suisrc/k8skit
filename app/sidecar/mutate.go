@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	admissionv1 "k8s.io/api/admission/v1"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 func init() {
