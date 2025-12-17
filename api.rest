@@ -1,0 +1,22 @@
+@BASE=http://127.0.0.1:80
+
+### 
+GET {{BASE}}/healthz
+Content-Type: application/json
+X-Request-Rt: 2
+
+### 
+GET {{BASE}}/?action=hello
+Content-Type: application/json
+
+### 
+GET {{BASE}}/world
+Content-Type: application/json
+
+### 
+POST {{BASE}}/world
+Content-Type: application/json
+
+### 
+GET {{BASE}}/token
+Content-Type: application/json

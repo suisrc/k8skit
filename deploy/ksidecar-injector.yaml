@@ -1,0 +1,70 @@
+# kubectl apply -f ksidecar-injector.yaml -n kube-ksidecar
+# ca: ksidecar-injector.kube-ksidecar,ksidecar-injector.kube-ksidecar.svc,ksidecar-injector.kube-ksidecar.svc.cluster.local
+# 
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ksidecar-injector
+spec:
+  ports:
+  - name: https
+    port: 443
+    targetPort: https
+  selector:
+    app: ksidecar-injector
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ksidecar-injector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ksidecar-injector
+  template:
+    metadata:
+      labels:
+        app: ksidecar-injector
+    spec:
+      serviceAccountName: ksidecar-injector
+      containers:
+        - name: kube-sidecar-injector
+          image: suisrc/sidecar-injector:1.0.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - --token=MQ8wDQYDVQQHEwZEYWxpYW4x
+            - --cerFile=/opt/cert/pem.crt:configmap/pem.crt
+            - --keyFile=/opt/cert/pem.key:configmap/pem.key
+            - --injectAnnotation=ksidecar/configmap
+            - --injectDefaultKey=sidecar.yml
+          # volumeMounts:
+          #   - {name: cert, mountPath: /opt/cert, readOnly: true }
+          ports:
+            - name: https
+              containerPort: 443
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 5
+            timeoutSeconds: 4
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 5
+            timeoutSeconds: 4
+      # volumes:
+      #   - { name: certs, secret: { secretName: fkc-tst-2b460997- } }
