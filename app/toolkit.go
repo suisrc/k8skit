@@ -11,10 +11,10 @@ import (
 
 var (
 	C = struct {
-		Namespace        string
-		Token            string
-		InjectAnnotation string
-		InjectDefaultKey string
+		Namespace string
+		Token     string
+		DirWWW    string
+		RootPath  string
 	}{}
 )
 

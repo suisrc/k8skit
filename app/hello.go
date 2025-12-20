@@ -6,9 +6,9 @@ import (
 	"github.com/suisrc/zgg/z"
 )
 
-func init() {
-	Init0()
-}
+// func init() {
+// 	Init0()
+// }
 
 func Init0() {
 	z.Register("01-hello", func(srv z.IServer) z.Closed {

@@ -14,9 +14,5 @@ GET {{BASE}}/world
 Content-Type: application/json
 
 ### 
-POST {{BASE}}/world
-Content-Type: application/json
-
-### 
-GET {{BASE}}/token
+GET {{BASE}}/?action=xxx
 Content-Type: application/json

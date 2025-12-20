@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"flag"
 	"kube-sidecar/app"
+	_ "kube-sidecar/app/www"
 	_ "kube-sidecar/cmd"
 	"strings"
 
@@ -33,6 +34,8 @@ func main() {
 	z.Fatalf = klog.Fatalf
 
 	flag.StringVar(&app.C.Token, "token", "", "http server api token")
+	flag.StringVar(&app.C.DirWWW, "dir", "www", "www dir folder path")
+	flag.StringVar(&app.C.RootPath, "rp", "", "root path folder path")
 
-	z.Execute(appname, version, "(https://github.com/suisrc/k8skit) main")
+	z.Execute(appname, version, "(https://github.com/suisrc/k8skit) frontend")
 }

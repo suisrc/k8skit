@@ -28,6 +28,9 @@ helm:
 main:
 	go run main.go -c zgg.toml
 
+mwww:
+	go run main.go -local -debug
+
 mapp:
 	go run main.go -local -debug -xrt 2 \
 	--token MQ8wDQYDVQQHEwZEYWxpYW4x \
