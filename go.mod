@@ -1,12 +1,5 @@
-module kube-sidecar
+module front2
 
 go 1.25.5
 
-// replace github.com/suisrc/zgg => ../zgg
-
-require (
-	github.com/suisrc/zgg v0.0.3
-	k8s.io/klog/v2 v2.130.1
-)
-
-require github.com/go-logr/logr v1.4.1 // indirect
+require github.com/suisrc/zgg v0.0.5
