@@ -2,7 +2,9 @@ package sidecar
 
 import (
 	"context"
-	"kube-sidecar/z"
+	"kube-sidecar/app"
+
+	"github.com/suisrc/zgg/z"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -16,10 +18,9 @@ type PodPatcher interface {
 }
 
 func NewInjectorPatcher(svc z.SvcKit) PodPatcher {
-	config := svc.Srv().GetConfig()
 	return &InjectorPatcher{
 		K8sClient:        svc.Get("k8sclient").(kubernetes.Interface),
-		InjectAnnotation: config.V("InjectAnnotation").(string),
-		InjectDefaultKey: config.V("InjectDefaultKey").(string),
+		InjectAnnotation: app.C.InjectAnnotation,
+		InjectDefaultKey: app.C.InjectDefaultKey,
 	}
 }

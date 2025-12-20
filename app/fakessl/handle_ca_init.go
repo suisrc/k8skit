@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"kube-sidecar/app"
-	"kube-sidecar/z"
 	"strings"
+
+	"github.com/suisrc/zgg/z"
+	"github.com/suisrc/zgg/ze/crt"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,7 +17,7 @@ import (
 func (aa *FakeSslApi) caInit(zrc *z.Ctx) bool {
 	cli := aa.K8sClient
 	// ------------------------------------------------------------------------------------------
-	co, err := z.ByTag(&SSLQueryCO{}, zrc.Request.URL.Query(), "form")
+	co, err := z.ReadForm(zrc.Request, &SSLQueryCO{})
 	if err != nil {
 		return zrc.JERR(err, 400)
 	}
@@ -26,7 +28,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) bool {
 		return zrc.JERR(&z.Result{ErrCode: "param-empty", Message: "key is empty"}, 400)
 	}
 	// ------------------------------------------------------------------------------------------
-	config, err := z.ReadBody(zrc.Request, &z.CertConfig{})
+	config, err := z.ReadBody(zrc.Request, &crt.CertConfig{})
 	if err != nil {
 		message := fmt.Sprintf("init api, read body error: %s", err.Error())
 		klog.Info(message)
@@ -38,7 +40,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) bool {
 	if err != nil {
 		if strings.HasSuffix(err.Error(), " not found") {
 			// 使用应用令牌， 进行验证，成功后，新建一个 INFO
-			if co.Token != aa.AppConfig.Token {
+			if co.Token != app.C.Token {
 				message := fmt.Sprintf("init api, secret [%s] token error: no equal!", ikey)
 				klog.Info(message)
 				return zrc.JERR(&z.Result{ErrCode: "app-info-token", Message: message}, 500)
@@ -67,7 +69,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) bool {
 	}
 	// ------------------------------------------------------------------------------------------
 	if cfgBts, ok := info.Data["config"]; ok { // 配置已经存在
-		config2 := &z.CertConfig{}
+		config2 := &crt.CertConfig{}
 		if err := json.Unmarshal(cfgBts, config2); err != nil {
 			message := fmt.Sprintf("init api, json unmarshal error: %s", err.Error())
 			klog.Info(message)
@@ -99,7 +101,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) bool {
 		return zrc.JSON(&z.Result{Success: true, Data: string(crt)})
 	}
 	// 证书不存在，需要重写构建证书
-	ca, err := z.CreateCA(config)
+	ca, err := crt.CreateCA(config)
 	if err != nil {
 		message := fmt.Sprintf("init api, create ca error: %s", err.Error())
 		klog.Info(message)
@@ -109,7 +111,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) bool {
 	info.Data["ca.crt"] = []byte(ca.Crt)
 	info.Data["ca.key"] = []byte(ca.Key)
 	// 求 ca.Key 的 md5 值
-	ckey, _ := z.HashMd5([]byte(ca.Key))
+	ckey, _ := crt.HashMd5([]byte(ca.Key))
 	info.Data["prefix"] = []byte(fmt.Sprintf("%s%s-%s-", PK, co.Key, ckey[:8]))
 	_, err = cli.CoreV1().Secrets(k8sns).Update(zrc.Ctx, info, metav1.UpdateOptions{})
 	if err != nil {

@@ -4,17 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"kube-sidecar/app"
-	"kube-sidecar/z"
 	"net/http"
 
+	"github.com/suisrc/zgg/z"
 	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/klog/v2"
 )
 
 func init() {
-	z.Register("99-app.sidecar", func(svc z.SvcKit, enr z.Enroll) z.Closed {
-		api := z.RegSvc(svc, &MutateApi{Patcher: NewInjectorPatcher(svc)})
-		enr(z.POST("mutate"), api.mutate) // 注册接口
+	z.Register("99-app.sidecar", func(srv z.IServer) z.Closed {
+		svc := srv.GetSvcKit()
+		api := z.Inject(svc, &MutateApi{Patcher: NewInjectorPatcher(svc)})
+		z.POST("mutate", api.mutate, srv) // 注册接口
 		return nil
 	})
 }

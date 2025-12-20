@@ -5,7 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"kube-sidecar/app"
-	"kube-sidecar/z"
+
+	"github.com/suisrc/zgg/z"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,14 +15,14 @@ import (
 )
 
 func init() {
-	z.Register("88-app.fakessl", func(svc z.SvcKit, enr z.Enroll) z.Closed {
-		api := z.Inject(svc, &FakeSslApi{})
-		enr(z.POST("api/ssl/v1/ca/init"), api.caInit)
-		enr(z.GET("api/ssl/v1/ca"), api.caGet)
-		enr(z.GET("api/ssl/v1/ca/txt"), api.caTxt)
-		enr(z.GET("api/ssl/v1/ca/b64"), api.caB64)
-		enr(z.GET("api/ssl/v1/cert"), api.ceGet) // certificate
-		enr(z.GET("api/ssl/v1/ce"), api.ceGet)
+	z.Register("88-app.fakessl", func(srv z.IServer) z.Closed {
+		api := z.Inject(srv.GetSvcKit(), &FakeSslApi{})
+		z.POST("api/ssl/v1/ca/init", api.caInit, srv)
+		z.GET("api/ssl/v1/ca", api.caGet, srv)
+		z.GET("api/ssl/v1/ca/txt", api.caTxt, srv)
+		z.GET("api/ssl/v1/ca/b64", api.caB64, srv)
+		z.GET("api/ssl/v1/cert", api.ceGet, srv) // certificate
+		z.GET("api/ssl/v1/ce", api.ceGet, srv)
 		return nil
 	})
 }
@@ -39,13 +40,12 @@ type SSLQueryCO struct {
 
 type FakeSslApi struct {
 	K8sClient kubernetes.Interface `svckit:"k8sclient"`
-	AppConfig *z.EConfig           `svckit:"config"`
 }
 
 func (aa *FakeSslApi) getCaSecret(zrc *z.Ctx) (*v1.Secret, int, error) {
 	cli := aa.K8sClient
 	// ---------------------------------------------------------------------------
-	co, err := z.ByTag(&SSLQueryCO{}, zrc.Request.URL.Query(), "form")
+	co, err := z.ReadForm(zrc.Request, &SSLQueryCO{})
 	if err != nil {
 		return nil, 400, err
 	}

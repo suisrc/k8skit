@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"kube-sidecar/app"
-	"kube-sidecar/z"
 	"net"
 	"sort"
 	"strings"
+
+	"github.com/suisrc/zgg/z"
+	"github.com/suisrc/zgg/ze/crt"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,7 +18,7 @@ import (
 func (aa *FakeSslApi) ceGet(zrc *z.Ctx) bool {
 	cli := aa.K8sClient
 	// ------------------------------------------------------------------------------------------
-	co, err := z.ByTag(&SSLQueryCO{}, zrc.Request.URL.Query(), "form")
+	co, err := z.ReadForm(zrc.Request, &SSLQueryCO{})
 	if err != nil {
 		return zrc.JERR(err, 400)
 	}
@@ -50,14 +52,14 @@ func (aa *FakeSslApi) ceGet(zrc *z.Ctx) bool {
 		secretKey += co.Domains[0]
 	} else {
 		sort.Strings(co.Domains)
-		hash, _ := z.HashMd5([]byte(strings.Join(co.Domains, ",")))
+		hash, _ := crt.HashMd5([]byte(strings.Join(co.Domains, ",")))
 		secretKey += hash
 	}
 	// ------------------------------------------------------------------------------------------
 	isUpdate := false
 	domain, err := cli.CoreV1().Secrets(k8sns).Get(zrc.Ctx, secretKey, metav1.GetOptions{})
 	if err == nil {
-		if ok, _ := z.IsPemExpired(string(domain.Data["pem.crt"])); !ok {
+		if ok, _ := crt.IsPemExpired(string(domain.Data["pem.crt"])); !ok {
 			return zrc.JSON(&z.Result{Success: true, Data: z.HA{
 				"crt": string(domain.Data["pem.crt"]),
 				"key": string(domain.Data["pem.key"]),
@@ -87,13 +89,13 @@ func (aa *FakeSslApi) ceGet(zrc *z.Ctx) bool {
 	if !ok0 || !ok1 || !ok2 {
 		return zrc.JERR(&z.Result{ErrCode: "k8s-info-error", Message: "config is error, CA证书不存在"}, 500)
 	}
-	config := &z.CertConfig{}
+	config := &crt.CertConfig{}
 	if err := json.Unmarshal(caBts, &config); err != nil {
 		message := fmt.Sprintf("ce get api, json unmarshal config error: %s", err.Error())
 		return zrc.JERR(&z.Result{ErrCode: "k8s-info-error", Message: message}, 500)
 
 	}
-	sub, err := z.CreateCE(config, co.CommonName, co.Profile, 0, dns, ips, caCrt, caKey)
+	sub, err := crt.CreateCE(config, co.CommonName, co.Profile, 0, dns, ips, caCrt, caKey)
 	if err != nil {
 		message := fmt.Sprintf("ce get api, create cert error: %s", err.Error())
 		return zrc.JERR(&z.Result{ErrCode: "k8s-info-error", Message: message}, 500)
