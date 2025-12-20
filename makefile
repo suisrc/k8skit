@@ -26,7 +26,7 @@ helm:
 	helm -n default template deploy/chart > deploy/bundle.yml
 
 main:
-	go run main.go -local -debug
+	go run main.go -c zgg.toml
 
 mapp:
 	go run main.go -local -debug -xrt 2 \

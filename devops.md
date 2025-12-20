@@ -1,15 +1,12 @@
 # zgg
 
+zgg(z? golang google)  
+为简约而生, 核心文件只有2个  
+
 ## 框架介绍
-
-这是一极精简的 基于 基于 net/http web 服务框架， 没有 router ，为单接口而生。  
-通过 query.action(query参数) 或者 path=action(path就是action) 两种方式确定 handle 函数。  
-
 
 这是一极精简的 web 服务框架， 默认没有 routing， 使用 map 进行 action 检索 ，为单接口而生。  
 通过 query.action(query参数) 或者 path=action(path就是action) 两种方式确定 handle 函数。  
-但是，可以通过 '-mux' 参数切换使用 net/http.mux 标准库的 http.router 完成标准 web 服务切换。  
-当前框架不依赖任何第三方库， 纯原生实现。  
 
   
 为什么需要它？  
@@ -20,25 +17,28 @@
 wire 是一个依赖注入框架， 但是考虑到框架本身就比较小，本身不依赖任何第三方库，所以不会集成wire， 如果需要，可以考虑自行增加。  
 但是，实现了一个简单的注入封装，`svckit:"auto"`, 可以自动注入依赖。例如：
 
+
+## 快速开发
+
 ```go
 package app
 
 import (
-	"kube-sidecar/z"
+	"github.com/suisrc/zgg/z"
 )
 
 func init() {
-	z.Register("00-hello", func(svc z.SvcKit, enr z.Enroll) z.Closed {
-		api := z.RegSvc(svc, "api-hello", &HelloApi{})
-		enr("hello", api.hello)
+	z.Register("01-hello", func(srv z.IServer) z.Closed {
+		api := z.Inject(srv.GetSvcKit(), &HelloApi{})
+		srv.AddRouter("hello", api.hello)
 		return func() {
 			z.Println("api-hello closed")
 		}
 	})
-	z.Register("zz-world", func(svc z.SvcKit, enr z.Enroll) z.Closed {
-		api := svc.Get("api-hello").(*HelloApi)
-		enr(z.GET("world"), api.world)
-		enr(z.GET("token"), z.TokenAuth(z.Ptr(""), api.token))
+	z.Register("zz-world", func(srv z.IServer) z.Closed {
+		api := srv.GetSvcKit().Get("HelloApi").(*HelloApi)
+		z.GET("world", api.world, srv)
+		z.GET("token", z.TokenAuth(z.Ptr(""), api.token), srv)
 		return nil
 	})
 }
@@ -55,40 +55,23 @@ type HelloApi struct {
 }
 
 ```
-
-
-
-这是一极精简的 web 服务框架， 默认没有 routing， 使用 map 进行 action 检索 ，为单接口而生。  
-通过 query.action(query参数) 或者 path=action(path就是action) 两种方式确定 handle 函数。  
-但是，可以通过 '-mux' 参数切换使用 net/http.mux 标准库的 http.router 完成标准 web 服务切换。  
   
-[z]包为 zgg(z? google golang) 框架抽象层，尽量不要修改，以免出现兼容性问题  
-  
-## 快速开始
+## 执行命令
 
 ```sh
 # 命令
 xxx [command] [arguments]
 
 xxx web (default)
-  -debug bool # debug mode
-        debug mode
-  -local bool # local mode， addr = 127.0.0.1
-        http server local mode
-  -addr string # 服务绑定的ip
-        http server addr (default "0.0.0.0")
-  -port int # 服务绑定的 port
-        http server Port (default 80)
-  -crtPath string # 服务绑定的 cer file，https 模式
-        http server cer file
-  -keyPath string # 服务绑定的 key file，https 模式
-        http server key file
-  -mux   bool # http server with mux， 默认为 false， 使用 net/http.mux 作为服务
-        http server with mux
-  -apiPath string # 服务绑定的 api path
-        http server api path
-  -token string # 服务绑定的 api token
-        http server api token
+  -c     string # 配置文件
+  -debug bool   # debug mode 
+  -local bool   # local mode， addr = 127.0.0.1
+  -addr  string # 服务绑定的ip， (default "0.0.0.0")
+  -port  int    # 服务绑定的 port，(default 80)
+  -crt   string # 服务绑定的 crt file，https 模式
+  -key   string # 服务绑定的 key file，https 模式
+  -eng   string # 路由引擎， 默认 map， 其他： mux， rdx
+  -api   string # 服务绑定的 api root path
 
 xxx version # 查看应用版本
 
@@ -106,4 +89,5 @@ xxx -debug -local
 
 ## 其他说明
 
-核心包 [z]， 其他都可以删除， [z/serve.go] 是一个 server 的标准实现，可以自行修改，增加启动参数。[app] 增加 web 服务， [cmd] 增加 命令行服务。
+[k8skit](https://github.com/suisrc/k8skit.git) k8s工具包
+- kubesider: k8s 边车注入服务

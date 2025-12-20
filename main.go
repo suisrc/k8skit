@@ -3,12 +3,13 @@ package main
 import (
 	_ "embed"
 	"flag"
+	"kube-sidecar/app"
+	_ "kube-sidecar/cmd"
 	"strings"
 
-	_ "github.com/suisrc/zgg/app"
-	_ "github.com/suisrc/zgg/cmd"
 	"github.com/suisrc/zgg/z"
 	_ "github.com/suisrc/zgg/ze/rdx"
+	"k8s.io/klog/v2"
 )
 
 //go:embed vname
@@ -22,20 +23,16 @@ var (
 	version = strings.TrimSpace(string(verbyte))
 )
 
-type EConfig struct {
-	Token            string
-	InjectAnnotation string
-	InjectDefaultKey string
-}
-
 /**
  * 程序入口
  */
 func main() {
-	conf := &EConfig{}
-	flag.StringVar(&conf.Token, "token", "", "http server api token")
-	flag.StringVar(&conf.InjectAnnotation, "injectAnnotation", "sidecar/configmap", "Injector Annotation")
-	flag.StringVar(&conf.InjectDefaultKey, "injectDefaultKey", "sidecar.yml", "Injector Default Key")
+	z.Println = klog.Infoln
+	z.Printf = klog.Infof
+	z.Fatal = klog.Fatal
+	z.Fatalf = klog.Fatalf
 
-	z.Execute(appname, version, "(https://github.com/suisrc/k8skit) kube-sidecar")
+	flag.StringVar(&app.C.Token, "token", "", "http server api token")
+
+	z.Execute(appname, version, "(https://github.com/suisrc/k8skit) main")
 }

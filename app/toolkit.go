@@ -7,8 +7,15 @@ import (
 	"strings"
 
 	"github.com/suisrc/zgg/z"
+)
 
-	"errors"
+var (
+	C = struct {
+		Namespace        string
+		Token            string
+		InjectAnnotation string
+		InjectDefaultKey string
+	}{}
 )
 
 // func init() {
@@ -21,6 +28,7 @@ import (
 // 			return nil
 // 		}
 // 		// z.RegSvc(srv.GetSvcKit(), client)
+// 		klog.Info("create k8s client success: local=", z.C.Server.Local)
 // 		srv.GetSvcKit().Set("k8sclient", client) // 注册 k8sclient
 // 		return nil
 // 	})
@@ -28,23 +36,18 @@ import (
 
 // -----------------------------------------------------------------------
 
-var (
-	namespace = ""
-)
-
-// 获取当前命名空间 k8s namespace
 func K8sNs() string {
-	if namespace != "" {
-		return namespace
+	if C.Namespace != "" {
+		return C.Namespace
 	}
 	ns, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 	if err != nil {
 		z.Printf("unable to read namespace: %s, return 'default'", err.Error())
-		namespace = "default"
+		C.Namespace = "default"
 	} else {
-		namespace = string(ns)
+		C.Namespace = string(ns)
 	}
-	return namespace
+	return C.Namespace
 }
 
 // // CreateClient Create the server
@@ -74,7 +77,7 @@ func PostJson(req *http.Request) error {
 		return fmt.Errorf("wrong http verb. got %s", req.Method)
 	}
 	if req.Body == nil {
-		return errors.New("empty body")
+		return fmt.Errorf("empty body")
 	}
 	contentType := req.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "application/json") {
