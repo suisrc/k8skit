@@ -78,7 +78,7 @@ GET {{BASE}}/api/ssl/v1/ce?token=Ckt1YmVybmV0ZXM&key=tst&domain=dev1.sims-cn.com
 Content-Type: application/json
 
 ###
-GET {{BASE}}/api/ssl/v1/ce?token=v4d050b629c0c4ed72d8c475d6811150&key=tst&domain=dev1.sims-cn.com&profile=&kind=1&cn=dev01
+GET {{BASE}}/api/ssl/v1/ce?token=v4d050b629c0c4ed72d8c475d6811150&key=tst&domain=dev1.sims-cn.com&profile=&kind=3&cn=dev01
 Content-Type: application/json
 
 ###
@@ -94,7 +94,7 @@ GET {{BASE}}/api/ssl/v1/ce?token=v4d050b629c0c4ed72d8c475d6811150&key=tst&domain
 Content-Type: application/json
 
 ###
-GET {{BASE}}/api/ssl/v1/ce?token=v4d050b629c0c4ed72d8c475d6811150&key=tst&domain=dev5.sims-cn.com
+GET {{BASE}}/api/ssl/v1/ce?token=v4d050b629c0c4ed72d8c475d6811150&key=tst&domain=dev5.sims-cn.com&profile=&kind=1&cn=dev05
 Content-Type: application/json
 
 ###

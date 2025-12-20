@@ -11,6 +11,7 @@ import (
 
 	"github.com/suisrc/zgg/z"
 	_ "github.com/suisrc/zgg/ze/rdx"
+	"k8s.io/klog/v2"
 )
 
 //go:embed vname
@@ -28,6 +29,11 @@ var (
  * 程序入口
  */
 func main() {
+	z.Println = klog.Infoln
+	z.Printf = klog.Infof
+	z.Fatal = klog.Fatal
+	z.Fatalf = klog.Fatalf
+
 	flag.StringVar(&app.C.Token, "token", "", "http server api token")
 	flag.StringVar(&app.C.InjectAnnotation, "injectAnnotation", "sidecar/configmap", "Injector Annotation")
 	flag.StringVar(&app.C.InjectDefaultKey, "injectDefaultKey", "sidecar.yml", "Injector Default Key")

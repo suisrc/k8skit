@@ -46,9 +46,9 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) bool {
 				return zrc.JERR(&z.Result{ErrCode: "app-info-token", Message: message}, 500)
 			}
 			co.Token = z.Str("v", 32) // 生成一个新令牌，新建应用
-			info = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ikey}, StringData: map[string]string{
-				"token":  co.Token,
-				"config": config.String(),
+			info = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ikey}, Data: map[string][]byte{
+				"token":  []byte(co.Token),
+				"config": []byte(config.String()),
 			}}
 			info, err = cli.CoreV1().Secrets(k8sns).Create(zrc.Ctx, info, metav1.CreateOptions{})
 			if err != nil {

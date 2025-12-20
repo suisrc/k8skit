@@ -14,7 +14,8 @@ import (
 func init() {
 	z.Register("99-app.sidecar", func(srv z.IServer) z.Closed {
 		svc := srv.GetSvcKit()
-		api := z.Inject(svc, &MutateApi{Patcher: NewInjectorPatcher(svc)})
+		// api := z.Inject(svc, &MutateApi{Patcher: NewInjectorPatcher(svc)})
+		api := z.RegSvc(svc, &MutateApi{Patcher: NewInjectorPatcher(svc)})
 		z.POST("mutate", api.mutate, srv) // 注册接口
 		return nil
 	})

@@ -13,6 +13,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 )
 
 func (aa *FakeSslApi) ceGet(zrc *z.Ctx) bool {
@@ -58,19 +59,24 @@ func (aa *FakeSslApi) ceGet(zrc *z.Ctx) bool {
 	// ------------------------------------------------------------------------------------------
 	isUpdate := false
 	domain, err := cli.CoreV1().Secrets(k8sns).Get(zrc.Ctx, secretKey, metav1.GetOptions{})
-	if err == nil {
-		if ok, _ := crt.IsPemExpired(string(domain.Data["pem.crt"])); !ok {
+	if co.Kind != 3 && err == nil {
+		if ok, exp, _ := crt.IsPemExpired(string(domain.Data["pem.crt"])); !ok {
 			return zrc.JSON(&z.Result{Success: true, Data: z.HA{
 				"crt": string(domain.Data["pem.crt"]),
 				"key": string(domain.Data["pem.key"]),
 			}})
+		} else {
+			klog.Infof("ce get api, secret [%s] expired: %v", secretKey, exp)
 		}
 		isUpdate = true
 		// 证书出现问题或者过期
+	} else if err == nil {
+		isUpdate = true
 	}
-	if co.Kind != 1 {
+	if co.Kind != 1 && co.Kind != 3 {
 		return zrc.JERR(&z.Result{ErrCode: "param-error", Message: "kind is error"}, 400)
 	}
+	klog.Infof("ce get api, secret [%s] create/update: %d", secretKey, co.Kind)
 	// domain 对应的cert 不存在, 重新生成 cert
 	dns := []string{} // 域名
 	ips := []net.IP{}
@@ -100,11 +106,12 @@ func (aa *FakeSslApi) ceGet(zrc *z.Ctx) bool {
 		message := fmt.Sprintf("ce get api, create cert error: %s", err.Error())
 		return zrc.JERR(&z.Result{ErrCode: "k8s-info-error", Message: message}, 500)
 	}
+	// klog.Info(sub.Crt)
 	// 存储 k8s secret
-	domain = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretKey}, StringData: map[string]string{
-		"pem.crt": sub.Crt,
-		"pem.key": sub.Key,
-		"domains": strings.Join(co.Domains, ","),
+	domain = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretKey}, Data: map[string][]byte{
+		"pem.crt": []byte(sub.Crt),
+		"pem.key": []byte(sub.Key),
+		"domains": []byte(strings.Join(co.Domains, ",")),
 	}}
 	if isUpdate {
 		if _, err := cli.CoreV1().Secrets(k8sns).Update(zrc.Ctx, domain, metav1.UpdateOptions{}); err != nil {
@@ -119,7 +126,7 @@ func (aa *FakeSslApi) ceGet(zrc *z.Ctx) bool {
 	}
 	// ------------------------------------------------------------------------------------------
 	return zrc.JSON(&z.Result{Success: true, Data: z.HA{
-		"crt": domain.StringData["pem.crt"],
-		"key": domain.StringData["pem.key"],
+		"crt": string(domain.Data["pem.crt"]),
+		"key": string(domain.Data["pem.key"]),
 	}})
 }

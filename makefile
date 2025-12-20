@@ -26,10 +26,10 @@ helm:
 	helm -n default template deploy/chart > deploy/bundle.yml
 
 main:
-	go run main.go -local -debug -c zgg.toml
+	go run main.go -c zgg.toml
 
 mapp:
-	go run main.go -local -debug -xrt 2 -c zgg.toml \
+	go run main.go -xrt 2 -local \
 	--token MQ8wDQYDVQQHEwZEYWxpYW4x \
 	--injectAnnotation ksidecar/configmap \
 	--injectDefaultKey sidecar.yml
