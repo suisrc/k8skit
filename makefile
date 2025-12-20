@@ -26,7 +26,7 @@ helm:
 	helm -n default template deploy/chart > deploy/bundle.yml
 
 main:
-	go run main.go -local 
+	go run main.go -local -debug -f2show=/site/list123
 
 test:
 	_out/$(APP) -local -debug
