@@ -8,4 +8,4 @@
 [k8skit](https://github.com/suisrc/k8skit.git) k8s工具包
 - [kubesider](https://github.com/suisrc/k8skit/tree/sidecar): k8s 边车注入服务
 - [frontend](https://github.com/suisrc/k8skit/tree/frontend): 前端部署服务， 取代nginx部署前段
-- [kwdog] (https://github.com/suisrc/k8skit/tree/kwdog): k8s 容器日志、监控、鉴权服务
+- [kwdog](https://github.com/suisrc/k8skit/tree/kwdog): k8s 容器日志、监控、鉴权服务
