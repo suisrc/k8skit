@@ -26,23 +26,23 @@ helm:
 	helm -n default template deploy/chart > deploy/bundle.yml
 
 main:
-	APP_NAME=$(APP) go run main.go -local -debug
+	go run main.go -local -debug
 
-tmux:
-	APP_NAME=$(APP) go run main.go -local -debug -xrt 2 \
+mapp:
+	go run main.go -local -debug -xrt 2 \
 	--token MQ8wDQYDVQQHEwZEYWxpYW4x \
 	--injectAnnotation ksidecar/configmap \
 	--injectDefaultKey sidecar.yml
 
 test:
-	APP_NAME=$(APP) _out/$(APP) version
+	_out/$(APP) version
 
 hello:
-	APP_NAME=$(APP) go run main.go hello
+	go run main.go hello
 
-# APP_NAME=$(APP) go run main.go cert -path _out/cert -domain localhost -cname=localhost
+# go run main.go cert -path _out/cert -domain localhost -cname=localhost
 cert:
-	APP_NAME=$(APP) go run main.go cert -domain localhost
+	go run main.go cert -domain localhost
 
 # https://storage.googleapis.com/kubebuilder-tools/kubebuilder-tools-v1.19.2-linux-amd64.tar.gz
 test-kube:
@@ -52,12 +52,5 @@ test-kube:
 	go test -v -run TestCustom testdata/custom_test.go
 
 test-custom:
-	go test -v app/custom_test.go
-
-test-copy:
-	go test -v cpy/zcpy_test.go
-
-test-cert:
-	go test -v app/cert_test.go -run Test_cer1
-
+	go test -v cmd/custom_test.go
 
