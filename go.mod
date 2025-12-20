@@ -2,7 +2,10 @@ module kube-sidecar
 
 go 1.25.5
 
+replace github.com/suisrc/zgg => ../zgg
+
 require (
+	github.com/suisrc/zgg v0.0.0-00010101000000-000000000000
 	github.com/ghodss/yaml v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/samber/lo v1.52.0
@@ -53,3 +56,4 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+

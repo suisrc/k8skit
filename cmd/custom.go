@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"fmt"
-	"kube-sidecar/z"
+
+	"github.com/suisrc/zgg/z"
 )
 
 func init() {
-	z.CmdR["hello"] = hello
+	z.CMDR["world"] = world
 }
 
-func hello() {
+func world() {
 	fmt.Println("hello world!")
 }

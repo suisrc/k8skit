@@ -3,7 +3,7 @@ package app
 // 这是一个测试类， 需要屏蔽 init 函数
 
 import (
-	"kube-sidecar/z"
+	"github.com/suisrc/zgg/z"
 )
 
 // func init() {
@@ -11,17 +11,17 @@ import (
 // }
 
 func Init0() {
-	z.Register("00-hello", func(svc z.SvcKit, enr z.Enroll) z.Closed {
-		api := z.Inject(svc, &HelloApi{})
-		enr("hello", api.hello)
+	z.Register("01-hello", func(srv z.IServer) z.Closed {
+		api := z.Inject(srv.GetSvcKit(), &HelloApi{})
+		srv.AddRouter("hello", api.hello)
 		return func() {
 			z.Println("api-hello closed")
 		}
 	})
-	z.Register("zz-world", func(svc z.SvcKit, enr z.Enroll) z.Closed {
-		api := svc.Get("HelloApi").(*HelloApi)
-		enr(z.GET("world"), api.world)
-		enr(z.GET("token"), z.TokenAuth(z.Ptr(""), api.token))
+	z.Register("zz-world", func(srv z.IServer) z.Closed {
+		api := srv.GetSvcKit().Get("HelloApi").(*HelloApi)
+		z.GET("world", api.world, srv)
+		z.GET("token", z.TokenAuth(z.Ptr(""), api.token), srv)
 		return nil
 	})
 }
@@ -37,7 +37,7 @@ type HelloApi struct {
 }
 
 func (aa *HelloApi) hello(zrc *z.Ctx) bool {
-	return zrc.JSON(&z.Result{Success: true, Data: "hello!"})
+	return zrc.JSON(&z.Result{Success: true, Data: "hello!", ErrShow: 1})
 }
 func (aa *HelloApi) world(zrc *z.Ctx) bool {
 	return zrc.JSON(&z.Result{Success: true, Data: "world!"})
