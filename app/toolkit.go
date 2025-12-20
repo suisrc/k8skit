@@ -13,8 +13,6 @@ var (
 	C = struct {
 		Namespace string
 		Token     string
-		DirWWW    string
-		RootPath  string
 	}{}
 )
 
