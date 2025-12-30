@@ -1,4 +1,4 @@
-module k8skite
+module k8skit
 
 go 1.25.5
 

@@ -8,10 +8,9 @@ import (
 	"github.com/suisrc/zgg/z/zc"
 	_ "github.com/suisrc/zgg/ze/rdx"
 	"k8s.io/klog/v2"
-
 	// _ "github.com/suisrc/zgg/app/zhe"
 	// _ "k8skit/app/zhe"
-	_ "k8skit/cmd"
+	// _ "k8skit/cmd"
 )
 
 //go:embed vname

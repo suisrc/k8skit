@@ -62,7 +62,7 @@ type HelloApi struct {
 # 命令
 xxx [command] [arguments]
 
-kdemo 
+k8skit
   -addr string
         http server addr (default "0.0.0.0")
   -api string
