@@ -2,7 +2,7 @@ package sidecar
 
 import (
 	"context"
-	"kube-sidecar/app"
+	"k8skit/app"
 
 	"github.com/suisrc/zgg/z"
 

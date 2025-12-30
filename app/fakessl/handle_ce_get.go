@@ -3,7 +3,7 @@ package fakessl
 import (
 	"encoding/json"
 	"fmt"
-	"kube-sidecar/app"
+	"k8skit/app"
 	"net"
 	"sort"
 	"strings"
@@ -33,7 +33,7 @@ func (aa *FakeSslApi) ceGet(zrc *z.Ctx) bool {
 		return zrc.JERR(&z.Result{ErrCode: "param-empty", Message: "domains is empty"}, 400)
 	}
 	// ------------------------------------------------------------------------------------------
-	k8sns := app.K8sNs()
+	k8sns := app.K8sNS()
 	ikey := fmt.Sprintf("%s%s-%s", PK, co.Key, "data") // fkc-tst-data
 	info, err := cli.CoreV1().Secrets(k8sns).Get(zrc.Ctx, ikey, metav1.GetOptions{})
 	if err != nil {

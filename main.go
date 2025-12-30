@@ -3,12 +3,12 @@ package main
 import (
 	_ "embed"
 	"flag"
+	"k8skit/app"
 	_ "k8skit/app/fakessl"
 	_ "k8skit/app/sidecar"
 	_ "k8skit/cmd"
 	"strings"
 
-	"github.com/suisrc/zgg/app/fluent"
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/zc"
 	_ "github.com/suisrc/zgg/ze/rdx"
@@ -28,8 +28,8 @@ var ver_ []byte
 // var www_ embed.FS
 
 var (
-	app = strings.TrimSpace(string(app_))
-	ver = strings.TrimSpace(string(ver_))
+	_app = strings.TrimSpace(string(app_))
+	_ver = strings.TrimSpace(string(ver_))
 )
 
 /**
@@ -48,7 +48,7 @@ func main() {
 
 	// front2.Init(www_) // 前端应用，由于需要 wwwFS参数，必须人工初始化
 	// kwdog2.Init() // API边车网关， 通过 Sidecar 模式保护主服务
-	fluent.Init() // 采集器日志, 为 fluentbit agent 提供 HTTP 收集日志功能
+	// fluent.Init() // 采集器日志, 为 fluentbit agent 提供 HTTP 收集日志功能
 
-	z.Execute(app, ver, "(https://github.com/suisrc/k8skit) "+app)
+	z.Execute(_app, _ver, "(https://github.com/suisrc/k8skit) "+_app)
 }

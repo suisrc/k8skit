@@ -3,7 +3,7 @@ package sidecar
 import (
 	"encoding/json"
 	"fmt"
-	"kube-sidecar/app"
+	"k8skit/app"
 	"net/http"
 
 	"github.com/suisrc/zgg/z"

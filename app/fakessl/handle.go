@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"kube-sidecar/app"
+	"k8skit/app"
 
 	"github.com/suisrc/zgg/z"
 
@@ -53,7 +53,7 @@ func (aa *FakeSslApi) getCaSecret(zrc *z.Ctx) (*v1.Secret, int, error) {
 		return nil, 400, &z.Result{ErrCode: "param-empty", Message: "key is empty"}
 	}
 	// ---------------------------------------------------------------------------
-	k8sns := app.K8sNs()
+	k8sns := app.K8sNS()
 	ikey := fmt.Sprintf("%s%s-%s", PK, co.Key, "data") // fkc-tst-data
 	info, err := cli.CoreV1().Secrets(k8sns).Get(zrc.Ctx, ikey, metav1.GetOptions{})
 	if err != nil {

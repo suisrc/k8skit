@@ -5,10 +5,10 @@ go 1.25.5
 // replace github.com/suisrc/zgg => ../zgg
 
 require (
-	github.com/suisrc/zgg v0.1.6
 	github.com/ghodss/yaml v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/samber/lo v1.52.0
+	github.com/suisrc/zgg v0.1.6
 	k8s.io/api v0.34.3
 	k8s.io/apimachinery v0.34.3
 	k8s.io/client-go v0.34.3

@@ -3,7 +3,7 @@ package fakessl
 import (
 	"encoding/json"
 	"fmt"
-	"kube-sidecar/app"
+	"k8skit/app"
 	"strings"
 
 	"github.com/suisrc/zgg/z"
@@ -34,7 +34,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) bool {
 		klog.Info(message)
 		return zrc.JERR(&z.Result{ErrCode: "body-error", Message: message}, 400)
 	}
-	k8sns := app.K8sNs()
+	k8sns := app.K8sNS()
 	ikey := fmt.Sprintf("%s%s-%s", PK, co.Key, "data") // fkc-tst-data
 	info, err := cli.CoreV1().Secrets(k8sns).Get(zrc.Ctx, ikey, metav1.GetOptions{})
 	if err != nil {
@@ -45,7 +45,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) bool {
 				klog.Info(message)
 				return zrc.JERR(&z.Result{ErrCode: "app-info-token", Message: message}, 500)
 			}
-			co.Token = z.Str("v", 32) // 生成一个新令牌，新建应用
+			co.Token = z.GenStr("v", 32) // 生成一个新令牌，新建应用
 			info = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ikey}, Data: map[string][]byte{
 				"token":  []byte(co.Token),
 				"config": []byte(config.String()),
