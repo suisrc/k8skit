@@ -6,10 +6,12 @@ import (
 	"github.com/suisrc/zgg/z"
 )
 
+// go run main.go world
+
 func init() {
-	z.CMDR["world"] = world
+	z.CMDR["hello"] = hello
 }
 
-func world() {
+func hello() {
 	fmt.Println("hello world!")
 }

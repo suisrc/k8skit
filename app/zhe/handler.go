@@ -1,4 +1,4 @@
-package app
+package zhe
 
 // 这是一个测试类， 需要屏蔽 init 函数
 

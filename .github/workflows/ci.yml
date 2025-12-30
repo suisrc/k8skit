@@ -14,7 +14,7 @@ env:
   DOCKER_REGISTRY: docker.io
 
 jobs:
-  build-docker:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,8 +24,10 @@ jobs:
         run: |
           TAG_NAME=${GITHUB_REF#refs/tags/}
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+          echo ${TAG_NAME##*-} > vname
           echo ${TAG_NAME%%-*} > version
-          cat version
+          echo "k8skit, appname: `cat vname`, version: `cat version`"
+          sed -i "s|k8skit|`cat vname`|g" Dockerfile
           docker build -t image --no-cache .
 
       - name: Push github image
@@ -36,7 +38,7 @@ jobs:
 
           IMAGE_ID=$REGISTRY_URL/$IMAGE_NAME
           echo IMAGE_ID=$IMAGE_ID
-          VERSION=$IMAGE_VERSION  
+          VERSION=$IMAGE_VERSION
           echo VERSION=$VERSION
 
           docker tag image $IMAGE_ID:$VERSION

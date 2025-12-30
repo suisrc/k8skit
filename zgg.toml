@@ -1,9 +1,37 @@
 # 配置文件
-printconfig=false
-
 debug=true
+printconfig=true
+
 
 [server]
 local = true
-port = 80
+port = 81
+# addr = "0.0.0.0"
 # engine=rdx
+xrt="2"
+
+[front2]
+f2show="/site/list123456"
+suff=[".html",".htm",".css",".map",".js",".ts",".json"]
+rootpath=["/zgg","/demo"]
+# indexs="/zgg=index.htm,/demo=demo.html"
+
+[front2.indexs]
+"/zgg"="index.htm"
+"/demo"="demo.html"
+
+[kwdog2]
+rootpath=""
+authz="http://end-iam-kin-svc.uat-fmes.svc/authx"
+servaddr="http://end-iam-pas-svc.uat-fmes.svc"
+ttylog=true
+syslog="klog.default.svc:5141"
+
+[kwdog2.routers]
+"/api/iam/"="http://end-iam-kin-svc.uat-fmes.svc"
+
+[fluent]
+token="xxx123456789"
+store="./www"
+route="/api/zgg/logs"
+use_origin=true

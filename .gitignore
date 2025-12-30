@@ -20,3 +20,6 @@
 dist
 _out
 *.log
+www
+www2
+tmpl

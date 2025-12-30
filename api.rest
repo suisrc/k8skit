@@ -10,13 +10,30 @@ GET {{BASE}}/?action=hello
 Content-Type: application/json
 
 ### 
-GET {{BASE}}/world
+GET {{BASE}}/img/1/1ss
 Content-Type: application/json
 
 ### 
-POST {{BASE}}/world
+GET {{BASE}}/zgg/img/1/1ss
 Content-Type: application/json
 
 ### 
-GET {{BASE}}/token
+GET {{BASE}}/demo1/demo2/img/1/1ss
+Content-Type: application/json
+
+
+### 
+GET {{BASE}}/zgg//file/%2Fdocs%2Freadme.txt
+Content-Type: application/json
+
+### 
+GET {{BASE}}/demo2/demo2/img/demo.jpeg?action=hello
+Content-Type: application/json
+
+### 
+GET {{BASE}}/zgg/img/demo.jpeg?action=hello
+Content-Type: application/json
+
+### 
+GET {{BASE}}/?action=xxx
 Content-Type: application/json

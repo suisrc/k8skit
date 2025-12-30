@@ -2,7 +2,7 @@
 
 NOW = $(shell date -u '+%Y%m%d%I%M%S')
 
-APP = kube-sidecar
+APP = $(shell cat vname)
 
 dev: main
 
@@ -34,23 +34,14 @@ mapp:
 	--injectAnnotation ksidecar/configmap \
 	--injectDefaultKey sidecar.yml
 
+tenv:
+	KIT_FLUENT_TOKEN=xxxx123456789 go run main.go -debug -print -port 81
+
 test:
-	_out/$(APP) version
+	_out/$(APP) -local -debug -port 81
 
-hello:
-	go run main.go hello
+bflow:
+	go mod init ${APP} && go mod tidy && CGO_ENABLED=0 go build -ldflags "-w -s" -o ./_out/$(APP) ./
 
-# go run main.go cert -path _out/cert -domain localhost -cname=localhost
-cert:
-	go run main.go cert -domain localhost
-
-# https://storage.googleapis.com/kubebuilder-tools/kubebuilder-tools-v1.19.2-linux-amd64.tar.gz
-test-kube:
-	TEST_ASSET_ETCD=_out/kubebuilder/bin/etcd \
-	TEST_ASSET_KUBE_APISERVER=_out/kubebuilder/bin/kube-apiserver \
-	TEST_ASSET_KUBECTL=_out/kubebuilder/bin/kubectl \
-	go test -v -run TestCustom testdata/custom_test.go
-
-test-custom:
-	go test -v cmd/custom_test.go
-
+clean:
+	rm -rf _out/$(APP) && rm go.mod go.sum
