@@ -1,6 +1,6 @@
 github.com/go-logr/logr v1.4.1 h1:pKouT5E8xu9zeFC39JXRDukb6JFQPXM5p5I91188VAQ=
 github.com/go-logr/logr v1.4.1/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
-github.com/suisrc/zgg v0.1.3 h1:sd7D9FfXOF3k2FRwpKThvdnuTp8H6CruUr+mT/Gc4Kw=
-github.com/suisrc/zgg v0.1.3/go.mod h1:xH+jv/cn5se2tT8v8LtAxsv5Pj6tR9uOtl4q92Lr/6E=
+github.com/suisrc/zgg v0.1.5 h1:C+qa6+q0I75/sF74DpScT/3NafsWBC5umnJzP4B0xjs=
+github.com/suisrc/zgg v0.1.5/go.mod h1:xH+jv/cn5se2tT8v8LtAxsv5Pj6tR9uOtl4q92Lr/6E=
 k8s.io/klog/v2 v2.130.1 h1:n9Xl7H1Xvksem4KFG4PYbdQCQxqc/tTUyrgXaOhHSzk=
 k8s.io/klog/v2 v2.130.1/go.mod h1:3Jpz1GvMt720eyJH1ckRHK1EDfpxISzJ7I9OYgaDtPE=

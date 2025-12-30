@@ -3,7 +3,7 @@ module front2
 go 1.25.5
 
 require (
-	github.com/suisrc/zgg v0.1.3
+	github.com/suisrc/zgg v0.1.5
 	k8s.io/klog/v2 v2.130.1
 )
 
