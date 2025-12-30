@@ -9,11 +9,6 @@ import (
 	// "k8s.io/klog/v2"
 )
 
-func main() {
-	front2.Init(wwwFS)
-	z.Execute(appname, version, "(https://github.com/suisrc/k8skit) front2")
-}
-
 //go:embed vname
 var appbyte []byte
 
@@ -27,3 +22,8 @@ var (
 	appname = strings.TrimSpace(string(appbyte))
 	version = strings.TrimSpace(string(verbyte))
 )
+
+func main() {
+	front2.Init(wwwFS)
+	z.Execute(appname, version, "(https://github.com/suisrc/k8skit) front2")
+}
