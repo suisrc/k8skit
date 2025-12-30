@@ -26,7 +26,7 @@ helm:
 	helm -n default template deploy/chart > deploy/bundle.yml
 
 main:
-	go run main.go -local -debug -port 81 -logtoken xxxx12345678
+	KIT_FLUENT_TOKEN=xxxx123456789 go run main.go -local -debug -port 81
 
 tenv:
 	KIT_FLUENT_TOKEN=xxxx123456789 go run main.go -debug -print -port 81

@@ -1,9 +1,9 @@
-module demo
+module k8skite
 
 go 1.25.5
 
 require (
-	github.com/suisrc/zgg v0.1.5
+	github.com/suisrc/zgg v0.1.6
 	k8s.io/klog/v2 v2.130.1
 )
 

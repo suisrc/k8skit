@@ -6,21 +6,26 @@ import (
 
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/zc"
+	_ "github.com/suisrc/zgg/ze/rdx"
 	"k8s.io/klog/v2"
+
+	// _ "github.com/suisrc/zgg/app/zhe"
+	// _ "k8skit/app/zhe"
+	_ "k8skit/cmd"
 )
 
 //go:embed vname
-var appbyte []byte
+var app_ []byte
 
 //go:embed version
-var verbyte []byte
+var ver_ []byte
 
 // //go:embed www/* www/**/*
-// var wwwFS embed.FS
+// var www_ embed.FS
 
 var (
-	appname = strings.TrimSpace(string(appbyte))
-	version = strings.TrimSpace(string(verbyte))
+	app = strings.TrimSpace(string(app_))
+	ver = strings.TrimSpace(string(ver_))
 )
 
 func main() {
@@ -30,6 +35,9 @@ func main() {
 	z.Fatalf = klog.Fatalf
 	z.Fatal = klog.Fatal
 
-	// fluent.Init()
-	z.Execute(appname, version, "(https://github.com/suisrc/k8skit) fluent")
+	// front2.Init(www_) // 前端应用，由于需要 wwwFS参数，必须人工初始化
+	// kwdog2.Init() // API边车网关， 通过 Sidecar 模式保护主服务
+	// fluent.Init() // 采集器日志, 为 fluentbit agent 提供 HTTP 收集日志功能
+
+	z.Execute(app, ver, "(https://github.com/suisrc/k8skit) "+app)
 }

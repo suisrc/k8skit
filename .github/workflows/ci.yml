@@ -26,6 +26,7 @@ jobs:
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
           echo ${TAG_NAME%%-*} > version
           cat version
+          set -i "s|k8skit|`cat vname`|g" Dockerfile
           docker build -t image --no-cache .
 
       #-${{ github.job }}

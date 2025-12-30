@@ -2,7 +2,7 @@
 # kubectl apply -f k8s.yaml
 # 
 # docker 环境下运行
-# docker run --name fluent -v /data/fluent:/data/fluent -e KIT_FLUENT_TOKEN=xxx123456789 -d suisrc/k8skit:v1.0.1-fluent
+# docker run --name kdemo -v /data/kdemo:/data/kdemo -e KIT_FLUENT_TOKEN=xxx123456789 -d suisrc/k8skit:v1.0.1-kdemo
 
 ---
 apiVersion: networking.k8s.io/v1
@@ -11,12 +11,12 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
-  name: fluent
+  name: kdemo
   namespace: default
 spec:
   ingressClassName: nginx
   rules:
-    - host: fluent.exp.com
+    - host: kdemo.exp.com
       http:
         paths:
           - backend:
@@ -28,21 +28,21 @@ spec:
             pathType: Prefix
   tls:
     - hosts:
-        - fluent.exp.com
-      secretName: tls-fluent.exp.com
+        - kdemo.exp.com
+      secretName: tls-kdemo.exp.com
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: fluent
+  name: kdemo
   namespace: default
 spec:
   ports:
   - name: http
     port: 80
   selector:
-    app: fluent
+    app: kdemo
   # clusterIP: None
 
 ---
@@ -50,33 +50,37 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet # Deployment or StatefulSet
 metadata:
-  name: fluent
+  name: kdemo
   namespace: default
 spec:
-  # serviceName: fluent
+  # serviceName: kdemo
   replicas: 1
   selector:
     matchLabels:
-      app: fluent
+      app: kdemo
   template:
     metadata:
       labels:
-        app: fluent
+        app: kdemo
     spec:
       # nodeSelector: { type: master }
       nodeName: dev-master # 必须指定节点， 单实例部署
       containers:
-        - image: ghcr.io/suisrc/k8skit:vX.Y.Z-fluent
-          name: fluent
-          # args: ["-logtoken", "xxx123456789", "-logroute", "/api/logs"]
+        - image: ghcr.io/suisrc/k8skit:vX.Y.Z-kdemo
+          name: kdemo
+          # args: ["-print", "-port", "81"]
           env:
             - {name: TZ, value: Asia/Shanghai }
             - {name: KIT_FLUENT_TOKEN, value: xxx123456789 }
-      volumes:
-        - name:  data
-          hostPath:
-            type: DirectoryOrCreate
-            path: /data/fluent
-          # nfs:
-          #   server: 192.168.3.33
-          #   path: /volume0/xxx/yyy/zzz
+      #     volumeMounts:
+      #       - mountPath: /opt/data
+      #         name: data
+      #         #subPath: xxx
+      # volumes:
+      #   - name:  data
+      #     hostPath:
+      #       type: DirectoryOrCreate
+      #       path: /data/kdemo
+      #     # nfs:
+      #     #   server: 192.168.3.33
+      #     #   path: /volume0/xxx/yyy/zzz

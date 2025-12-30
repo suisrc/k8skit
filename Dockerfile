@@ -13,13 +13,13 @@ FROM build_deps AS build
 
 COPY . .
 
-RUN CGO_ENABLED=0 go build -o app -ldflags '-w -extldflags "-static"' .
+RUN CGO_ENABLED=0 go build -o k8skit -ldflags '-w -extldflags "-static"' .
 
 FROM alpine:3.23
 
 RUN apk add --no-cache ca-certificates
 
 WORKDIR /opt
-COPY --from=build /opt/app /opt/fluent
+COPY --from=build /opt/k8skit /opt/k8skit
 
-ENTRYPOINT ["./fluent"]
+ENTRYPOINT ["./k8skit"]
