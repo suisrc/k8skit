@@ -1,0 +1,87 @@
+# 部署内容
+# kubectl apply -f k8s.yaml
+# 
+# docker 环境下运行
+# docker run --name fluent -v /data/fluent:/data/fluent -d ghcr.io/suisrc/k8skit:vX.Y.Z-fluent -logtoken xxx123456789 -logroute /api/logs
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
+  name: fluent
+  namespace: default
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: fluent.exp.com
+      http:
+        paths:
+          - backend:
+              service:
+                name: vscode
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        - fluent.exp.com
+      secretName: tls-fluent.exp.com
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fluent
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 80
+  selector:
+    app: fluent
+  # clusterIP: None
+
+---
+# 防止文件读写竞争， 推荐使用 StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet # Deployment or StatefulSet
+metadata:
+  name: fluent
+  namespace: default
+spec:
+  # serviceName: fluent
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fluent
+  template:
+    metadata:
+      labels:
+        app: fluent
+    spec:
+      # nodeSelector: { type: master }
+      nodeName: dev-master # 必须指定节点， 单实例部署
+      containers:
+        - image: ghcr.io/suisrc/k8skit:vX.Y.Z-fluent
+          name: fluent
+          command:
+            - fluent
+          args:
+            - -logtoken
+            - xxx123456789
+            - -logroute
+            - /api/logs
+          env:
+            - {name: TZ, value: Asia/Shanghai }
+      volumes:
+        - name:  data
+          hostPath:
+            type: DirectoryOrCreate
+            path: /data/fluent
+          # nfs:
+          #   server: 192.168.3.33
+          #   path: /volume0/xxx/yyy/zzz

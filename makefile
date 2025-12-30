@@ -26,10 +26,13 @@ helm:
 	helm -n default template deploy/chart > deploy/bundle.yml
 
 main:
-	go run main.go -local -debug -f2show=/site/list123
+	go run main.go -local -debug -port 81 -logtoken xxxx12345678
+
+tenv:
+	KIT_FLUENT_TOKEN=xxxx123456789 go run main.go -debug -print -port 81
 
 test:
-	_out/$(APP) -local -debug
+	_out/$(APP) -local -debug -port 81
 
 bflow:
 	go mod init ${APP} && go mod tidy && CGO_ENABLED=0 go build -ldflags "-w -s" -o ./_out/$(APP) ./
