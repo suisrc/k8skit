@@ -22,4 +22,4 @@ RUN apk add --no-cache ca-certificates
 WORKDIR /opt
 COPY --from=build /opt/app /opt/fluent
 
-ENTRYPOINT ["fluent"]
+ENTRYPOINT ["./fluent"]

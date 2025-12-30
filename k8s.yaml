@@ -2,7 +2,7 @@
 # kubectl apply -f k8s.yaml
 # 
 # docker 环境下运行
-# docker run --name fluent -v /data/fluent:/data/fluent -d ghcr.io/suisrc/k8skit:vX.Y.Z-fluent -logtoken xxx123456789 -logroute /api/logs
+# docker run --name fluent -v /data/fluent:/data/fluent -e KIT_FLUENT_TOKEN=xxx123456789 -d suisrc/k8skit:v1.0.1-fluent
 
 ---
 apiVersion: networking.k8s.io/v1
@@ -68,15 +68,10 @@ spec:
       containers:
         - image: ghcr.io/suisrc/k8skit:vX.Y.Z-fluent
           name: fluent
-          command:
-            - fluent
-          args:
-            - -logtoken
-            - xxx123456789
-            - -logroute
-            - /api/logs
+          # args: ["-logtoken", "xxx123456789", "-logroute", "/api/logs"]
           env:
             - {name: TZ, value: Asia/Shanghai }
+            - {name: KIT_FLUENT_TOKEN, value: xxx123456789 }
       volumes:
         - name:  data
           hostPath:
