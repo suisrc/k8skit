@@ -2,13 +2,10 @@ package main
 
 import (
 	_ "embed"
-	"flag"
-	"kube-sidecar/app"
-	_ "kube-sidecar/cmd"
 	"strings"
 
 	"github.com/suisrc/zgg/z"
-	_ "github.com/suisrc/zgg/ze/rdx"
+	"github.com/suisrc/zgg/z/zc"
 	"k8s.io/klog/v2"
 )
 
@@ -18,21 +15,21 @@ var appbyte []byte
 //go:embed version
 var verbyte []byte
 
+// //go:embed www/* www/**/*
+// var wwwFS embed.FS
+
 var (
 	appname = strings.TrimSpace(string(appbyte))
 	version = strings.TrimSpace(string(verbyte))
 )
 
-/**
- * 程序入口
- */
 func main() {
+	zc.CFG_ENV = "KIT"
 	z.Println = klog.Infoln
 	z.Printf = klog.Infof
-	z.Fatal = klog.Fatal
 	z.Fatalf = klog.Fatalf
+	z.Fatal = klog.Fatal
 
-	flag.StringVar(&app.C.Token, "token", "", "http server api token")
-
-	z.Execute(appname, version, "(https://github.com/suisrc/k8skit) frontend")
+	// fluent.Init()
+	z.Execute(appname, version, "(https://github.com/suisrc/k8skit) fluent")
 }

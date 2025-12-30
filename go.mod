@@ -1,11 +1,9 @@
-module kube-sidecar
+module demo
 
 go 1.25.5
 
-// replace github.com/suisrc/zgg => ../zgg
-
 require (
-	github.com/suisrc/zgg v0.0.7
+	github.com/suisrc/zgg v0.1.5
 	k8s.io/klog/v2 v2.130.1
 )
 

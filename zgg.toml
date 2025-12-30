@@ -1,9 +1,0 @@
-# 配置文件
-printconfig=false
-
-debug=true
-
-[server]
-local = true
-port = 80
-# engine=rdx

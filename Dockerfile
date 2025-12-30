@@ -2,7 +2,7 @@ FROM golang:1.25-alpine3.23 AS build_deps
 
 RUN apk add --no-cache git
 
-WORKDIR /workspace
+WORKDIR /opt
 
 COPY go.mod .
 COPY go.sum .
@@ -13,12 +13,13 @@ FROM build_deps AS build
 
 COPY . .
 
-RUN CGO_ENABLED=0 go build -o kube-sidecar -ldflags '-w -extldflags "-static"' .
+RUN CGO_ENABLED=0 go build -o app -ldflags '-w -extldflags "-static"' .
 
 FROM alpine:3.23
 
 RUN apk add --no-cache ca-certificates
 
-COPY --from=build /workspace/kube-sidecar /usr/local/bin/kube-sidecar
+WORKDIR /opt
+COPY --from=build /opt/app /opt/fluent
 
-ENTRYPOINT ["kube-sidecar"]
+ENTRYPOINT ["./fluent"]
