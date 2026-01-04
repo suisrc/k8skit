@@ -1,6 +1,7 @@
 package app
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,10 +10,10 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/suisrc/zgg/z"
+	"github.com/suisrc/zgg/z/zc"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/klog/v2"
 )
 
 var (
@@ -26,17 +27,19 @@ var (
 )
 
 func init() {
+	zc.Register(&C)
+	flag.StringVar(&C.InjectAnnotation, "injectAnnotation", "sidecar/configmap", "injector annotation")
+	flag.StringVar(&C.InjectDefaultKey, "injectDefaultKey", "sidecar.yml", "injector default key")
+
 	z.Register("11-app.init", func(zgg *z.Zgg) z.Closed {
 		// 创建 k8sclient
-		client, err := CreateClient(z.C.Server.Local)
+		cli, err := CreateClient(z.C.Server.Local)
 		if err != nil {
-			klog.Error("create k8s client error: ", err.Error())
-			zgg.ServeStop() // 初始化失败，直接退出
+			zgg.ServeStop("create k8s client error: ", err.Error()) // 初始化失败，直接退出
 			return nil
 		}
-		// z.RegSvc(srv.GetSvcKit(), client)
-		klog.Info("create k8s client success: local=", z.C.Server.Local)
-		zgg.SvcKit.Set("k8sclient", client) // 注册 k8sclient
+		zc.Println("create k8s client success: local=", z.C.Server.Local)
+		zgg.SvcKit.Set("k8sclient", cli) // 注册 k8sclient
 		return nil
 	})
 }
@@ -50,7 +53,7 @@ func K8sNS() string {
 	}
 	ns, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 	if err != nil {
-		z.Printf("unable to read namespace: %s, return 'default'", err.Error())
+		zc.Printf("unable to read namespace: %s, return 'default'", err.Error())
 		namespace_ = "default"
 	} else {
 		namespace_ = string(ns)
@@ -70,11 +73,11 @@ func CreateClient(local bool) (*kubernetes.Clientset, error) {
 // BuildConfig Build the config
 func BuildConfig(local bool) (*rest.Config, error) {
 	if local {
-		klog.Info("using local kubeconfig.")
+		zc.Println("using local kubeconfig.")
 		kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
 		return clientcmd.BuildConfigFromFlags("", kubeconfig)
 	}
-	klog.Info("using in cluster kubeconfig.")
+	zc.Println("using in cluster kubeconfig.")
 	return rest.InClusterConfig()
 }
 

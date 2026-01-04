@@ -29,7 +29,8 @@ main:
 	go run main.go -c zgg.toml
 
 mapp:
-	go run main.go -xrt 2 -local -debug -port 81 \
+	go run main.go -xrt 2 -local -debug -port 81 -dual \
+	--secretName fkc-sidecar-data \
 	--injectAnnotation ksidecar/configmap \
 	--injectDefaultKey sidecar.yml
 

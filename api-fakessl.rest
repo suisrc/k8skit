@@ -1,12 +1,13 @@
 @BASE=http://127.0.0.1:81
 
-###
+### curl --cacert _out/_sa.crt https://127.0.0.1/healthz
+### curl --cacert _out/_sa.crt https://localhost/healthz
 GET {{BASE}}/healthz
 Content-Type: application/json
 
 
 ###
-POST {{BASE}}/api/ssl/v1/ca/init?token=MQ8wDQYDVQQHEwZEYWxpYW4x&key=tst&cn=kubernetes
+POST {{BASE}}/api/ssl/v1/ca/init?token=va2792f4feeb0c8f5f0c4019f378ce10&key=dev&cn=kubernetes
 Content-Type: application/json
 
 {
@@ -34,7 +35,7 @@ Content-Type: application/json
 }
 
 ###
-POST {{BASE}}/api/ssl/v1/ca/init?token=v34ed884903b854540a8c86299fe2308&key=tst
+POST {{BASE}}/api/ssl/v1/ca/init?token=va2792f4feeb0c8f5f0c4019f378ce10&key=dev
 Content-Type: application/json
 
 
@@ -64,6 +65,8 @@ GET {{BASE}}/api/ssl/v1/ca/txt?key=tst
 ###
 GET {{BASE}}/api/ssl/v1/ca/b64?key=tst
 
+###
+GET {{BASE}}/api/ssl/v1/ca/txt?key=sidecar
 
 ###
 GET {{BASE}}/api/ssl/v1/ce?token=Ckt1YmVybmV0ZXM&key=tst&domain=dev1.sims-cn.com&kind=1&cn=dev01

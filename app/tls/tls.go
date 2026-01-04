@@ -1,135 +1,123 @@
 package tls
 
 import (
+	"context"
 	"crypto/tls"
+	"encoding/json"
 	"flag"
-	"net"
-	"os"
-	"sync"
+	"fmt"
+	"k8skit/app"
+	"strings"
 
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/zc"
 	"github.com/suisrc/zgg/ze/crt"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 var (
 	C = struct {
-		Server ServerConfig
+		SecretName string
 	}{}
 )
 
-type ServerConfig struct {
-	CrtCA string `json:"cacrt"`
-	KeyCA string `json:"cakey"`
-	IsSub bool   `json:"casub"`
-}
-
 func init() {
 	zc.Register(&C)
-	flag.StringVar(&(C.Server.CrtCA), "cacrt", "", "http server crt ca file")
-	flag.StringVar(&(C.Server.KeyCA), "cakey", "", "http server key ca file")
-	flag.BoolVar(&C.Server.IsSub, "casub", false, "是否是中间证书")
+	flag.StringVar(&C.SecretName, "secretName", "", "sidecar fakessl secret name")
 
-	z.Register("10-tlshttp", func(zgg *z.Zgg) z.Closed {
-		if C.Server.CrtCA == "" || C.Server.KeyCA == "" {
-			z.Println("[_tlshttp]: cacrt file or cakey file is empty")
+	z.Register("21-tlshttp", func(zgg *z.Zgg) z.Closed {
+		if C.SecretName == "" {
+			zc.Println("[_tlshttp]: SecretName is empty")
 			return nil
 		}
-		z.Println("[_tlshttp]: crt=", C.Server.CrtCA, " key=", C.Server.KeyCA)
+		// 注册 https 证书
+		cli := zgg.SvcKit.Get("k8sclient").(kubernetes.Interface)
 
-		caCrtBts, err := os.ReadFile(C.Server.CrtCA)
+		// fkc-sidecar-data
+		zc.Printf("[_tlshttp]: checker https cert: %s\n", C.SecretName)
+
+		ctx := context.TODO()
+		k8sns := app.K8sNS()
+		ikey := C.SecretName
+		info, err := cli.CoreV1().Secrets(k8sns).Get(ctx, C.SecretName, metav1.GetOptions{})
 		if err != nil {
-			z.Printf("[_tlshttp]: cacrt file error: %s\n", err)
-			zgg.ServeStop()
-			return nil
-		}
-		caKeyBts, err := os.ReadFile(C.Server.KeyCA)
-		if err != nil {
-			z.Printf("[_tlshttp]: cakey file error: %s\n", err)
-			zgg.ServeStop()
-			return nil
-		}
-		certConf := crt.CertConfig{
-			"default": {
-				Expiry:  "10y",
-				KeySize: 2048,
+			if !strings.HasSuffix(err.Error(), " not found") {
+				message := fmt.Sprintf("[_tlshttp]: secret [%s] get error: %s", ikey, err.Error())
+				zgg.ServeStop(message) // 初始化失败，直接退出
+				return nil
+			}
+			config := crt.CertConfig{"default": {
+				Expiry: "20y",
 				SubjectName: crt.SignSubject{
 					Organization:     "default",
 					OrganizationUnit: "default",
 				},
-			},
+			}}
+			// 证书不存在，需要重写构建证书
+			ca, err := crt.CreateCA(config, "default")
+			if err != nil {
+				message := fmt.Sprintf("[_tlshttp]: create ca error: %s", err.Error())
+				zgg.ServeStop(message) // 初始化失败，直接退出
+				return nil
+			}
+			ckey, _ := crt.HashMd5([]byte(ca.Key))
+			pkey := strings.TrimSuffix(ikey, "-data") + "-" + ckey[:8]
+
+			token := z.GenStr("v", 32) // 生成一个新令牌，新建应用
+			info = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ikey}, Data: map[string][]byte{
+				"token":  []byte(token),
+				"config": []byte(config.String()),
+				"ca.crt": []byte(ca.Crt),
+				"ca.key": []byte(ca.Key),
+				"prefix": []byte(pkey),
+			}}
+			info, err = cli.CoreV1().Secrets(k8sns).Create(ctx, info, metav1.CreateOptions{})
+			if err != nil {
+				message := fmt.Sprintf("[_tlshttp]: secret [%s] create error: %s", ikey, err.Error())
+				zgg.ServeStop(message) // 初始化失败，直接退出
+				return nil
+			}
+		}
+		if token, ok := info.Data["token"]; !ok {
+			message := fmt.Sprintf("[_tlshttp]: secret [%s.token] not found", ikey)
+			zgg.ServeStop(message) // 初始化失败，直接退出
+			return nil
+		} else {
+			app.C.Token = string(token)
+			zc.Printf("[_tlshttp]: secret [%s] token: %s", ikey, string(token))
+		}
+
+		config := crt.TLSAutoConfig{}
+		if cfgBts, ok := info.Data["config"]; !ok {
+			message := fmt.Sprintf("[_tlshttp]: secret [%s.config] not found", ikey)
+			zgg.ServeStop(message) // 初始化失败，直接退出
+			return nil
+		} else if err := json.Unmarshal(cfgBts, &config.CertConf); err != nil {
+			message := fmt.Sprintf("[_tlshttp]: json unmarshal error: %s", err.Error())
+			zgg.ServeStop(message) // 初始化失败，直接退出
+			return nil
+		}
+		if crtBts, ok := info.Data["ca.crt"]; !ok {
+			message := fmt.Sprintf("[_tlshttp]: secret [%s.(ca.crt)] not found", ikey)
+			zgg.ServeStop(message) // 初始化失败，直接退出
+			return nil
+		} else {
+			config.CaCrtBts = crtBts
+		}
+		if keyBts, ok := info.Data["ca.key"]; !ok {
+			message := fmt.Sprintf("[_tlshttp]: secret [%s.(ca.key)] not found", ikey)
+			zgg.ServeStop(message) // 初始化失败，直接退出
+			return nil
+		} else {
+			config.CaKeyBts = keyBts
 		}
 
 		cfg := &tls.Config{}
-		cfg.GetCertificate = (&TLSAutoConfig{
-			CaKeyBts: caKeyBts,
-			CaCrtBts: caCrtBts,
-			CertConf: certConf,
-			IsSubCa:  C.Server.IsSub,
-		}).GetCertificate
+		cfg.GetCertificate = (&config).GetCertificate
 		zgg.TLSConf = cfg
 
 		return nil
 	})
-}
-
-type TLSAutoConfig struct {
-	CaKeyBts []byte
-	CaCrtBts []byte
-	CertConf crt.CertConfig
-	IsSubCa  bool
-
-	cache sync.Map // 缓存池
-}
-
-func (aa *TLSAutoConfig) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	if ct, ok := aa.cache.Load(hello.ServerName); ok {
-		return ct.(*tls.Certificate), nil
-	}
-
-	var err error
-	var sni string
-	var cer crt.SignResult
-	if hello.ServerName == "" {
-		sni, _, err = net.SplitHostPort(hello.Conn.LocalAddr().String())
-		if err == nil {
-			sip := net.ParseIP(sni)
-			cer, err = crt.CreateCE(aa.CertConf, "", nil, []net.IP{sip}, aa.CaCrtBts, aa.CaKeyBts)
-		}
-	} else {
-		sni = hello.ServerName
-		cer, err = crt.CreateCE(aa.CertConf, "", []string{sni}, nil, aa.CaCrtBts, aa.CaKeyBts)
-	}
-	if err != nil {
-		if z.IsDebug() {
-			z.Println("[_tlshttp]: GetCertificate: ", sni, " error: ", err)
-		}
-		return nil, err
-	}
-	if aa.IsSubCa {
-		cer.Crt += string(aa.CaCrtBts)
-	}
-	if z.IsDebug() {
-		z.Println("[_tlshttp]: GetCertificate: ", sni)
-		z.Printf("=================== cert .crt ===================%s\n%s\n", sni, cer.Crt)
-		z.Printf("=================== cert .key ===================%s\n%s\n", sni, cer.Key)
-		z.Println("=================================================")
-	}
-	ct, err := tls.X509KeyPair([]byte(cer.Crt), []byte(cer.Key))
-	if err != nil {
-		z.Println("[_tlshttp]: GetCertificate: ", sni, " load error: ", err)
-		return nil, err
-	}
-	aa.cache.Store(hello.ServerName, &ct)
-	return &ct, nil
-}
-
-func (aa *TLSAutoConfig) GetConfigForClient(hello *tls.ClientHelloInfo) (*tls.Config, error) {
-	cert, err := aa.GetCertificate(hello)
-	if err != nil {
-		return nil, err
-	}
-	return &tls.Config{
-		Certificates: []tls.Certificate{*cert},
-	}, nil
 }

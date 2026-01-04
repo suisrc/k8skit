@@ -9,6 +9,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/samber/lo"
+	"github.com/suisrc/zgg/z/zc"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -85,11 +86,11 @@ func (patcher *InjectorPatcher) ConfigmapSidecarNames(namespace string, pod core
 		})
 
 		if len(parts) > 0 {
-			klog.Infof("sideCar injection for %v/%v: sidecars: %v", namespace, podName, sidecars)
+			zc.Printf("sideCar injection for %v/%v: sidecars: %v", namespace, podName, sidecars)
 			return parts
 		}
 	}
-	klog.Infof("Skipping mutation for [%v]. No action required", podName)
+	zc.Printf("Skipping mutation for [%v]. No action required", podName)
 	return nil
 }
 
@@ -347,7 +348,7 @@ func (patcher *InjectorPatcher) PatchPodCreate(ctx context.Context, namespace st
 		for _, configmapSidecarName := range configmapSidecarNames {
 			configmapSidecar, err := patcher.ConfigmapSidecarData(ctx, namespace, configmapSidecarName, pod)
 			if k8serrors.IsNotFound(err) {
-				klog.Infof("sidecar configmap %s -> %s was not found for %s/%s pod", namespace, configmapSidecarName, namespace, podName)
+				zc.Printf("sidecar configmap %s -> %s was not found for %s/%s pod", namespace, configmapSidecarName, namespace, podName)
 			} else if err != nil {
 				klog.Errorf("error fetching sidecar configmap %s -> %s for %s/%s pod - %v", namespace, configmapSidecarName, namespace, podName, err)
 			} else if configmapSidecar != nil {

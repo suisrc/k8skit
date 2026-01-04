@@ -7,11 +7,11 @@ import (
 	"k8skit/app"
 
 	"github.com/suisrc/zgg/z"
+	"github.com/suisrc/zgg/z/zc"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog/v2"
 )
 
 func init() {
@@ -69,30 +69,33 @@ func (aa *FakeSslApi) getCaSecret(zrc *z.Ctx) (*v1.Secret, int, error) {
 
 // -------------------------------------------------------------------------------
 
-func (aa *FakeSslApi) caGet(zrc *z.Ctx) bool {
+func (aa *FakeSslApi) caGet(zrc *z.Ctx) {
 	info, hss, err := aa.getCaSecret(zrc)
 	if err != nil {
-		klog.Info(err.Error())
-		return zrc.JERR(err, hss)
+		zc.Println(err.Error())
+		zrc.JERR(err, hss)
+	} else {
+		zrc.JSON(&z.Result{Success: true, Data: string(info.Data["ca.crt"])})
 	}
-	return zrc.JSON(&z.Result{Success: true, Data: string(info.Data["ca.crt"])})
 }
 
-func (aa *FakeSslApi) caTxt(zrc *z.Ctx) bool {
+func (aa *FakeSslApi) caTxt(zrc *z.Ctx) {
 	info, hss, err := aa.getCaSecret(zrc)
 	if err != nil {
-		klog.Info(err.Error())
-		return zrc.JERR(err, hss)
+		zc.Println(err.Error())
+		zrc.JERR(err, hss)
+	} else {
+		zrc.TEXT(string(info.Data["ca.crt"]), 0)
 	}
-	return zrc.TEXT(string(info.Data["ca.crt"]), 0)
 }
 
-func (aa *FakeSslApi) caB64(zrc *z.Ctx) bool {
+func (aa *FakeSslApi) caB64(zrc *z.Ctx) {
 	info, hss, err := aa.getCaSecret(zrc)
 	if err != nil {
-		klog.Info(err.Error())
-		return zrc.JERR(err, hss)
+		zc.Println(err.Error())
+		zrc.JERR(err, hss)
+	} else {
+		b64 := base64.StdEncoding.EncodeToString(info.Data["ca.crt"])
+		zrc.TEXT(b64, 0)
 	}
-	b64 := base64.StdEncoding.EncodeToString(info.Data["ca.crt"])
-	return zrc.TEXT(b64, 0)
 }
