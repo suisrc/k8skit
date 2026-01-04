@@ -3,7 +3,7 @@ package app
 import (
 	"os"
 
-	"github.com/suisrc/zgg/z"
+	"github.com/suisrc/zgg/z/zc"
 )
 
 var (
@@ -38,7 +38,7 @@ func K8sNS() string {
 	}
 	ns, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 	if err != nil {
-		z.Printf("unable to read namespace: %s, return 'default'", err.Error())
+		zc.Printf("unable to read namespace: %s, return 'default'", err.Error())
 		namespace_ = "default"
 	} else {
 		namespace_ = string(ns)

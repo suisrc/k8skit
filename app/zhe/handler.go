@@ -4,6 +4,7 @@ package zhe
 
 import (
 	"github.com/suisrc/zgg/z"
+	"github.com/suisrc/zgg/z/zc"
 )
 
 func init() {
@@ -11,37 +12,37 @@ func init() {
 }
 
 func Init0() {
-	z.Register("01-hello", func(srv z.IServer) z.Closed {
-		api := z.Inject(srv.GetSvcKit(), &HelloApi{})
-		srv.AddRouter("hello", api.hello)
+	z.Register("01-hello", func(zgg *z.Zgg) z.Closed {
+		api := z.Inject(zgg.SvcKit, &HelloApi{})
+		zgg.AddRouter("hello", api.hello)
 		return func() {
-			z.Println("api-hello closed")
+			zc.Println("api-hello closed")
 		}
 	})
-	z.Register("zz-world", func(srv z.IServer) z.Closed {
-		api := srv.GetSvcKit().Get("HelloApi").(*HelloApi)
-		z.GET("world", api.world, srv)
-		z.GET("token", z.TokenAuth(z.Ptr(""), api.token), srv)
+	z.Register("zz-world", func(zgg *z.Zgg) z.Closed {
+		api := zgg.SvcKit.Get("HelloApi").(*HelloApi)
+		z.GET("world", api.world, zgg)
+		z.GET("token", z.TokenAuth(z.Ptr(""), api.token), zgg)
 		return nil
 	})
 }
 
 type HelloApi struct {
-	FA any       // 标记不注入，默认
-	FB any       `svckit:"-"`         // 标记不注入，默认
-	CM z.IServer `svckit:"type"`      // 根据类型自动注入
-	SK z.SvcKit  `svckit:"type"`      // 根据类型自动注入
-	AH any       `svckit:"api-hello"` // 根据名称自动注入
-	AW any       `svckit:"api-world"` // 根据名称自动注入
-	TK z.TplKit  `svckit:"auto"`      // 根据名称自动注入
+	FA any      // 标记不注入，默认
+	FB any      `svckit:"-"`         // 标记不注入，默认
+	CM *z.Zgg   `svckit:"type"`      // 根据类型自动注入
+	SK z.SvcKit `svckit:"type"`      // 根据类型自动注入
+	AH any      `svckit:"api-hello"` // 根据名称自动注入
+	AW any      `svckit:"api-world"` // 根据名称自动注入
+	TK z.TplKit `svckit:"auto"`      // 根据名称自动注入
 }
 
-func (aa *HelloApi) hello(zrc *z.Ctx) bool {
-	return zrc.JSON(&z.Result{Success: true, Data: "hello!", ErrShow: 1})
+func (aa *HelloApi) hello(zrc *z.Ctx) {
+	zrc.JSON(&z.Result{Success: true, Data: "hello!", ErrShow: 1})
 }
-func (aa *HelloApi) world(zrc *z.Ctx) bool {
-	return zrc.JSON(&z.Result{Success: true, Data: "world!"})
+func (aa *HelloApi) world(zrc *z.Ctx) {
+	zrc.JSON(&z.Result{Success: true, Data: "world!"})
 }
-func (aa *HelloApi) token(zrc *z.Ctx) bool {
-	return zrc.JSON(&z.Result{Success: true, Data: "token!"})
+func (aa *HelloApi) token(zrc *z.Ctx) {
+	zrc.JSON(&z.Result{Success: true, Data: "token!"})
 }
