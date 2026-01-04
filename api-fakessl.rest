@@ -1,4 +1,4 @@
-@BASE=http://127.0.0.1:80
+@BASE=http://127.0.0.1:81
 
 ###
 GET {{BASE}}/healthz
@@ -6,59 +6,51 @@ Content-Type: application/json
 
 
 ###
-POST {{BASE}}/api/ssl/v1/ca/init?token=MQ8wDQYDVQQHEwZEYWxpYW4x&key=tst
+POST {{BASE}}/api/ssl/v1/ca/init?token=MQ8wDQYDVQQHEwZEYWxpYW4x&key=tst&cn=kubernetes
 Content-Type: application/json
 
 {
-  "CN": "Kubernetes",
-  "key": {
-    "size": 2048
-  },
-  "CA":{
-    "expiry":"20y",
+  "kubernetes": {
+    "expiry": "20y",
     "name": {
       "O": "Kubernetes",
       "OU": "CA"
     }
   },
-  "profiles": {
-    "default": {
-      "expiry": "10y",
-      "name": {
-        "O": "Kubernetes",
-        "OU": "CA"
-      }
-    },
-    "profile": {
-      "expiry": "30d",
-      "name": {
-        "O": "profile",
-        "OU": "CA"
-      }
+  "default": {
+    "expiry": "10y",
+    "name": {
+      "O": "Kubernetes",
+      "OU": "CA"
+    }
+  },
+  "profile": {
+    "expiry": "30d",
+    "name": {
+      "O": "profile",
+      "OU": "CA"
     }
   }
 }
 
 ###
-POST {{BASE}}/api/ssl/v1/ca/init?token=v4d050b629c0c4ed72d8c475d681115&key=tst
+POST {{BASE}}/api/ssl/v1/ca/init?token=v34ed884903b854540a8c86299fe2308&key=tst
 Content-Type: application/json
 
 
 {
-  "profiles": {
-    "default": {
-      "expiry": "10y",
-      "name": {
-        "O": "default",
-        "OU": "CA"
-      }
-    },
-    "profile": {
-      "expiry": "30d",
-      "name": {
-        "O": "profile",
-        "OU": "CA"
-      }
+  "default": {
+    "expiry": "5y",
+    "name": {
+      "O": "default",
+      "OU": "CA"
+    }
+  },
+  "profile": {
+    "expiry": "60d",
+    "name": {
+      "O": "profile",
+      "OU": "CA"
     }
   }
 }
@@ -74,31 +66,31 @@ GET {{BASE}}/api/ssl/v1/ca/b64?key=tst
 
 
 ###
-GET {{BASE}}/api/ssl/v1/ce?token=Ckt1YmVybmV0ZXM&key=tst&domain=dev1.sims-cn.com&profile=&kind=1&cn=dev01
+GET {{BASE}}/api/ssl/v1/ce?token=Ckt1YmVybmV0ZXM&key=tst&domain=dev1.sims-cn.com&kind=1&cn=dev01
 Content-Type: application/json
 
 ###
-GET {{BASE}}/api/ssl/v1/ce?token=v4d050b629c0c4ed72d8c475d6811150&key=tst&domain=dev1.sims-cn.com&profile=&kind=3&cn=dev01
+GET {{BASE}}/api/ssl/v1/ce?token=v34ed884903b854540a8c86299fe2308&key=tst&domain=dev1.sims-cn.com&kind=3&cn=dev01
 Content-Type: application/json
 
 ###
-GET {{BASE}}/api/ssl/v1/ce?token=v4d050b629c0c4ed72d8c475d6811150&key=tst&domain=dev2.sims-cn.com&profile=&kind=1&cn=dev02
+GET {{BASE}}/api/ssl/v1/ce?token=v34ed884903b854540a8c86299fe2308&key=tst&domain=dev2.sims-cn.com&kind=1&cn=dev02
 Content-Type: application/json
 
 ###
-GET {{BASE}}/api/ssl/v1/ce?token=v4d050b629c0c4ed72d8c475d6811150&key=tst&domain=dev3.sims-cn.com&profile=&kind=1&cn=dev03
+GET {{BASE}}/api/ssl/v1/ce?token=v34ed884903b854540a8c86299fe2308&key=tst&domain=dev3.sims-cn.com&kind=1&cn=dev03
 Content-Type: application/json
 
 ###
-GET {{BASE}}/api/ssl/v1/ce?token=v4d050b629c0c4ed72d8c475d6811150&key=tst&domain=dev4.sims-cn.com&profile=&kind=1&cn=dev04
+GET {{BASE}}/api/ssl/v1/ce?token=v34ed884903b854540a8c86299fe2308&key=tst&domain=dev4.sims-cn.com&kind=1&cn=dev04
 Content-Type: application/json
 
 ###
-GET {{BASE}}/api/ssl/v1/ce?token=v4d050b629c0c4ed72d8c475d6811150&key=tst&domain=dev5.sims-cn.com&profile=&kind=1&cn=dev05
+GET {{BASE}}/api/ssl/v1/ce?token=v34ed884903b854540a8c86299fe2308&key=tst&domain=dev5.sims-cn.com&domain=dev7.sims-cn.com&kind=1&cn=dev05
 Content-Type: application/json
 
 ###
-GET {{BASE}}/api/ssl/v1/ce?token=v4d050b629c0c4ed72d8c475d6811150&key=tst&domain=dev6.sims-cn.com
+GET {{BASE}}/api/ssl/v1/ce?token=v34ed884903b854540a8c86299fe2308&key=tst&domain=dev6.sims-cn.com
 Content-Type: application/json
 
 ###

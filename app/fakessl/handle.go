@@ -15,14 +15,14 @@ import (
 )
 
 func init() {
-	z.Register("88-app.fakessl", func(srv z.IServer) z.Closed {
-		api := z.Inject(srv.GetSvcKit(), &FakeSslApi{})
-		z.POST("api/ssl/v1/ca/init", api.caInit, srv)
-		z.GET("api/ssl/v1/ca", api.caGet, srv)
-		z.GET("api/ssl/v1/ca/txt", api.caTxt, srv)
-		z.GET("api/ssl/v1/ca/b64", api.caB64, srv)
-		z.GET("api/ssl/v1/cert", api.ceGet, srv) // certificate
-		z.GET("api/ssl/v1/ce", api.ceGet, srv)
+	z.Register("88-app.fakessl", func(zgg *z.Zgg) z.Closed {
+		api := z.Inject(zgg.SvcKit, &FakeSslApi{})
+		z.POST("api/ssl/v1/ca/init", api.caInit, zgg)
+		z.GET("api/ssl/v1/ca", api.caGet, zgg)
+		z.GET("api/ssl/v1/ca/txt", api.caTxt, zgg)
+		z.GET("api/ssl/v1/ca/b64", api.caB64, zgg)
+		z.GET("api/ssl/v1/cert", api.ceGet, zgg) // certificate
+		z.GET("api/ssl/v1/ce", api.ceGet, zgg)
 		return nil
 	})
 }
@@ -34,7 +34,6 @@ type SSLQueryCO struct {
 	Key        string   `form:"key"`
 	Kind       int      `form:"kind"`
 	CommonName string   `form:"cn"`
-	Profile    string   `form:"profile"`
 	Domains    []string `form:"domain"`
 }
 

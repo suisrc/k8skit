@@ -29,8 +29,7 @@ main:
 	go run main.go -c zgg.toml
 
 mapp:
-	go run main.go -xrt 2 -local \
-	--token MQ8wDQYDVQQHEwZEYWxpYW4x \
+	go run main.go -xrt 2 -local -debug -port 81 \
 	--injectAnnotation ksidecar/configmap \
 	--injectDefaultKey sidecar.yml
 

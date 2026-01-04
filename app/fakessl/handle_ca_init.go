@@ -28,8 +28,8 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) bool {
 		return zrc.JERR(&z.Result{ErrCode: "param-empty", Message: "key is empty"}, 400)
 	}
 	// ------------------------------------------------------------------------------------------
-	config, err := z.ReadBody(zrc.Request, &crt.CertConfig{})
-	if err != nil {
+	config := crt.CertConfig{}
+	if _, err := z.ReadBody(zrc.Request, &config); err != nil {
 		message := fmt.Sprintf("init api, read body error: %s", err.Error())
 		klog.Info(message)
 		return zrc.JERR(&z.Result{ErrCode: "body-error", Message: message}, 400)
@@ -69,8 +69,8 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) bool {
 	}
 	// ------------------------------------------------------------------------------------------
 	if cfgBts, ok := info.Data["config"]; ok { // 配置已经存在
-		config2 := &crt.CertConfig{}
-		if err := json.Unmarshal(cfgBts, config2); err != nil {
+		config2 := crt.CertConfig{}
+		if err := json.Unmarshal(cfgBts, &config2); err != nil {
 			message := fmt.Sprintf("init api, json unmarshal error: %s", err.Error())
 			klog.Info(message)
 			return zrc.JERR(&z.Result{ErrCode: "k8s-secret-err", Message: message}, 500)
@@ -101,7 +101,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) bool {
 		return zrc.JSON(&z.Result{Success: true, Data: string(crt)})
 	}
 	// 证书不存在，需要重写构建证书
-	ca, err := crt.CreateCA(config)
+	ca, err := crt.CreateCA(config, co.CommonName)
 	if err != nil {
 		message := fmt.Sprintf("init api, create ca error: %s", err.Error())
 		klog.Info(message)

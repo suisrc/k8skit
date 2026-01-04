@@ -95,13 +95,13 @@ func (aa *FakeSslApi) ceGet(zrc *z.Ctx) bool {
 	if !ok0 || !ok1 || !ok2 {
 		return zrc.JERR(&z.Result{ErrCode: "k8s-info-error", Message: "config is error, CA证书不存在"}, 500)
 	}
-	config := &crt.CertConfig{}
+	config := crt.CertConfig{}
 	if err := json.Unmarshal(caBts, &config); err != nil {
 		message := fmt.Sprintf("ce get api, json unmarshal config error: %s", err.Error())
 		return zrc.JERR(&z.Result{ErrCode: "k8s-info-error", Message: message}, 500)
 
 	}
-	sub, err := crt.CreateCE(config, co.CommonName, co.Profile, 0, dns, ips, caCrt, caKey)
+	sub, err := crt.CreateCE(config, co.CommonName, dns, ips, caCrt, caKey)
 	if err != nil {
 		message := fmt.Sprintf("ce get api, create cert error: %s", err.Error())
 		return zrc.JERR(&z.Result{ErrCode: "k8s-info-error", Message: message}, 500)

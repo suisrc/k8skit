@@ -12,11 +12,10 @@ import (
 )
 
 func init() {
-	z.Register("99-app.sidecar", func(srv z.IServer) z.Closed {
-		svc := srv.GetSvcKit()
+	z.Register("99-app.sidecar", func(zgg *z.Zgg) z.Closed {
 		// api := z.Inject(svc, &MutateApi{Patcher: NewInjectorPatcher(svc)})
-		api := z.RegSvc(svc, &MutateApi{Patcher: NewInjectorPatcher(svc)})
-		z.POST("mutate", api.mutate, srv) // 注册接口
+		api := z.RegSvc(zgg.SvcKit, &MutateApi{Patcher: NewInjectorPatcher(zgg.SvcKit)})
+		z.POST("mutate", api.mutate, zgg) // 注册接口
 		return nil
 	})
 }
