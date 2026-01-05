@@ -39,3 +39,10 @@ bflow:
 
 clean:
 	rm -rf _out/$(APP) && rm go.mod go.sum
+
+tflow:
+	@if [ -z "$(tag)" ]; then \
+		echo "error: 'tag' not specified! Please specify the 'tag' using 'make tflow tag=(version)-(appname)'";\
+		exit 1; \
+	fi
+	git commit -am "${tag}" && git tag -a $(tag) -m "${tag}" && git push origin $(tag) && git reset --hard HEAD~1
