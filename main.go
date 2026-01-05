@@ -1,9 +1,11 @@
 package main
 
 import (
+	"embed"
 	_ "embed"
 	"strings"
 
+	"github.com/suisrc/zgg/app/front2"
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/zc"
 	_ "github.com/suisrc/zgg/ze/rdx"
@@ -18,8 +20,8 @@ var app_ []byte
 //go:embed version
 var ver_ []byte
 
-// //go:embed www/* www/**/*
-// var www_ embed.FS
+//go:embed www/* www/**/*
+var www_ embed.FS
 
 var (
 	_app = strings.TrimSpace(string(app_))
@@ -29,7 +31,7 @@ var (
 func main() {
 	zc.CFG_ENV = "KIT"
 
-	// front2.Init(www_) // 前端应用，由于需要 wwwFS参数，必须人工初始化
+	front2.Init(www_) // 前端应用，由于需要 wwwFS参数，必须人工初始化
 	// kwdog2.Init() // API边车网关， 通过 Sidecar 模式保护主服务
 	// fluent.Init() // 采集器日志, 为 fluentbit agent 提供 HTTP 收集日志功能
 
