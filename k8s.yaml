@@ -2,7 +2,7 @@
 # kubectl apply -f k8s.yaml
 # 
 # docker 环境下运行
-# docker run --name kdemo -v /data/kdemo:/data/kdemo -e KIT_FLUENT_TOKEN=xxx123456789 -d suisrc/k8skit:v1.0.1-kdemo
+# docker run --name kdemo -v /opt/kdemo:/opt/kdemo -e KIT_KWLOG2_TOKEN=xxx123456789 -d suisrc/k8skit:1.0.1-kdemo
 
 ---
 apiVersion: networking.k8s.io/v1
@@ -16,20 +16,20 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: kdemo.exp.com
+    - host: kdemo.xxx.zzz
       http:
         paths:
           - backend:
               service:
-                name: vscode
+                name: kdemo
                 port:
                   name: http
             path: /
             pathType: Prefix
   tls:
     - hosts:
-        - kdemo.exp.com
-      secretName: tls-kdemo.exp.com
+        - kdemo.xxx.zzz
+      secretName: tls-kdemo.xxx.zzz
 
 ---
 apiVersion: v1
@@ -66,21 +66,20 @@ spec:
       # nodeSelector: { type: master }
       nodeName: dev-master # 必须指定节点， 单实例部署
       containers:
-        - image: ghcr.io/suisrc/k8skit:vX.Y.Z-kdemo
+        - image: ghcr.io/suisrc/k8skit:X.Y.Z-kdemo
           name: kdemo
           # args: ["-print", "-port", "81"]
           env:
             - {name: TZ, value: Asia/Shanghai }
-            - {name: KIT_FLUENT_TOKEN, value: xxx123456789 }
+            - {name: KIT_KWLOG2_TOKEN, value: xxx123456789 }
       #     volumeMounts:
-      #       - mountPath: /opt/data
+      #       - mountPath: /opt/logs
       #         name: data
-      #         #subPath: xxx
       # volumes:
       #   - name:  data
       #     hostPath:
       #       type: DirectoryOrCreate
-      #       path: /data/kdemo
+      #       path: /opt/kdemo
       #     # nfs:
       #     #   server: 192.168.3.33
-      #     #   path: /volume0/xxx/yyy/zzz
+      #     #   path: /volume0/kdemo
