@@ -8,7 +8,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/pkg/errors v0.9.1
 	github.com/samber/lo v1.52.0
-	github.com/suisrc/zgg v0.2.7
+	github.com/suisrc/zgg v0.2.9
 	k8s.io/api v0.34.3
 	k8s.io/apimachinery v0.34.3
 	k8s.io/client-go v0.34.3
