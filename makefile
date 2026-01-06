@@ -40,7 +40,7 @@ bflow:
 clean:
 	rm -rf _out/$(APP) && rm go.mod go.sum
 
-tflow:
+git:
 	@if [ -z "$(tag)" ]; then \
 		echo "error: 'tag' not specified! Please specify the 'tag' using 'make tflow tag=(version)-(appname)'";\
 		exit 1; \
