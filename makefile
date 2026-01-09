@@ -48,7 +48,7 @@ clean:
 
 git:
 	@if [ -z "$(tag)" ]; then \
-		echo "error: 'tag' not specified! Please specify the 'tag' using 'make tflow tag=(version)-(appname)'";\
+		echo "error: 'tag' not specified! Please specify the 'tag' using 'make tflow tag=(version)'";\
 		exit 1; \
 	fi
-	git commit -am "${tag}" && git tag -a $(tag) -m "${tag}" && git push && git push origin $(tag)
+	git commit -am "${tag}" && git tag -a $(tag)-sidecar -m "${tag}" && git push && git push origin $(tag)-sidecar
