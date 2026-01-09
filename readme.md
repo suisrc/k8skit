@@ -1,42 +1,271 @@
-# k8skit
+# fluentbit
 
-高度集成， 封装了一个前端服务
+An output plugin (Go) for Aliyun SLS
+
+
+### Build
 
 ```
-k8skit 
-  -addr string
-        http server addr (default "0.0.0.0")
-  -api string
-        http server api path
-  -c string
-        config file path
-  -crt string
-        http server cer file
-  -debug
-        debug mode
-  -eng string
-        http server router engine (default "map")
-  -key string
-        http server key file
-  -local
-        http server local mode
-  -port int
-        http server Port (default 80)
-  -tpl string
-        templates folder path
-  -xrt string
-        X-Request-Rt default value
+go build -buildmode=c-shared -o out_sls.so .
 ```
 
-## 使用说明
+### Run
+```
+fluent-bit -c example/fluent.conf -e out_sls.so
+```
+
+### Run with k8s - DaemonSet Mode
+
+``` yaml
+# kubectl apply -f fluent.yaml -n default
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: klog
+  namespace: default
+spec:
+  ports:
+  - { name: klog41, port: 5141, protocol: UDP }
+  - { name: http20, port: 2020, protocol: TCP }
+  selector:
+    app: fluent
+  clusterIP: None
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent
+  namespace: default
+data:
+# klog.default.svc
+# 2.0 系统， 应用将日志推送到控制台后， 容器通过控制台日志文件采集, 容器的名字以 -logtty 结尾的会自动采集
+# 这是一个的例子，用于我们测试集群的日志收集，1.0系统我们使用sls,cls这类系统，会有费用产生，测试环境没必要
+  config2: |
+    [SERVICE]
+        Parsers_File    parsers2.conf
+        # 启用监控接口(默认端口2020)
+        # HTTP_Server     On
+        # HTTP_Listen     0.0.0.0
+    [INPUT]
+        # 兼容之前的旧系统配置, 注意这里没有平铺 message(json) 内容
+        Name     syslog
+        Listen   0.0.0.0
+        Port     5141
+        Mode     udp
+        Tag      kube.dev.udp
+        Parser   kwlog
+    [INPUT]
+        Name              tail
+        Tag               klog.*
+        Path              /var/log/containers/*-logtty-*.log
+        DB                /data/kube.db
+        Parser            cri
+        Mem_Buf_Limit     50MB
+        Skip_Long_Lines   On
+        Refresh_Interval  10
+        Rotate_Wait       5
+    [FILTER]
+        Name              kubernetes
+        Match             klog.var.log.containers.*
+        Labels            On
+        Annotations       Off
+    [FILTER]
+        Name              nest
+        Match             klog.var.log.containers.*
+        Operation         lift
+        Nested_under      kubernetes
+        Add_prefix        __
+    [FILTER]
+        Name              nest
+        Match             klog.var.log.containers.*
+        Operation         lift
+        Nested_under      __labels
+        Add_prefix        __labels_
+    [FILTER]
+        Name              modify
+        Match             klog.var.log.containers.*
+        Remove            _ltag
+        Rename            __host __node_name
+        Rename            __labels_app __app_name
+        Remove            __pod_id
+        Remove            __docker_id
+        Remove            __container_hash
+        Remove_wildcard   __labels_
+    [FILTER]
+        Name              rewrite_tag
+        Match             klog.var.log.containers.*
+        Rule              $__container_name ^(.+)-logtty$ kube.dev.tty false
+        Emitter_Name      re_emitted
+    [OUTPUT]
+       Name   stdout
+       Match  *
+    #[OUTPUT]
+    #    Name    http
+    #    Match   kube.*
+    #    Host    10.42.0.14
+    #    Port    81
+    #    Header  Authorization Token xxx123456789
+    #    URI     /api/logs
+    #    Json_date_key   __time
+    #    Header_tag      X-Request-Tag
+# kubectl logs `kubectl get pod -o wide | grep fluent | cut -d ' ' -f 1` | tail -n 10
+# kubectl delete pod `kubectl get pod -o wide | grep fluent | cut -d ' ' -f 1`
+# 自定义解析器, 注意时区解析， z无冒号,Z有冒号
+# https://github.com/fluent/fluent-bit/blob/master/conf/parsers.conf
+  parsers.conf: |
+    [PARSER]
+        Name    json
+        Format  json
+    [PARSER]
+        Name    text
+        Format  regex
+        Regex   ^(?<message>.*)$
+    [PARSER]
+        # <134|pri>2021-10-12T13:51:45Z __pod_name __app_name.__namespace_name[pid]: {msg: 'hello'}
+        Name          kwl0g
+        Format        regex
+        Regex         ^\<(?<pri>[0-9]+)\>(?<time>[^ ]+) (?<hostname>[^ ]+) (?<appname>[\w-]+)(?:\.(?<namespace>[\w-]+))?\[(?<pid>[0-9]+)\]\: *(?<message>.*)$
+        Decode_Field  json  message
+    [PARSER]
+        Name         kwlog
+        Format       regex
+        Regex        ^\<(?<_ktag>[0-9]+)\>(?<_time>[^ ]+) (?<__pod_name>[^ ]+) (?<__app_name>[\w-]+)(?:\.(?<__namespace_name>[\w-]+))?\[(?<_pid>[0-9]+)\]\: *(?<message>.*)$
+        Time_Key     _time
+        Time_Keep    On
+    [PARSER]
+        Name          jkey
+        Format        regex
+        Regex         ^(?<key>[^ ]+) +(?<message>.*)$
+        Decode_Field  json  message
+    [PARSER]
+        Name    k9tag
+        Format  regex
+        Regex   (?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<container_id>[a-z0-9]{64})
+    [PARSER]
+        # http://rubular.com/r/tjUt3Awgg4
+        Name         cri
+        Format       regex
+        Regex        ^(?<_time>[^ ]+) (?<_ktag>stdout|stderr) (?<_ltag>[^ ]*) (?<message>.*)$
+        Time_Key     _time
+        Time_Format  %Y-%m-%dT%H:%M:%S.%L%z
+        Time_Keep    On
+# 数据处理配置 https://docs.fluentbit.io/manual/data-pipeline/filters/lua
+  scripts.lua: |
+    function k8s_format_record(tag, timestamp, record)
+      local k8s = record["kubernetes"]
+      if k8s == nil then
+        return 1, timestamp, record
+      end
+      local data = {}
+      data["_time"] = record["_time"]
+      data["_kind"] = record["_kind"]
+      data["message"] = record["message"]
+      data["__namespace_name"] = k8s["namespace_name"]
+      data["__pod_name"] = k8s["pod_name"]
+      data["__pod_ip"] = k8s["pod_ip"]
+      data["__node_name"] = k8s["host"]
+      data["__container_name"] = k8s["container_name"]
+      data["__container_image"] = k8s["container_image"]
+      -- 匹配最后是否有 -logtty, 有删除后面，没有保持整体
+      return 1, timestamp, data
+    end
+    -- [FILTER]
+    --     Name    lua
+    --     Match   klog.var.log.containers.*
+    --     script  /fluent-bit/etc/scripts2.lua
+    --     call    k8s_format_record
+
+---
+# k8skit:1.3.7-fluent4.2.2 是基于 fluentbit:4.2.2 修改的版本，增加的 AliyunSLS 插件
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluent
+  namespace: default
+spec:
+  selector: { matchLabels: { app: fluent }}
+  template:
+    metadata: 
+      labels: { app: fluent }
+      annotations:
+        fluentbit.io/exclude: "true"
+        # fluentbit.io/parser: ????
+    spec:
+      serviceAccountName: fluent
+      # nodeName: dev-master
+      containers:
+        - name: app
+          image: ghcr.io/suisrc/k8skit:1.3.7-fluent4.2.2
+          env:
+            - { name: TZ, value: Asia/Shanghai } # CST-8
+            # - { name: AWS_ACCESS_KEY_ID, value: xxxx }
+            # - { name: AWS_SECRET_ACCESS_KEY, value: zzzz }
+          volumeMounts:
+            # - mountPath: /fluent-bit/etc/scripts2.lua
+            #   name: config
+            #   subPath: scripts.lua
+            - mountPath: /fluent-bit/etc/parsers2.conf
+              name: config
+              subPath: parsers.conf
+            - mountPath: /fluent-bit/etc/fluent-bit.conf
+              name: config
+              subPath: config2
+            - mountPath: /data
+              name: data
+            - mountPath: /var/log/containers
+              name: varlog
+            - mountPath: /var/log/pods
+              name: varpod
+            # /var/log/containers 中的内容是 /var/log/pods/**/0.log 中的链接，必须同时挂载
+      volumes:
+        - { name: varlog, hostPath: { path: /var/log/containers }}
+        - { name: varpod, hostPath: { path: /var/log/pods }}
+        - { name: config, configMap: { name: fluent }}
+        - { name: data, hostPath: { path: /var/log/fluentbit, type: DirectoryOrCreate }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fluent
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fluent
+  namespace: default
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "pods", "nodes", "nodes/proxy"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fluent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fluent
+subjects:
+  - kind: ServiceAccount
+    name: fluent
+    namespace: default
+
+```
 
 
- k8s集群工具箱
+### debug
 
-[zgg](https://github.com/suisrc/zgg.git) Web服务框架
+#### fluent-bit
 
-[k8skit](https://github.com/suisrc/k8skit.git) k8s工具包
-- [kubesider](https://github.com/suisrc/k8skit/tree/sidecar): k8s 边车注入服务
-- [front2](https://github.com/suisrc/k8skit/tree/front2): 前端部署服务， 取代nginx部署前段
-- [kwdog2](https://github.com/suisrc/k8skit/tree/kwdog2): k8s 容器日志、监控、鉴权服务
-- [fluent](https://github.com/suisrc/k8skit/tree/fluent): fluentd 日志HTTP接受服务
+```sh
+# 安装 fluent-bit
+sudo sh -c 'curl https://packages.fluentbit.io/fluentbit.key | gpg --dearmor > /usr/share/keyrings/fluentbit-keyring.gpg'
+codename=$(grep -oP '(?<=VERSION_CODENAME=).*' /etc/os-release 2>/dev/null || lsb_release -cs 2>/dev/null)
+echo "deb [signed-by=/usr/share/keyrings/fluentbit-keyring.gpg] https://packages.fluentbit.io/debian/$codename $codename main" | sudo tee /etc/apt/sources.list.d/fluent-bit.list
+```
+

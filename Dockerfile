@@ -1,25 +1,17 @@
-FROM golang:1.25-alpine3.23 AS build_deps
 
-RUN apk add --no-cache git
+FROM golang:1.25-trixie as builder
 
-WORKDIR /opt
+COPY go.mod /build/
+COPY go.sum /build/
+COPY ali_sls.go /build/
+RUN cd /build/ && go build -buildmode=c-shared -o ali_sls.so .
 
-COPY go.mod .
-COPY go.sum .
+FROM fluent/fluent-bit:4.2.2 as fluent-bit
+USER root
 
-RUN go mod download
+COPY --from=builder /build/ali_sls.so /fluent-bit/bin/
+COPY --from=builder /build/ali_sls.h /fluent-bit/bin/
 
-FROM build_deps AS build
+WORKDIR /fluent-bit
 
-COPY . .
-
-RUN CGO_ENABLED=0 go build -o k8skit -ldflags '-w -extldflags "-static"' .
-
-FROM alpine:3.23
-
-RUN apk add --no-cache ca-certificates tzdata
-
-WORKDIR /opt
-COPY --from=build /opt/k8skit /opt/k8skit
-
-ENTRYPOINT ["./k8skit"]
+CMD ["./bin/fluent-bit", "-c", "etc/fluent-bit.conf", "-e", "bin/ali_sls.so"]

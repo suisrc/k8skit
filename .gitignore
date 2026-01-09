@@ -1,25 +1,50 @@
-!.vscode
+# Eclipse
+.project
+.classpath
+.settings/
+bin/
 
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
+# IntelliJ
 .idea
-# Test binary, build with `go test -c`
-*.test
+*.ipr
+*.iml
+*.iws
 
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
+# NetBeans
+nb-configuration.xml
 
-# Ignore the built binary
+# Visual Studio Code
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+.factorypath
 
 
-# Make artifacts
-dist
-_out
-*.log
-www
-www2
-tmpl
+# OSX
+.DS_Store
+
+# Vim
+*.swp
+*.swo
+
+# patch
+*.orig
+*.rej
+
+# golang
+runtime/*
+*/github.com/*
+*/golang.org/*
+*/gopkg.in/*
+*/bin
+*/test/*
+*/test
+*/vendor
+logs/*
+__*
+
+ali_sls.h
+ali_sls.so
+
+www/
+_out/
