@@ -33,9 +33,10 @@ syslog="klog.default.svc:5141"
 [kwlog2]
 token="xxx123456789"
 store="./www"
-route="/api/zgg/logs"
+route="/api/logs"
 use_origin=true
 
 [proxy2]
+syslog="klog.default.svc:5141"
 cacrt="_out/proxy2/ca.crt"
 cakey="_out/proxy2/ca.key"
