@@ -2,12 +2,11 @@
 
 NOW = $(shell date -u '+%Y%m%d%I%M%S')
 FTV = fluent4.2.2
-
-APP = alisls-fluentd
+APP = k8skit
 
 # 初始化mod
 init:
-	go mod init github.com/suisrc/${APP}
+	go mod init ${APP}
 
 # 修正依赖
 tidy:
