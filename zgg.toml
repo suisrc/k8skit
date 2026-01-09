@@ -1,6 +1,5 @@
 # 配置文件
-printconfig=true
-
+print=true
 debug=true
 
 [server]

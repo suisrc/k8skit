@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/suisrc/zgg/z"
-	"github.com/suisrc/zgg/z/zc"
 	_ "github.com/suisrc/zgg/ze/rdx"
 	// _ "github.com/suisrc/zgg/app/zhe"
 	// _ "k8skit/app/zhe"
@@ -28,7 +27,7 @@ var (
 
 func main() {
 	// zc.C.Syslog, zc.C.LogTty = "udp://klog.default.svc:5141", true
-	zc.CFG_ENV, zc.LogTrackFile = "KIT", false
+	// zc.CFG_ENV, zc.LogTrackFile = "KIT", false
 	// z.HttpServeDef = false // 标记是否启动默认 HTTP 服务， z.RegisterDefaultHttpServe
 	// kwdog2.RecordFunc = gte.ToRecord1
 
