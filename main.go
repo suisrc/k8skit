@@ -11,6 +11,7 @@ import (
 
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/zc"
+	_ "github.com/suisrc/zgg/ze/log_syslog"
 	_ "github.com/suisrc/zgg/ze/rdx"
 	// _ "github.com/suisrc/zgg/app/zhe"
 	// _ "k8skit/app/zhe"
@@ -32,6 +33,6 @@ var (
  * 程序入口
  */
 func main() {
-	zc.CFG_ENV = "KIT"
+	zc.CFG_ENV, zc.LogTrackFile = "KIT", false
 	z.Execute(_app, _ver, "(https://github.com/suisrc/k8skit)")
 }
