@@ -45,4 +45,4 @@ git:
 		echo "error: 'tag' not specified! Please specify the 'tag' using 'make tflow tag=(version)-(appname)'";\
 		exit 1; \
 	fi
-	git commit -am "${tag}" && git tag -a $(tag) -m "${tag}" && git push origin $(tag) && git reset --hard HEAD~1
+	git commit -am "${tag}" && git tag -a $(tag)-front2s3 -m "${tag}" && git push origin $(tag)-front2s3
