@@ -40,6 +40,11 @@ k8s集群工具箱
 [k8skit](https://github.com/suisrc/k8skit.git) k8s工具包
 - [sidecar](https://github.com/suisrc/k8skit/tree/sidecar): kube-injector + fake-ssl, 边车注入 + 模拟SSL
 - [fluentbit](https://github.com/suisrc/k8skit/tree/fluentbit): 支持阿里云 sls 日志服务
+- [front2s3](https://github.com/suisrc/k8skit/tree/front2s3): 在 front2 基础上，支持 S3 自动部署， 以便于使用CDN加速
 - [front2](https://hub.docker.com/r/suisrc/k8skit/tags?name=front2): 前端部署服务， 取代nginx部署前段
 - [kwdog2](https://hub.docker.com/r/suisrc/k8skit/tags?name=kwdog2): k8s 容器日志、监控、鉴权服务， kwdog2 + proxy2
 - [kwlog2](https://hub.docker.com/r/suisrc/k8skit/tags?name=kwlog2): fluentbit 日志收集服务，之后上报到 http 服务器
+
+## 其他模块
+
+- [alidns-webhook](https://github.com/suisrc/alidns-webhook.git) 为 cert-manager 模块提供 阿里云, 腾讯云， 华为云 DNS 支持
