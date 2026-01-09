@@ -20,6 +20,8 @@ FROM alpine:3.23
 RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /opt
-COPY --from=build /opt/k8skit /opt/k8skit
+COPY --from=build /opt/k8skit  /opt/k8skit
+COPY --from=build /opt/version /opt/version
+COPY --from=build /opt/vname   /opt/vname
 
 ENTRYPOINT ["./k8skit"]

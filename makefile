@@ -26,7 +26,7 @@ helm:
 	helm -n default template deploy/chart > deploy/bundle.yml
 
 main:
-	KIT_KWLOG2_TOKEN=xxxx123456789 go run main.go -local -debug -port 81 -c zgg.toml
+	KIT_KWLOG2_TOKEN=xxxx123456789 go run main.go -local -debug -port 81 -c __zgg.toml
 
 tenv:
 	KIT_KWLOG2_TOKEN=xxxx123456789 go run main.go -debug -print -port 81

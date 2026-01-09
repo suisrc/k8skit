@@ -18,23 +18,20 @@ rootpath=["/zgg","/demo"]
 "/zgg"="index.htm"
 "/demo"="demo.html"
 
-[kwdog2]
-rootpath=""
-authz="http://end-iam-kin-svc.uat-fmes.svc/authx"
-servaddr="http://end-iam-pas-svc.uat-fmes.svc"
-ttylog=true
-syslog="klog.default.svc:5141"
-
-[kwdog2.routers]
-"/api/iam/"="http://end-iam-kin-svc.uat-fmes.svc"
-
-[kwlog2]
-token="xxx123456789"
-store="./www"
-route="/api/logs"
-use_origin=true
-
-[proxy2]
-syslog="klog.default.svc:5141"
-cacrt="_out/proxy2/ca.crt"
-cakey="_out/proxy2/ca.key"
+[s3cdn]
+# s3 端口
+endpoint=""
+# s3 账号
+access=""
+# s3 秘钥
+secret=""
+# s3 存储桶
+bucket=""
+# s3 区域
+region=""
+# s3 根目录
+rootdir=""
+# 访问地址, CDN域名， 包含桶信息，比如 //[bucket].x.y.z or //x.y.z/[bucket]
+domain=""
+# 对应用的内容进行重写
+rewrite=false
