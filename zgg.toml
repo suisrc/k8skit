@@ -13,7 +13,6 @@ xrt="2"
 f2show="/site/list123456"
 suff=[".html",".htm",".css",".map",".js",".ts",".json"]
 rootpath=["/zgg","/demo"]
-# indexs="/zgg=index.htm,/demo=demo.html"
 
 [front2.indexs]
 "/zgg"="index.htm"
