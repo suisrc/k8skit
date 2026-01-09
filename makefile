@@ -35,7 +35,7 @@ mapp:
 	--injectDefaultKey sidecar.yml
 
 tenv:
-	KIT_FLUENT_TOKEN=xxxx123456789 go run main.go -debug -print -port 81
+	KIT_KWLOG2_TOKEN=xxxx123456789 go run main.go -debug -print -port 81
 
 test:
 	_out/$(APP) -local -debug -port 81

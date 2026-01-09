@@ -10,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/suisrc/zgg/z"
-	"github.com/suisrc/zgg/z/zc"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -27,7 +26,7 @@ var (
 )
 
 func init() {
-	zc.Register(&C)
+	z.Config(&C)
 	flag.StringVar(&C.InjectAnnotation, "injectAnnotation", "sidecar/configmap", "injector annotation")
 	flag.StringVar(&C.InjectDefaultKey, "injectDefaultKey", "sidecar.yml", "injector default key")
 
@@ -38,28 +37,13 @@ func init() {
 			zgg.ServeStop("create k8s client error: ", err.Error()) // 初始化失败，直接退出
 			return nil
 		}
-		zc.Println("create k8s client success: local=", z.C.Server.Local)
+		z.Println("create k8s client success: local=", z.C.Server.Local)
 		zgg.SvcKit.Set("k8sclient", cli) // 注册 k8sclient
 		return nil
 	})
 }
 
 // -----------------------------------------------------------------------
-
-// 获取当前命名空间 k8s namespace
-func K8sNS() string {
-	if namespace_ != "" {
-		return namespace_
-	}
-	ns, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-	if err != nil {
-		zc.Printf("unable to read namespace: %s, return 'default'", err.Error())
-		namespace_ = "default"
-	} else {
-		namespace_ = string(ns)
-	}
-	return namespace_
-}
 
 // CreateClient Create the server
 func CreateClient(local bool) (*kubernetes.Clientset, error) {
@@ -73,11 +57,11 @@ func CreateClient(local bool) (*kubernetes.Clientset, error) {
 // BuildConfig Build the config
 func BuildConfig(local bool) (*rest.Config, error) {
 	if local {
-		zc.Println("using local kubeconfig.")
+		z.Println("using local kubeconfig.")
 		kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
 		return clientcmd.BuildConfigFromFlags("", kubeconfig)
 	}
-	zc.Println("using in cluster kubeconfig.")
+	z.Println("using in cluster kubeconfig.")
 	return rest.InClusterConfig()
 }
 

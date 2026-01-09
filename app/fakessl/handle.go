@@ -4,10 +4,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"k8skit/app"
 
 	"github.com/suisrc/zgg/z"
-	"github.com/suisrc/zgg/z/zc"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,7 +50,7 @@ func (aa *FakeSslApi) getCaSecret(zrc *z.Ctx) (*v1.Secret, int, error) {
 		return nil, 400, &z.Result{ErrCode: "param-empty", Message: "key is empty"}
 	}
 	// ---------------------------------------------------------------------------
-	k8sns := app.K8sNS()
+	k8sns := z.GetNamespace()
 	ikey := fmt.Sprintf("%s%s-%s", PK, co.Key, "data") // fkc-tst-data
 	info, err := cli.CoreV1().Secrets(k8sns).Get(zrc.Ctx, ikey, metav1.GetOptions{})
 	if err != nil {
@@ -72,7 +70,7 @@ func (aa *FakeSslApi) getCaSecret(zrc *z.Ctx) (*v1.Secret, int, error) {
 func (aa *FakeSslApi) caGet(zrc *z.Ctx) {
 	info, hss, err := aa.getCaSecret(zrc)
 	if err != nil {
-		zc.Println(err.Error())
+		z.Println(err.Error())
 		zrc.JERR(err, hss)
 	} else {
 		zrc.JSON(&z.Result{Success: true, Data: string(info.Data["ca.crt"])})
@@ -82,7 +80,7 @@ func (aa *FakeSslApi) caGet(zrc *z.Ctx) {
 func (aa *FakeSslApi) caTxt(zrc *z.Ctx) {
 	info, hss, err := aa.getCaSecret(zrc)
 	if err != nil {
-		zc.Println(err.Error())
+		z.Println(err.Error())
 		zrc.JERR(err, hss)
 	} else {
 		zrc.TEXT(string(info.Data["ca.crt"]), 0)
@@ -92,7 +90,7 @@ func (aa *FakeSslApi) caTxt(zrc *z.Ctx) {
 func (aa *FakeSslApi) caB64(zrc *z.Ctx) {
 	info, hss, err := aa.getCaSecret(zrc)
 	if err != nil {
-		zc.Println(err.Error())
+		z.Println(err.Error())
 		zrc.JERR(err, hss)
 	} else {
 		b64 := base64.StdEncoding.EncodeToString(info.Data["ca.crt"])

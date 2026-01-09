@@ -4,7 +4,6 @@ package zhe
 
 import (
 	"github.com/suisrc/zgg/z"
-	"github.com/suisrc/zgg/z/zc"
 )
 
 // func init() {
@@ -16,7 +15,7 @@ func Init0() {
 		api := z.Inject(zgg.SvcKit, &HelloApi{})
 		zgg.AddRouter("hello", api.hello)
 		return func() {
-			zc.Println("api-hello closed")
+			z.Println("api-hello closed")
 		}
 	})
 	z.Register("zz-world", func(zgg *z.Zgg) z.Closed {

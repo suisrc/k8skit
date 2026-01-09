@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/suisrc/zgg/z"
-	"github.com/suisrc/zgg/z/zc"
 	"github.com/suisrc/zgg/ze/crt"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,7 +23,7 @@ var (
 )
 
 func init() {
-	zc.Register(&C)
+	z.Config(&C)
 	flag.StringVar(&C.SecretName, "secretName", "", "sidecar fakessl secret name")
 
 	z.Register("21-tlshttp", InitRegister)
@@ -32,17 +31,17 @@ func init() {
 
 func InitRegister(zgg *z.Zgg) z.Closed {
 	if C.SecretName == "" {
-		zc.Println("[_tlshttp]: SecretName is empty")
+		z.Println("[_tlshttp]: SecretName is empty")
 		return nil
 	}
 	// 注册 https 证书
 	cli := zgg.SvcKit.Get("k8sclient").(kubernetes.Interface)
 
 	// fkc-sidecar-data
-	zc.Printf("[_tlshttp]: checker https cert: %s\n", C.SecretName)
+	z.Printf("[_tlshttp]: checker https cert: %s\n", C.SecretName)
 
 	ctx := context.TODO()
-	k8sns := app.K8sNS()
+	k8sns := z.GetNamespace()
 	ikey := C.SecretName
 	info, err := cli.CoreV1().Secrets(k8sns).Get(ctx, C.SecretName, metav1.GetOptions{})
 	if err != nil {
@@ -89,7 +88,7 @@ func InitRegister(zgg *z.Zgg) z.Closed {
 		return nil
 	} else {
 		app.C.Token = string(token)
-		zc.Printf("[_tlshttp]: secret [%s] token: %s", ikey, string(token))
+		z.Printf("[_tlshttp]: secret [%s] token: %s", ikey, string(token))
 	}
 
 	config := crt.TLSAutoConfig{}

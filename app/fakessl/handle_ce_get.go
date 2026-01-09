@@ -3,13 +3,11 @@ package fakessl
 import (
 	"encoding/json"
 	"fmt"
-	"k8skit/app"
 	"net"
 	"sort"
 	"strings"
 
 	"github.com/suisrc/zgg/z"
-	"github.com/suisrc/zgg/z/zc"
 	"github.com/suisrc/zgg/ze/crt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -37,7 +35,7 @@ func (aa *FakeSslApi) ceGet(zrc *z.Ctx) {
 		return
 	}
 	// ------------------------------------------------------------------------------------------
-	k8sns := app.K8sNS()
+	k8sns := z.GetNamespace()
 	ikey := fmt.Sprintf("%s%s-%s", PK, co.Key, "data") // fkc-tst-data
 	info, err := cli.CoreV1().Secrets(k8sns).Get(zrc.Ctx, ikey, metav1.GetOptions{})
 	if err != nil {
@@ -73,7 +71,7 @@ func (aa *FakeSslApi) ceGet(zrc *z.Ctx) {
 			}})
 			return
 		} else {
-			zc.Printf("ce get api, secret [%s] expired: %v", secretKey, exp)
+			z.Printf("ce get api, secret [%s] expired: %v", secretKey, exp)
 		}
 		isUpdate = true
 		// 证书出现问题或者过期
@@ -84,7 +82,7 @@ func (aa *FakeSslApi) ceGet(zrc *z.Ctx) {
 		zrc.JERR(&z.Result{ErrCode: "param-error", Message: "kind is error"}, 400)
 		return
 	}
-	zc.Printf("ce get api, secret [%s] create/update: %d", secretKey, co.Kind)
+	z.Printf("ce get api, secret [%s] create/update: %d", secretKey, co.Kind)
 	// domain 对应的cert 不存在, 重新生成 cert
 	dns := []string{} // 域名
 	ips := []net.IP{}
@@ -116,7 +114,7 @@ func (aa *FakeSslApi) ceGet(zrc *z.Ctx) {
 		zrc.JERR(&z.Result{ErrCode: "k8s-info-error", Message: message}, 500)
 		return
 	}
-	// zc.Println(sub.Crt)
+	// z.Println(sub.Crt)
 	// 存储 k8s secret
 	domain = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretKey}, Data: map[string][]byte{
 		"pem.crt": []byte(sub.Crt),

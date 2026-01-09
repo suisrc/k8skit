@@ -34,28 +34,28 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) {
 	config := crt.CertConfig{}
 	if _, err := z.ReadBody(zrc.Request, &config); err != nil {
 		message := fmt.Sprintf("init api, read body error: %s", err.Error())
-		zc.Println(message)
+		z.Println(message)
 		zrc.JERR(&z.Result{ErrCode: "body-error", Message: message}, 400)
 		return
 	}
-	k8sns := app.K8sNS()
+	k8sns := zc.GetNamespace()
 	ikey := fmt.Sprintf("%s%s-%s", PK, co.Key, "data") // fkc-tst-data
 	info, err := cli.CoreV1().Secrets(k8sns).Get(zrc.Ctx, ikey, metav1.GetOptions{})
 	if err != nil {
 		if !strings.HasSuffix(err.Error(), " not found") {
 			message := fmt.Sprintf("init api, secret [%s] get error: %s", ikey, err.Error())
-			zc.Println(message)
+			z.Println(message)
 			zrc.JERR(&z.Result{ErrCode: "k8s-secret-err", Message: message}, 500)
 			return
 		}
 		// 使用应用令牌， 进行验证，成功后，新建一个 INFO
 		if co.Token != app.C.Token {
 			message := fmt.Sprintf("init api, secret [%s] token error: no equal!", ikey)
-			zc.Println(message)
+			z.Println(message)
 			zrc.JERR(&z.Result{ErrCode: "app-info-token", Message: message}, 500)
 			return
 		}
-		co.Token = z.GenStr("v", 32) // 生成一个新令牌，新建应用
+		co.Token = zc.GenStr("v", 32) // 生成一个新令牌，新建应用
 		info = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: ikey}, Data: map[string][]byte{
 			"token":  []byte(co.Token),
 			"config": []byte(config.String()),
@@ -63,14 +63,14 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) {
 		info, err = cli.CoreV1().Secrets(k8sns).Create(zrc.Ctx, info, metav1.CreateOptions{})
 		if err != nil {
 			message := fmt.Sprintf("init api, secret [%s] create error: %s", ikey, err.Error())
-			zc.Println(message)
+			z.Println(message)
 			zrc.JERR(&z.Result{ErrCode: "k8s-secret-err", Message: message}, 500)
 			return
 		}
 	}
 	if tkn, ok := info.Data["token"]; ok && string(tkn) != co.Token { // 必须存在，不存在，不可访问
 		message := fmt.Sprintf("init api, secret [%s].token error: no equal!", ikey)
-		zc.Println(message)
+		z.Println(message)
 		zrc.JERR(&z.Result{ErrCode: "k8s-info-token", Message: message}, 500)
 		return
 	}
@@ -79,7 +79,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) {
 		config2 := crt.CertConfig{}
 		if err := json.Unmarshal(cfgBts, &config2); err != nil {
 			message := fmt.Sprintf("init api, json unmarshal error: %s", err.Error())
-			zc.Println(message)
+			z.Println(message)
 			zrc.JERR(&z.Result{ErrCode: "k8s-secret-err", Message: message}, 500)
 			return
 		}
@@ -89,7 +89,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) {
 			info, err = cli.CoreV1().Secrets(k8sns).Update(zrc.Ctx, info, metav1.UpdateOptions{})
 			if err != nil {
 				message := fmt.Sprintf("init api, secret [%s] update error: %s", ikey, err.Error())
-				zc.Println(message)
+				z.Println(message)
 				zrc.JERR(&z.Result{ErrCode: "k8s-secret-err", Message: message}, 500)
 				return
 			}
@@ -100,7 +100,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) {
 		info, err = cli.CoreV1().Secrets(k8sns).Update(zrc.Ctx, info, metav1.UpdateOptions{})
 		if err != nil {
 			message := fmt.Sprintf("init api, secret [%s] create error: %s", ikey, err.Error())
-			zc.Println(message)
+			z.Println(message)
 			zrc.JERR(&z.Result{ErrCode: "k8s-secret-err", Message: message}, 500)
 			return
 		}
@@ -115,11 +115,11 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) {
 	ca, err := crt.CreateCA(config, co.CommonName)
 	if err != nil {
 		message := fmt.Sprintf("init api, create ca error: %s", err.Error())
-		zc.Println(message)
+		z.Println(message)
 		zrc.JERR(&z.Result{ErrCode: "ca-create-err", Message: message}, 500)
 		return
 	}
-	zc.Println("init api, ca create success")
+	z.Println("init api, ca create success")
 	info.Data["ca.crt"] = []byte(ca.Crt)
 	info.Data["ca.key"] = []byte(ca.Key)
 	// 求 ca.Key 的 md5 值
@@ -128,7 +128,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) {
 	_, err = cli.CoreV1().Secrets(k8sns).Update(zrc.Ctx, info, metav1.UpdateOptions{})
 	if err != nil {
 		message := fmt.Sprintf("init api, secret [%s] update error: %s", ikey, err.Error())
-		zc.Println(message)
+		z.Println(message)
 		zrc.JERR(&z.Result{ErrCode: "k8s-secret-err", Message: message}, 500)
 		return
 	}

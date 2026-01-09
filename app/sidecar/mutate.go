@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/suisrc/zgg/z"
-	"github.com/suisrc/zgg/z/zc"
 	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/klog/v2"
 )
@@ -40,7 +39,7 @@ func (aa *MutateApi) mutate(zrc *z.Ctx) {
 	}
 	req := admReview.Request
 
-	zc.Printf("AdmissionReview for Kind=%v, Namespace=%v Name=%v UID=%v patchOperation=%v UserInfo=%v", //
+	z.Printf("AdmissionReview for Kind=%v, Namespace=%v Name=%v UID=%v patchOperation=%v UserInfo=%v", //
 		req.Kind, req.Namespace, req.Name, req.UID, req.Operation, req.UserInfo)
 	if patchOperations, err := aa.process(zrc, req); err != nil {
 		message := fmt.Sprintf("request for object '%s' with name '%s' in namespace '%s' denied: %v", //

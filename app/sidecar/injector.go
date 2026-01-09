@@ -9,12 +9,11 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/samber/lo"
-	"github.com/suisrc/zgg/z/zc"
+	"github.com/suisrc/zgg/z"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog/v2"
 )
 
 // InjectorPatcher implements PodPatcher
@@ -86,11 +85,11 @@ func (patcher *InjectorPatcher) ConfigmapSidecarNames(namespace string, pod core
 		})
 
 		if len(parts) > 0 {
-			zc.Printf("sideCar injection for %v/%v: sidecars: %v", namespace, podName, sidecars)
+			z.Printf("sideCar injection for %v/%v: sidecars: %v", namespace, podName, sidecars)
 			return parts
 		}
 	}
-	zc.Printf("Skipping mutation for [%v]. No action required", podName)
+	z.Printf("Skipping mutation for [%v]. No action required", podName)
 	return nil
 }
 
@@ -348,9 +347,9 @@ func (patcher *InjectorPatcher) PatchPodCreate(ctx context.Context, namespace st
 		for _, configmapSidecarName := range configmapSidecarNames {
 			configmapSidecar, err := patcher.ConfigmapSidecarData(ctx, namespace, configmapSidecarName, pod)
 			if k8serrors.IsNotFound(err) {
-				zc.Printf("sidecar configmap %s -> %s was not found for %s/%s pod", namespace, configmapSidecarName, namespace, podName)
+				z.Printf("sidecar configmap %s -> %s was not found for %s/%s pod", namespace, configmapSidecarName, namespace, podName)
 			} else if err != nil {
-				klog.Errorf("error fetching sidecar configmap %s -> %s for %s/%s pod - %v", namespace, configmapSidecarName, namespace, podName, err)
+				z.Printf("error fetching sidecar configmap %s -> %s for %s/%s pod - %v", namespace, configmapSidecarName, namespace, podName, err)
 			} else if configmapSidecar != nil {
 				// patcher.fixSidecarByPodAnnotations(configmapSidecar, pod.GetAnnotations()) // fix sidecar by pod annotations
 				patches = append(patches, CreateContainersPatches(configmapSidecar.InitContainers, &pod.Spec.InitContainers, "/spec/initContainers")...)
@@ -362,7 +361,7 @@ func (patcher *InjectorPatcher) PatchPodCreate(ctx context.Context, namespace st
 			}
 		}
 	}
-	// klog.Debugf("sidecar patches being applied for %v/%v: patches: %v", namespace, podName, patches)
+	// z.Debugf("sidecar patches being applied for %v/%v: patches: %v", namespace, podName, patches)
 	return patches, nil
 }
 
