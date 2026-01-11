@@ -28,6 +28,9 @@ helm:
 main:
 	KIT_KWLOG2_TOKEN=xxxx123456789 go run main.go -local -debug -port 81 -c __zgg.toml
 
+deploy:
+	go run main.go  deploy -print -c __zgg.toml -s3rewrite
+
 tenv:
 	KIT_KWLOG2_TOKEN=xxxx123456789 go run main.go -debug -print -port 81
 

@@ -30,6 +30,8 @@ var (
 type S3cdnConfig struct {
 	Access   string `json:"access"`   // 账号
 	Secret   string `json:"secret"`   // 秘钥
+	TToken   string `json:"token"`    // 临时令牌
+	Signer   int    `json:"signer"`   // 签名, 0: default, 1: v4, 2: v2, 3: v4stream, 4: anonymous
 	Endpoint string `json:"endpoint"` // 接口
 	Region   string `json:"region"`   // 区域
 	Bucket   string `json:"bucket"`   // 存储桶
@@ -44,6 +46,8 @@ func init() {
 
 	flag.StringVar(&C.S3cdn.Access, "s3access", "", "S3 账号")
 	flag.StringVar(&C.S3cdn.Secret, "s3secret", "", "S3 秘钥")
+	flag.Var(z.NewStrVal(&C.S3cdn.TToken, ""), "s3ttoken", "S3 临时令牌")
+	flag.IntVar(&C.S3cdn.Signer, "s3signer", 1, "S3 签名, 0: def, 1: v4(default), 2: v2, 3: v4stream, 4: anonymous")
 	flag.StringVar(&C.S3cdn.Endpoint, "s3endpoint", "", "S3 接口")
 	flag.StringVar(&C.S3cdn.Region, "s3region", "", "S3 区域")
 	flag.StringVar(&C.S3cdn.Bucket, "s3bucket", "", "S3 存储桶")
@@ -56,7 +60,7 @@ func init() {
 // 初始化方法， 处理 api 的而外配置接口
 func Front2ServeByS3(api *front2.IndexApi, zgg *z.Zgg) {
 	if C.S3cdn.Endpoint != "" {
-		err := UploadToS3(api, zgg, C.S3cdn)
+		err := UploadToS3(api.HttpFS, &api.Config, &C.S3cdn)
 		if err != nil {
 			zgg.ServeStop("upload to s3 error:", err.Error())
 			return
@@ -72,9 +76,8 @@ func Front2ServeByS3(api *front2.IndexApi, zgg *z.Zgg) {
 }
 
 // 上传到 S3
-func UploadToS3(api *front2.IndexApi, zgg *z.Zgg, cfg S3cdnConfig) error {
+func UploadToS3(hfs http.FileSystem, ffc *front2.Front2Config, cfg *S3cdnConfig) error {
 	if cfg.Access == "" || cfg.Secret == "" || cfg.Region == "" || cfg.Bucket == "" || cfg.Domain == "" {
-		zgg.ServeStop("s3cdn config error: empty")
 		return errors.New("config error: empty")
 	}
 	// https://github.com/minio/minio-go/
@@ -90,7 +93,7 @@ func UploadToS3(api *front2.IndexApi, zgg *z.Zgg, cfg S3cdnConfig) error {
 
 	// Initialize minio client object.
 	cli, err := minio.New(cfg.Endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(cfg.Access, cfg.Secret, ""),
+		Creds:  credentials.NewStatic(cfg.Access, cfg.Secret, cfg.TToken, credentials.SignatureType(cfg.Signer)),
 		Region: cfg.Region,
 		Secure: useSSL,
 	})
@@ -108,7 +111,7 @@ func UploadToS3(api *front2.IndexApi, zgg *z.Zgg, cfg S3cdnConfig) error {
 	rootdir := filepath.Join(cfg.RootDir, z.AppName, z.Version)
 	if !cfg.Rewrite {
 		// 判断 index 文件是否存在，如果存在，跳过上传
-		name := filepath.Join(rootdir, api.Config.Index)
+		name := filepath.Join(rootdir, ffc.Index)
 		_, err = cli.StatObject(ctx, cfg.Bucket, name, minio.StatObjectOptions{})
 		if err == nil {
 			z.Println("[_cdnskip_] upload to s3:", name, ", exists")
@@ -128,8 +131,8 @@ func UploadToS3(api *front2.IndexApi, zgg *z.Zgg, cfg S3cdnConfig) error {
 	// if err != nil && minio.ToErrorResponse(err).Code == "NoSuchKey"
 
 	// 遍历 api 中所有的文件夹执行上传
-	return UploadToS3Loop(ctx, cli, cfg.Bucket, rootdir, cfg.Domain, api.HttpFS, //
-		api.Config.Folder, api.Config.Folder, api.Config.TmplPath, api.Config.TmplSuff)
+	return UploadToS3Loop(ctx, cli, cfg.Bucket, rootdir, cfg.Domain, hfs, //
+		ffc.Folder, ffc.Folder, ffc.TmplPath, ffc.TmplSuff)
 }
 
 // 循环上传文件

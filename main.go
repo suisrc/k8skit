@@ -4,6 +4,8 @@ import (
 	"k8skit/app/s3cdn"
 	"os"
 
+	_ "k8skit/cmd"
+
 	"github.com/suisrc/zgg/app/front2"
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/zc"
