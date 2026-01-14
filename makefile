@@ -47,6 +47,14 @@ git:
 	fi
 	git commit -am "${tag}" && git tag -a $(tag) -m "${tag}" && git push origin $(tag) && git reset --hard HEAD~1
 
+front2:
+	@if [ -z "$(tag)" ]; then \
+		echo "error: 'tag' not specified! Please specify the 'tag' using 'make tflow tag=(version)";\
+		exit 1; \
+	fi
+	sed -i -e 's|// front2.Init3(os.|front2.Init3(os.|g' -e '7i"os"' -e '7i"github.com/suisrc/zgg/app/front2"' main.go
+	git commit -am "${tag}" && git tag -a $(tag)-front2 -m "${tag}" && git push origin $(tag)-front2 && git reset --hard HEAD~1
+
 kwlog2:
 	@if [ -z "$(tag)" ]; then \
 		echo "error: 'tag' not specified! Please specify the 'tag' using 'make tflow tag=(version)";\
