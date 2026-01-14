@@ -46,3 +46,22 @@ git:
 		exit 1; \
 	fi
 	git commit -am "${tag}" && git tag -a $(tag) -m "${tag}" && git push origin $(tag) && git reset --hard HEAD~1
+
+kwlog2:
+	@if [ -z "$(tag)" ]; then \
+		echo "error: 'tag' not specified! Please specify the 'tag' using 'make tflow tag=(version)";\
+		exit 1; \
+	fi
+	sed -i -e 's|// z.HttpServeDef|z.HttpServeDef|g' \
+	-e 's|// kwlog2.|kwlog2.|g' -e '7i"github.com/suisrc/zgg/app/kwlog2"' main.go
+	git commit -am "${tag}" && git tag -a $(tag)-kwlog2 -m "${tag}" && git push origin $(tag)-kwlog2 && git reset --hard HEAD~1
+
+kwdog2:
+	@if [ -z "$(tag)" ]; then \
+		echo "error: 'tag' not specified! Please specify the 'tag' using 'make tflow tag=(version)";\
+		exit 1; \
+	fi
+	sed -i -e '7i"github.com/suisrc/zgg/ze/gte"' \
+	-e 's|// proxy2.|proxy2.|g' -e '7i"github.com/suisrc/zgg/app/proxy2"' \
+	-e 's|// kwdog2.|kwdog2.|g' -e '7i"github.com/suisrc/zgg/app/kwdog2"' main.go
+	git commit -am "${tag}" && git tag -a $(tag)-kwdog2 -m "${tag}" && git push origin $(tag)-kwdog2 && git reset --hard HEAD~1
