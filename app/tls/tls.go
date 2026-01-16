@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/suisrc/zgg/z"
-	"github.com/suisrc/zgg/ze/crt"
+	"github.com/suisrc/zgg/z/ze/tlsx"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -50,21 +50,21 @@ func InitRegister(zgg *z.Zgg) z.Closed {
 			zgg.ServeStop(message) // 初始化失败，直接退出
 			return nil
 		}
-		config := crt.CertConfig{"default": {
+		config := tlsx.CertConfig{"default": {
 			Expiry: "20y",
-			SubjectName: crt.SignSubject{
+			SubjectName: tlsx.SignSubject{
 				Organization:     "default",
 				OrganizationUnit: "default",
 			},
 		}}
 		// 证书不存在，需要重写构建证书
-		ca, err := crt.CreateCA(config, "default")
+		ca, err := tlsx.CreateCA(config, "default")
 		if err != nil {
 			message := fmt.Sprintf("[_tlshttp]: create ca error: %s", err.Error())
 			zgg.ServeStop(message) // 初始化失败，直接退出
 			return nil
 		}
-		ckey, _ := crt.HashMd5([]byte(ca.Key))
+		ckey, _ := tlsx.HashMd5([]byte(ca.Key))
 		pkey := strings.TrimSuffix(ikey, "-data") + "-" + ckey[:8]
 
 		token := z.GenStr("v", 32) // 生成一个新令牌，新建应用
@@ -91,7 +91,7 @@ func InitRegister(zgg *z.Zgg) z.Closed {
 		z.Printf("[_tlshttp]: secret [%s] token: %s", ikey, string(token))
 	}
 
-	config := crt.TLSAutoConfig{}
+	config := tlsx.TLSAutoConfig{}
 	if cfgBts, ok := info.Data["config"]; !ok {
 		message := fmt.Sprintf("[_tlshttp]: secret [%s.config] not found", ikey)
 		zgg.ServeStop(message) // 初始化失败，直接退出

@@ -8,7 +8,7 @@ import (
 
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/zc"
-	"github.com/suisrc/zgg/ze/crt"
+	"github.com/suisrc/zgg/z/ze/tlsx"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +31,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) {
 		return
 	}
 	// ------------------------------------------------------------------------------------------
-	config := crt.CertConfig{}
+	config := tlsx.CertConfig{}
 	if _, err := z.ReadBody(zrc.Request, &config); err != nil {
 		message := fmt.Sprintf("init api, read body error: %s", err.Error())
 		z.Println(message)
@@ -76,7 +76,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) {
 	}
 	// ------------------------------------------------------------------------------------------
 	if cfgBts, ok := info.Data["config"]; ok { // 配置已经存在
-		config2 := crt.CertConfig{}
+		config2 := tlsx.CertConfig{}
 		if err := json.Unmarshal(cfgBts, &config2); err != nil {
 			message := fmt.Sprintf("init api, json unmarshal error: %s", err.Error())
 			z.Println(message)
@@ -112,7 +112,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) {
 		return
 	}
 	// 证书不存在，需要重写构建证书
-	ca, err := crt.CreateCA(config, co.CommonName)
+	ca, err := tlsx.CreateCA(config, co.CommonName)
 	if err != nil {
 		message := fmt.Sprintf("init api, create ca error: %s", err.Error())
 		z.Println(message)
@@ -123,7 +123,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) {
 	info.Data["ca.crt"] = []byte(ca.Crt)
 	info.Data["ca.key"] = []byte(ca.Key)
 	// 求 ca.Key 的 md5 值
-	ckey, _ := crt.HashMd5([]byte(ca.Key))
+	ckey, _ := tlsx.HashMd5([]byte(ca.Key))
 	info.Data["prefix"] = []byte(fmt.Sprintf("%s%s-%s-", PK, co.Key, ckey[:8]))
 	_, err = cli.CoreV1().Secrets(k8sns).Update(zrc.Ctx, info, metav1.UpdateOptions{})
 	if err != nil {

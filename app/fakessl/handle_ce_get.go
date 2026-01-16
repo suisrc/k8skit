@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/suisrc/zgg/z"
-	"github.com/suisrc/zgg/ze/crt"
+	"github.com/suisrc/zgg/z/ze/tlsx"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,14 +57,14 @@ func (aa *FakeSslApi) ceGet(zrc *z.Ctx) {
 		secretKey += co.Domains[0]
 	} else {
 		sort.Strings(co.Domains)
-		hash, _ := crt.HashMd5([]byte(strings.Join(co.Domains, ",")))
+		hash, _ := tlsx.HashMd5([]byte(strings.Join(co.Domains, ",")))
 		secretKey += hash
 	}
 	// ------------------------------------------------------------------------------------------
 	isUpdate := false
 	domain, err := cli.CoreV1().Secrets(k8sns).Get(zrc.Ctx, secretKey, metav1.GetOptions{})
 	if co.Kind != 3 && err == nil {
-		if ok, exp, _ := crt.IsPemExpired(string(domain.Data["pem.crt"])); !ok {
+		if ok, exp, _ := tlsx.IsPemExpired(string(domain.Data["pem.crt"])); !ok {
 			zrc.JSON(&z.Result{Success: true, Data: z.HA{
 				"crt": string(domain.Data["pem.crt"]),
 				"key": string(domain.Data["pem.key"]),
@@ -102,13 +102,13 @@ func (aa *FakeSslApi) ceGet(zrc *z.Ctx) {
 		zrc.JERR(&z.Result{ErrCode: "k8s-info-error", Message: "config is error, CA证书不存在"}, 500)
 		return
 	}
-	config := crt.CertConfig{}
+	config := tlsx.CertConfig{}
 	if err := json.Unmarshal(caBts, &config); err != nil {
 		message := fmt.Sprintf("ce get api, json unmarshal config error: %s", err.Error())
 		zrc.JERR(&z.Result{ErrCode: "k8s-info-error", Message: message}, 500)
 		return
 	}
-	sub, err := crt.CreateCE(config, co.CommonName, dns, ips, caCrt, caKey)
+	sub, err := tlsx.CreateCE(config, co.CommonName, dns, ips, caCrt, caKey)
 	if err != nil {
 		message := fmt.Sprintf("ce get api, create cert error: %s", err.Error())
 		zrc.JERR(&z.Result{ErrCode: "k8s-info-error", Message: message}, 500)
