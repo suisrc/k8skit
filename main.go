@@ -9,7 +9,7 @@ import (
 	"github.com/suisrc/zgg/app/front2"
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/zc"
-	_ "github.com/suisrc/zgg/ze/log_syslog"
+	// _ "github.com/suisrc/zgg/z/ze/log/syslog"
 )
 
 func main() {
