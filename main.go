@@ -6,8 +6,8 @@ import (
 
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/zc"
-	_ "github.com/suisrc/zgg/ze/log_syslog"
-	_ "github.com/suisrc/zgg/ze/rdx"
+	_ "github.com/suisrc/zgg/z/ze/log/syslog"
+	_ "github.com/suisrc/zgg/z/ze/rdx"
 	// _ "github.com/suisrc/zgg/app/zhe"
 	// _ "k8skit/app/zhe"
 	// _ "k8skit/cmd"
