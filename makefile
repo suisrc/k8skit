@@ -42,14 +42,14 @@ clean:
 
 git:
 	@if [ -z "$(tag)" ]; then \
-		echo "error: 'tag' not specified! Please specify the 'tag' using 'make tflow tag=(version)-(appname)'";\
+		echo "error: 'tag' not specified! Please specify the 'tag' using 'make git tag=(version)-(appname)'";\
 		exit 1; \
 	fi
 	git commit -am "${tag}" && git tag -a $(tag) -m "${tag}" && git push origin $(tag) && git reset --hard HEAD~1
 
 front2:
 	@if [ -z "$(tag)" ]; then \
-		echo "error: 'tag' not specified! Please specify the 'tag' using 'make tflow tag=(version)";\
+		echo "error: 'tag' not specified! Please specify the 'tag' using 'make front2 tag=(version)";\
 		exit 1; \
 	fi
 	sed -i -e 's|// front2.Init3(os.|front2.Init3(os.|g' -e '7i"os"' -e '7i"github.com/suisrc/zgg/app/front2"' main.go
@@ -57,7 +57,7 @@ front2:
 
 kwlog2:
 	@if [ -z "$(tag)" ]; then \
-		echo "error: 'tag' not specified! Please specify the 'tag' using 'make tflow tag=(version)";\
+		echo "error: 'tag' not specified! Please specify the 'tag' using 'make kwlog2 tag=(version)";\
 		exit 1; \
 	fi
 	sed -i -e 's|// kwlog2.|kwlog2.|g' -e '7i"github.com/suisrc/zgg/app/kwlog2"' main.go
@@ -65,7 +65,7 @@ kwlog2:
 
 kwdog2:
 	@if [ -z "$(tag)" ]; then \
-		echo "error: 'tag' not specified! Please specify the 'tag' using 'make tflow tag=(version)";\
+		echo "error: 'tag' not specified! Please specify the 'tag' using 'make kwdog2 tag=(version)";\
 		exit 1; \
 	fi
 	sed -i -e 's|// z.HttpServeDef|z.HttpServeDef|g' -e '7i"github.com/suisrc/zgg/z/ze/gte"' \
@@ -75,7 +75,7 @@ kwdog2:
 
 wgetar:
 	@if [ -z "$(tag)" ]; then \
-		echo "error: 'tag' not specified! Please specify the 'tag' using 'make tflow tag=(version)";\
+		echo "error: 'tag' not specified! Please specify the 'tag' using 'make wgetar tag=(version)";\
 		exit 1; \
 	fi
 	cp wget_tar Dockerfile
