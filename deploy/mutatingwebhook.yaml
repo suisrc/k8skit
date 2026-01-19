@@ -12,7 +12,7 @@ webhooks:
         name: ksidecar
         namespace: default
         path: "/mutate"
-      caBundle: >- # curl http://ksidecar.default.svc/api/ssl/v1/ca/b64?key=ksidecar (内部域名和命令行抽取)
+      caBundle: >- # curl 'http://ksidecar.default.svc/api/ssl/v1/ca/b64?key=ksidecar' (内部域名和命令行抽取)
           LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURXakNDQWtL...
     failurePolicy: Fail
     sideEffects: None

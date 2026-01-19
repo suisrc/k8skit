@@ -22,18 +22,6 @@ import (
 // 	PatchPodDelete(ctx context.Context, namespace string, pod corev1.Pod) ([]PatchOperation, error)
 // }
 
-// func NewPatcher(svc z.SvcKit) *Patcher {
-// 	return &Patcher{
-// 		K8sClient:        svc.Get("k8sclient").(kubernetes.Interface),
-// 		ConfxRepository:  svc.Get("repoconfx").(*repo.ConfxRepo),
-// 		InjectAnnotation: C.InjectAnnotation,
-// 		InjectDefaultKey: C.InjectDefaultKey,
-// 		InjectConfigKind: C.InjectConfigKind,
-// 		InjectConfigPath: C.InjectConfigPath,
-// 		InjectServerHost: C.InjectServerHost,
-// 	}
-// }
-
 // PatchOperation JsonPatch struct http://jsonpatch.com/
 type PatchOperation struct {
 	Op    string `json:"op"`
