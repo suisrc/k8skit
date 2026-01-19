@@ -24,7 +24,7 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 		return []PatchOperation{}
 	}
 	// envName
-	envName, _ := annotations[patcher.InjectConfigKind]
+	envName, _ := annotations[patcher.InjectByDBConfig]
 	if envName == "" {
 		return []PatchOperation{}
 	}
@@ -34,9 +34,9 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 	cidx := 0
 	if idx := strings.IndexByte(envName, '#'); idx >= 0 {
 		var err error
-		cidx, err = strconv.Atoi(patcher.InjectConfigKind[idx+1:])
+		cidx, err = strconv.Atoi(patcher.InjectByDBConfig[idx+1:])
 		if err != nil {
-			z.Printf("Skipping configuration by database, invalid annotation [%s=%s]", patcher.InjectConfigKind, envName)
+			z.Printf("Skipping configuration by database, invalid annotation [%s=%s]", patcher.InjectByDBConfig, envName)
 			return []PatchOperation{}
 		}
 		envName = envName[:idx]
@@ -82,9 +82,9 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 	if kind != "" && kind != "env" {
 		// configuration file
 		if datas := patcher.ConfxRepository.GetConfigs(envName, appName, version, kind); len(datas) > 0 {
-			dirpath, _ := annotations[patcher.InjectConfigPath]
+			dirpath, _ := annotations[patcher.InjectByDBFolder]
 			if dirpath == "" {
-				dirpath = "/confx" // 默认配置文件夹
+				dirpath = "/" // 默认配置文件夹
 			}
 			rpath := fmt.Sprintf("/archive?rand=%s&time=%d", z.GenStr("", 12), time.Now().Unix())
 			for index, data := range datas {
@@ -115,8 +115,7 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 			}}
 			patches = append(patches, CreateArrayPatche(volume, len(pod.Spec.Volumes) == 0, "/spec/volumes"))
 			pod.Spec.Volumes = append(pod.Spec.Volumes, volume)
-			// init container busybox:1.37.0
-			// wget -q -S -O - ? | tar -x -C /conf
+			// init container busybox:1.37.0 -> suisrc/k8skit:1.3.12-wgetar
 			initc := corev1.Container{
 				Name:            "confx",
 				Image:           patcher.InitArchiveImage,
