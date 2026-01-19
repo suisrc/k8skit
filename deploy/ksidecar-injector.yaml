@@ -1,56 +1,49 @@
-# kubectl apply -f ksidecar-injector.yaml -n kube-ksidecar
-# ca: ksidecar-injector.kube-ksidecar,ksidecar-injector.kube-ksidecar.svc,ksidecar-injector.kube-ksidecar.svc.cluster.local
-# 
+# kubectl apply  -f 09-sidecar-01.yaml -n default
+# kubectl delete -f 09-sidecar-01.yaml -n default
+# 边车注入修改服务
 
 apiVersion: v1
 kind: Service
 metadata:
-  name: ksidecar-injector
+  name: ksidecar
 spec:
   ports:
   - name: https
     port: 443
-    targetPort: https
+  - name: http
+    port: 80
   selector:
-    app: ksidecar-injector
+    app: ksidecar
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ksidecar-injector
+  name: ksidecar
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
-      app: ksidecar-injector
+      app: ksidecar
   template:
     metadata:
       labels:
-        app: ksidecar-injector
+        app: ksidecar
     spec:
-      serviceAccountName: ksidecar-injector
+      serviceAccountName: ksidecar
       containers:
-        - name: kube-sidecar-injector
-          image: suisrc/sidecar-injector:1.0.0
+        - name: ksidecar
+          image: suisrc/k8skit:1.3.15-sidecar
           imagePullPolicy: IfNotPresent
           args:
-            - --token=MQ8wDQYDVQQHEwZEYWxpYW4x
-            - --cerFile=/opt/cert/pem.crt:configmap/pem.crt
-            - --keyFile=/opt/cert/pem.key:configmap/pem.key
-            - --injectAnnotation=ksidecar/configmap
-            - --injectDefaultKey=sidecar.yml
-          # volumeMounts:
-          #   - {name: cert, mountPath: /opt/cert, readOnly: true }
-          ports:
-            - name: https
-              containerPort: 443
-              protocol: TCP
+            - --dual
+            - --dsn
+            - 'user:pass@tcp(mysql.base.svc:3306)/cfg?charset=utf8&parseTime=True&loc=Asia%2FShanghai'
           livenessProbe:
             httpGet:
               path: /healthz
-              port: https
-              scheme: HTTPS
+              port: http
+              scheme: HTTP
             initialDelaySeconds: 5
             periodSeconds: 10
             successThreshold: 1
@@ -59,12 +52,38 @@ spec:
           readinessProbe:
             httpGet:
               path: /healthz
-              port: https
-              scheme: HTTPS
+              port: http
+              scheme: HTTP
             initialDelaySeconds: 10
             periodSeconds: 10
             successThreshold: 1
             failureThreshold: 5
             timeoutSeconds: 4
-      # volumes:
-      #   - { name: certs, secret: { secretName: fkc-tst-2b460997- } }
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ksidecar
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ksidecar
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "delete", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ksidecar
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ksidecar
+subjects:
+  - kind: ServiceAccount
+    name: ksidecar
+    namespace: default

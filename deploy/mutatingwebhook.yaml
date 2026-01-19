@@ -1,18 +1,19 @@
-# kubectl apply -f mutatingwebhook.yaml -n kube-ksidecar
+# kubectl apply  -f 09-sidecar-02.yaml -n default
+# kubectl delete -f 09-sidecar-02.yaml -n default
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: ksidecar-injector
+  name: ksidecar
 webhooks:
   - name: ksidecar.suisrc.com
     clientConfig:
       service:
-        name: ksidecar-injector
-        namespace: kube-ksidecar
+        name: ksidecar
+        namespace: default
         path: "/mutate"
-      caBundle: >- # secret => fkc-tst-info
-        LS0tLS1CRUdJTiBDRVJUS...
+      caBundle: >- # curl http://ksidecar.default.svc/api/ssl/v1/ca/b64?key=ksidecar (内部域名和命令行抽取)
+          LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURXakNDQWtL...
     failurePolicy: Fail
     sideEffects: None
     admissionReviewVersions:
@@ -34,7 +35,7 @@ webhooks:
           values:
             - kube-system
             - kube-public
-            - kube-ksidecar
+            - default
         - key: ksidecar/inject
           operator: In
           values:

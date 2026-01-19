@@ -35,7 +35,7 @@ func init() {
 	flag.StringVar(&C.Sidecar.InjectDefaultKey, "injectDefaultKey", "value.yml", "injector default configmap attribute name")
 	flag.StringVar(&C.Sidecar.InjectByDBConfig, "injectConfigKind", "ksidecar/db.config", "injector configuration, [env](.json|yaml|prop|toml)(#0), #0 is containers offset from 0")
 	flag.StringVar(&C.Sidecar.InjectByDBFolder, "injectConfigPath", "ksidecar/db.folder", "injector configuration directory path")
-	flag.StringVar(&C.Sidecar.InjectServerHost, "injectServerHost", "http://ksidecar-injector.default.svc", "injector server host")
+	flag.StringVar(&C.Sidecar.InjectServerHost, "injectServerHost", "http://ksidecar.default.svc", "injector server host")
 	flag.StringVar(&C.Sidecar.InitArchiveImage, "initArchiveImage", "suisrc/k8skit:1.3.12-wgetar", "init container archive image")
 
 	z.Register("99-app.sidecar", func(zgg *z.Zgg) z.Closed {
