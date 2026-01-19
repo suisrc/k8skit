@@ -120,11 +120,11 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 			initc := corev1.Container{
 				Name:            "confx",
 				Image:           patcher.InitArchiveImage,
-				Command:         []string{"sh", "-c"},
-				Args:            []string{"wget -q -O - '$(TAR_URL)' | tar -xvC /conf"},
 				Env:             []corev1.EnvVar{{Name: "TAR_URL", Value: tarurl}},
 				ImagePullPolicy: corev1.PullIfNotPresent,
-				VolumeMounts:    []corev1.VolumeMount{{Name: "confx", MountPath: "/conf"}},
+				VolumeMounts:    []corev1.VolumeMount{{Name: "confx", MountPath: "/data"}},
+
+				// Command: []string{"sh", "-c", "wget -q -O - '$(TAR_URL)' | tar -xvC /data"},
 			}
 			patches = append(patches, CreateArrayPatche(initc, len(pod.Spec.InitContainers) == 0, "/spec/initContainers"))
 			pod.Spec.InitContainers = append(pod.Spec.InitContainers, initc)
