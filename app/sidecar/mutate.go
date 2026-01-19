@@ -32,7 +32,7 @@ func init() {
 	flag.StringVar(&C.InjectConfigKind, "injectConfigKind", "ksidecar/confkind", "injector configuration, [env](.json|yaml|prop|toml)(#0), #0 is containers offset from 0")
 	flag.StringVar(&C.InjectConfigPath, "injectConfigPath", "ksidecar/confpath", "injector configuration directory path")
 	flag.StringVar(&C.InjectServerHost, "injectServerHost", "http://ksidecar-injector.default.svc", "injector server host")
-	flag.StringVar(&C.InitArchiveImage, "initArchiveImage", "busybox:1.37.0", "init container archive image")
+	flag.StringVar(&C.InitArchiveImage, "initArchiveImage", "suisrc/k8skit:1.3.10-wgetar", "init container archive image")
 
 	z.Register("99-app.sidecar", func(zgg *z.Zgg) z.Closed {
 		api := z.RegSvc(zgg.SvcKit, &MutateApi{Patcher: &Patcher{
