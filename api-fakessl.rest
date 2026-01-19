@@ -66,7 +66,7 @@ GET {{BASE}}/api/ssl/v1/ca/txt?key=tst
 GET {{BASE}}/api/ssl/v1/ca/b64?key=tst
 
 ###
-GET {{BASE}}/api/ssl/v1/ca/txt?key=sidecar
+GET {{BASE}}/api/ssl/v1/ca/txt?key=ksidecar
 
 ###
 GET {{BASE}}/api/ssl/v1/ce?token=Ckt1YmVybmV0ZXM&key=tst&domain=dev1.sims-cn.com&kind=1&cn=dev01

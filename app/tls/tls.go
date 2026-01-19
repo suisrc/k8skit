@@ -24,7 +24,7 @@ var (
 
 func init() {
 	z.Config(&C)
-	flag.StringVar(&C.SecretName, "secretName", "", "sidecar fakessl secret name")
+	flag.StringVar(&C.SecretName, "secretName", "fkc-ksidecar-data", "ksidecar fakessl secret name")
 
 	z.Register("21-tlshttp", InitRegister)
 }
@@ -37,7 +37,7 @@ func InitRegister(zgg *z.Zgg) z.Closed {
 	// 注册 https 证书
 	cli := zgg.SvcKit.Get("k8sclient").(kubernetes.Interface)
 
-	// fkc-sidecar-data
+	// fkc-ksidecar-data
 	z.Printf("[_tlshttp]: checker https cert: %s\n", C.SecretName)
 
 	ctx := context.TODO()
@@ -81,14 +81,14 @@ func InitRegister(zgg *z.Zgg) z.Closed {
 			zgg.ServeStop(message) // 初始化失败，直接退出
 			return nil
 		}
+		z.Printf("[_tlshttp]: create secret success, secret [%s] token: %s", ikey, string(token))
 	}
 	if token, ok := info.Data["token"]; !ok {
 		message := fmt.Sprintf("[_tlshttp]: secret [%s.token] not found", ikey)
 		zgg.ServeStop(message) // 初始化失败，直接退出
 		return nil
 	} else {
-		app.C.Token = string(token)
-		z.Printf("[_tlshttp]: secret [%s] token: %s", ikey, string(token))
+		app.Token = string(token) // 设置令牌
 	}
 
 	config := tlsx.TLSAutoConfig{}

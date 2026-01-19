@@ -1,7 +1,6 @@
 package app
 
 import (
-	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -16,20 +15,13 @@ import (
 )
 
 var (
-	namespace_ = ""
+	Token string
 
-	C = struct {
-		Token            string
-		InjectAnnotation string
-		InjectDefaultKey string
-	}{}
+	// C = struct {
+	// }{}
 )
 
 func init() {
-	z.Config(&C)
-	flag.StringVar(&C.InjectAnnotation, "injectAnnotation", "sidecar/configmap", "injector annotation")
-	flag.StringVar(&C.InjectDefaultKey, "injectDefaultKey", "sidecar.yml", "injector default key")
-
 	z.Register("11-app.init", func(zgg *z.Zgg) z.Closed {
 		// 创建 k8sclient
 		cli, err := CreateClient(z.C.Server.Local)
@@ -37,7 +29,7 @@ func init() {
 			zgg.ServeStop("create k8s client error: ", err.Error()) // 初始化失败，直接退出
 			return nil
 		}
-		z.Println("create k8s client success: local=", z.C.Server.Local)
+		z.Println("[_k8scli_]: create k8s client success: local=", z.C.Server.Local)
 		zgg.SvcKit.Set("k8sclient", cli) // 注册 k8sclient
 		return nil
 	})
@@ -57,11 +49,11 @@ func CreateClient(local bool) (*kubernetes.Clientset, error) {
 // BuildConfig Build the config
 func BuildConfig(local bool) (*rest.Config, error) {
 	if local {
-		z.Println("using local kubeconfig.")
+		z.Println("[_k8scli_]: using local kubeconfig.")
 		kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
 		return clientcmd.BuildConfigFromFlags("", kubeconfig)
 	}
-	z.Println("using in cluster kubeconfig.")
+	z.Println("[_k8scli_]: using in cluster kubeconfig.")
 	return rest.InClusterConfig()
 }
 

@@ -3,7 +3,6 @@ package sidecar
 import (
 	"context"
 	"encoding/json"
-	"k8skit/app"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -11,25 +10,29 @@ import (
 
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 )
 
 // PodPatcher Pod patching interface
-type PodPatcher interface {
-	PatchPodCreate(ctx context.Context, namespace string, pod corev1.Pod) ([]PatchOperation, error)
-	PatchPodUpdate(ctx context.Context, namespace string, oldPod corev1.Pod, newPod corev1.Pod) ([]PatchOperation, error)
-	PatchPodDelete(ctx context.Context, namespace string, pod corev1.Pod) ([]PatchOperation, error)
-}
+// type PodPatcher interface {
+// 	PatchPodCreate(ctx context.Context, namespace string, pod corev1.Pod) ([]PatchOperation, error)
+// 	PatchPodUpdate(ctx context.Context, namespace string, oldPod corev1.Pod, newPod corev1.Pod) ([]PatchOperation, error)
+// 	PatchPodDelete(ctx context.Context, namespace string, pod corev1.Pod) ([]PatchOperation, error)
+// }
 
-func NewInjectorPatcher(svc z.SvcKit) PodPatcher {
-	return &InjectorPatcher{
-		K8sClient:        svc.Get("k8sclient").(kubernetes.Interface),
-		InjectAnnotation: app.C.InjectAnnotation,
-		InjectDefaultKey: app.C.InjectDefaultKey,
-	}
-}
+// func NewPatcher(svc z.SvcKit) *Patcher {
+// 	return &Patcher{
+// 		K8sClient:        svc.Get("k8sclient").(kubernetes.Interface),
+// 		ConfxRepository:  svc.Get("repoconfx").(*repo.ConfxRepo),
+// 		InjectAnnotation: C.InjectAnnotation,
+// 		InjectDefaultKey: C.InjectDefaultKey,
+// 		InjectConfigKind: C.InjectConfigKind,
+// 		InjectConfigPath: C.InjectConfigPath,
+// 		InjectServerHost: C.InjectServerHost,
+// 	}
+// }
 
 // PatchOperation JsonPatch struct http://jsonpatch.com/
 type PatchOperation struct {
@@ -38,6 +41,69 @@ type PatchOperation struct {
 	Value any    `json:"value,omitempty"`
 }
 
+//=========================================================================================================================
+
+// PatchPodCreate Handle Pod Create Patch
+func (patcher *Patcher) PatchPodCreate(ctx context.Context, namespace string, pod corev1.Pod) ([]PatchOperation, error) {
+	podName := pod.GetName()
+	if podName == "" {
+		podName = pod.GetGenerateName()
+	}
+	// init pod fileds, nil is not allowed
+	if pod.Spec.InitContainers == nil {
+		pod.Spec.InitContainers = []corev1.Container{}
+	}
+	if pod.Spec.Containers == nil {
+		pod.Spec.Containers = []corev1.Container{}
+	}
+	if pod.Spec.Volumes == nil {
+		pod.Spec.Volumes = []corev1.Volume{}
+	}
+	if pod.Spec.ImagePullSecrets == nil {
+		pod.Spec.ImagePullSecrets = []corev1.LocalObjectReference{}
+	}
+	if pod.Annotations == nil {
+		pod.Annotations = map[string]string{}
+	}
+	if pod.Labels == nil {
+		pod.Labels = map[string]string{}
+	}
+	var patches []PatchOperation
+	if configmapSidecarNames := patcher.ConfigmapSidecarNames(namespace, pod); configmapSidecarNames != nil {
+		// add configmap sidecar
+		for _, configmapSidecarName := range configmapSidecarNames {
+			configmapSidecar, err := patcher.ConfigmapSidecarData(ctx, namespace, configmapSidecarName, pod)
+			if k8serrors.IsNotFound(err) {
+				z.Printf("sidecar configmap %s -> %s was not found for %s/%s pod", namespace, configmapSidecarName, namespace, podName)
+			} else if err != nil {
+				z.Printf("error fetching sidecar configmap %s -> %s for %s/%s pod - %v", namespace, configmapSidecarName, namespace, podName, err)
+			} else if configmapSidecar != nil {
+				// patcher.fixSidecarByPodAnnotations(configmapSidecar, pod.GetAnnotations()) // fix sidecar by pod annotations
+				patches = append(patches, CreateContainersPatches(configmapSidecar.InitContainers, &pod.Spec.InitContainers, "/spec/initContainers")...)
+				patches = append(patches, CreateContainersPatches(configmapSidecar.Containers, &pod.Spec.Containers, "/spec/containers")...)
+				patches = append(patches, CreateArrayPatches(configmapSidecar.Volumes, &pod.Spec.Volumes, "/spec/volumes")...)
+				patches = append(patches, CreateArrayPatches(configmapSidecar.ImagePullSecrets, &pod.Spec.ImagePullSecrets, "/spec/imagePullSecrets")...)
+				patches = append(patches, CreateObjectPatches(configmapSidecar.Annotations, &pod.Annotations, "/metadata/annotations", patcher.AllowAnnotationOverrides)...)
+				patches = append(patches, CreateObjectPatches(configmapSidecar.Labels, &pod.Labels, "/metadata/labels", patcher.AllowLabelOverrides)...)
+			}
+		}
+	}
+	patches = append(patches, patcher.InjectConfigByDatabase(ctx, namespace, &pod)...)
+	// z.Debugf("sidecar patches being applied for %v/%v: patches: %v", namespace, podName, patches)
+	return patches, nil
+}
+
+/*PatchPodUpdate not supported, only support create */
+func (patcher *Patcher) PatchPodUpdate(_ context.Context, _ string, _ corev1.Pod, _ corev1.Pod) ([]PatchOperation, error) {
+	return nil, nil
+}
+
+/*PatchPodDelete not supported, only support create */
+func (patcher *Patcher) PatchPodDelete(_ context.Context, _ string, _ corev1.Pod) ([]PatchOperation, error) {
+	return nil, nil
+}
+
+// =========================================================================================================================
 func baseAdmissionReview() *admissionv1.AdmissionReview {
 	gvk := admissionv1.SchemeGroupVersion.WithKind("AdmissionReview")
 	return &admissionv1.AdmissionReview{

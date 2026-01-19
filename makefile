@@ -30,9 +30,11 @@ main:
 
 mapp:
 	go run main.go -xrt 2 -local -debug -port 81 -dual \
-	--secretName fkc-sidecar-data \
-	--injectAnnotation ksidecar/configmap \
-	--injectDefaultKey sidecar.yml
+	--dsn "cfg:i3SbJ6snkQeZXt@tcp(mysql.base.svc:3306)/cfg?charset=utf8&parseTime=True&loc=Asia%2FShanghai"
+	
+# 	--secretName fkc-ksidecar-data \
+# 	--injectAnnotation ksidecar/configmap \
+# 	--injectDefaultKey value.yml
 
 tenv:
 	KIT_KWLOG2_TOKEN=xxxx123456789 go run main.go -debug -print -port 81

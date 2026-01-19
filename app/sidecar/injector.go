@@ -11,13 +11,8 @@ import (
 	"github.com/samber/lo"
 	"github.com/suisrc/zgg/z"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
-
-// InjectorPatcher implements PodPatcher
-var _ PodPatcher = (*InjectorPatcher)(nil)
 
 // Sidecar Kubernetes Sidecar Injector schema
 type Sidecar struct {
@@ -29,21 +24,10 @@ type Sidecar struct {
 	Labels           map[string]string             `yaml:"labels"`
 }
 
-// InjectorPatcher Sidecar Injector patcher
-type InjectorPatcher struct {
-	K8sClient                kubernetes.Interface
-	InjectAnnotation         string
-	InjectDefaultKey         string
-	AllowAnnotationOverrides bool
-	AllowLabelOverrides      bool
-}
-
-//==================================================================================================================================================================
-
-func (patcher *InjectorPatcher) ConfigmapSidecarData(ctx context.Context, configSidecarNamespace, configSidecarName string, pod corev1.Pod) (*Sidecar, error) {
-	namespace := configSidecarNamespace   // namespace of the configmap
+// ConfigmapSidecarData
+func (patcher *Patcher) ConfigmapSidecarData(ctx context.Context, namespace, configmapSidecarName string, pod corev1.Pod) (*Sidecar, error) {
 	configKey := patcher.InjectDefaultKey // key of the configmap
-	configName := configSidecarName
+	configName := configmapSidecarName
 	if idx := strings.IndexRune(configName, '/'); idx > 0 {
 		namespace = configName[:idx]
 		configName = configName[idx+1:]
@@ -70,7 +54,8 @@ func (patcher *InjectorPatcher) ConfigmapSidecarData(ctx context.Context, config
 	}
 }
 
-func (patcher *InjectorPatcher) ConfigmapSidecarNames(namespace string, pod corev1.Pod) []string {
+// ConfigmapSidecarNames
+func (patcher *Patcher) ConfigmapSidecarNames(namespace string, pod corev1.Pod) []string {
 	podName := pod.GetName()
 	if podName == "" {
 		podName = pod.GetGenerateName()
@@ -85,7 +70,7 @@ func (patcher *InjectorPatcher) ConfigmapSidecarNames(namespace string, pod core
 		})
 
 		if len(parts) > 0 {
-			z.Printf("sideCar injection for %v/%v: sidecars: %v", namespace, podName, sidecars)
+			z.Printf("sidecar injection for %v/%v: sidecars: %v", namespace, podName, sidecars)
 			return parts
 		}
 	}
@@ -93,9 +78,9 @@ func (patcher *InjectorPatcher) ConfigmapSidecarNames(namespace string, pod core
 	return nil
 }
 
-//==================================================================================================================================================================
+//=========================================================================================================================
 
-// func (patcher *InjectorPatcher) FixSidecarByPodAnnotations(sidecar *Sidecar, annotations map[string]string) {
+// func (patcher *Patcher) FixSidecarByPodAnnotations(sidecar *Sidecar, annotations map[string]string) {
 // 	if (annotations == nil) || (len(annotations) == 0) {
 // 		return
 // 	}
@@ -113,7 +98,7 @@ func (patcher *InjectorPatcher) ConfigmapSidecarNames(namespace string, pod core
 // 	}
 // }
 //
-// func (patcher *InjectorPatcher) FixSidecarContainerEnvValue(container *corev1.Container, envName, envValue string) {
+// func (patcher *Patcher) FixSidecarContainerEnvValue(container *corev1.Container, envName, envValue string) {
 // 	edx := -1
 // 	for jdx := range container.Env {
 // 		if container.Env[jdx].Name == envName {
@@ -132,8 +117,9 @@ func (patcher *InjectorPatcher) ConfigmapSidecarNames(namespace string, pod core
 // 	}
 // }
 
-//==================================================================================================================================================================
+//=========================================================================================================================
 
+// CreateContainersPatches
 func CreateContainersPatches(newContainers []corev1.Container, existingContainers *[]corev1.Container, path string) []PatchOperation {
 	if len(newContainers) == 0 {
 		// no new containers, so no patch necessary
@@ -228,15 +214,7 @@ func CreateContainersPatches(newContainers []corev1.Container, existingContainer
 	return patches
 }
 
-func FindIndexArrayObject[T any](items *[]T, exist func(T) bool) int {
-	for idx, item := range *items {
-		if exist(item) {
-			return idx
-		}
-	}
-	return -1
-}
-
+// CreateArrayPatches
 func CreateArrayPatches[T any](newCollection []T, existingCollection *[]T, path string /*, exist func(T, T) bool*/) []PatchOperation {
 	if len(newCollection) == 0 {
 		// no new collection, so no patch necessary
@@ -246,7 +224,7 @@ func CreateArrayPatches[T any](newCollection []T, existingCollection *[]T, path 
 	for index, item := range newCollection {
 		first := index == 0 && len(*existingCollection) == 0
 		// if !first && exist != nil {
-		// 	idx := findIndexArrayObject(existingCollection, func(that T) bool {
+		// 	idx := FindIndexArrayObject(existingCollection, func(that T) bool {
 		// 		return exist(item, that)
 		// 	})
 		// 	// item is exist in existingCollection，pass merge patch
@@ -260,8 +238,9 @@ func CreateArrayPatches[T any](newCollection []T, existingCollection *[]T, path 
 	return patches
 }
 
+// CreateArrayPatche
 func CreateArrayPatche[T any](item T, first bool, path string) PatchOperation {
-	var value interface{}
+	var value any
 	if !first {
 		path = path + "/-"
 		value = item
@@ -275,6 +254,7 @@ func CreateArrayPatche[T any](item T, first bool, path string) PatchOperation {
 	}
 }
 
+// CreateObjectPatches
 func CreateObjectPatches(newMap map[string]string, existingMap *map[string]string, path string, override bool) []PatchOperation {
 	if len(newMap) == 0 {
 		// no new map, so no patch necessary
@@ -307,70 +287,19 @@ func CreateObjectPatches(newMap map[string]string, existingMap *map[string]strin
 	return patches
 }
 
+// FindIndexArrayObject
+func FindIndexArrayObject[T any](items *[]T, exist func(T) bool) int {
+	for idx, item := range *items {
+		if exist(item) {
+			return idx
+		}
+	}
+	return -1
+}
+
 // Escape keys that may contain `/`s or `~`s to have a valid patch
 // Order matters here, otherwise `/` --> ~01, instead of ~1
 func escapeJSONPath(k string) string {
 	k = strings.ReplaceAll(k, "~", "~0")
 	return strings.ReplaceAll(k, "/", "~1")
-}
-
-//==================================================================================================================================================================
-
-// PatchPodCreate Handle Pod Create Patch
-func (patcher *InjectorPatcher) PatchPodCreate(ctx context.Context, namespace string, pod corev1.Pod) ([]PatchOperation, error) {
-	podName := pod.GetName()
-	if podName == "" {
-		podName = pod.GetGenerateName()
-	}
-	var patches []PatchOperation
-	if configmapSidecarNames := patcher.ConfigmapSidecarNames(namespace, pod); configmapSidecarNames != nil {
-		// init pod fileds, nil is not allowed
-		if pod.Spec.InitContainers == nil {
-			pod.Spec.InitContainers = []corev1.Container{}
-		}
-		if pod.Spec.Containers == nil {
-			pod.Spec.Containers = []corev1.Container{}
-		}
-		if pod.Spec.Volumes == nil {
-			pod.Spec.Volumes = []corev1.Volume{}
-		}
-		if pod.Spec.ImagePullSecrets == nil {
-			pod.Spec.ImagePullSecrets = []corev1.LocalObjectReference{}
-		}
-		if pod.Annotations == nil {
-			pod.Annotations = map[string]string{}
-		}
-		if pod.Labels == nil {
-			pod.Labels = map[string]string{}
-		}
-		// add configmap sidecar
-		for _, configmapSidecarName := range configmapSidecarNames {
-			configmapSidecar, err := patcher.ConfigmapSidecarData(ctx, namespace, configmapSidecarName, pod)
-			if k8serrors.IsNotFound(err) {
-				z.Printf("sidecar configmap %s -> %s was not found for %s/%s pod", namespace, configmapSidecarName, namespace, podName)
-			} else if err != nil {
-				z.Printf("error fetching sidecar configmap %s -> %s for %s/%s pod - %v", namespace, configmapSidecarName, namespace, podName, err)
-			} else if configmapSidecar != nil {
-				// patcher.fixSidecarByPodAnnotations(configmapSidecar, pod.GetAnnotations()) // fix sidecar by pod annotations
-				patches = append(patches, CreateContainersPatches(configmapSidecar.InitContainers, &pod.Spec.InitContainers, "/spec/initContainers")...)
-				patches = append(patches, CreateContainersPatches(configmapSidecar.Containers, &pod.Spec.Containers, "/spec/containers")...)
-				patches = append(patches, CreateArrayPatches(configmapSidecar.Volumes, &pod.Spec.Volumes, "/spec/volumes")...)
-				patches = append(patches, CreateArrayPatches(configmapSidecar.ImagePullSecrets, &pod.Spec.ImagePullSecrets, "/spec/imagePullSecrets")...)
-				patches = append(patches, CreateObjectPatches(configmapSidecar.Annotations, &pod.Annotations, "/metadata/annotations", patcher.AllowAnnotationOverrides)...)
-				patches = append(patches, CreateObjectPatches(configmapSidecar.Labels, &pod.Labels, "/metadata/labels", patcher.AllowLabelOverrides)...)
-			}
-		}
-	}
-	// z.Debugf("sidecar patches being applied for %v/%v: patches: %v", namespace, podName, patches)
-	return patches, nil
-}
-
-/*PatchPodUpdate not supported, only support create */
-func (patcher *InjectorPatcher) PatchPodUpdate(_ context.Context, _ string, _ corev1.Pod, _ corev1.Pod) ([]PatchOperation, error) {
-	return nil, nil
-}
-
-/*PatchPodDelete not supported, only support create */
-func (patcher *InjectorPatcher) PatchPodDelete(_ context.Context, _ string, _ corev1.Pod) ([]PatchOperation, error) {
-	return nil, nil
 }
