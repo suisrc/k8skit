@@ -24,8 +24,7 @@ var (
 func init() {
 	z.Register("11-app.init", func(zgg *z.Zgg) z.Closed {
 		// 创建 k8sclient
-		// cli, err := CreateClient(z.C.Server.Local)
-		cli, err := CreateClient(true)
+		cli, err := CreateClient(z.C.Server.Local)
 		if err != nil {
 			zgg.ServeStop("create k8s client error: ", err.Error()) // 初始化失败，直接退出
 			return nil
