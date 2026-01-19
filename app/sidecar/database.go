@@ -1,7 +1,7 @@
 package sidecar
 
 import (
-	"archive/zip"
+	"archive/tar"
 	"context"
 	"crypto/sha1"
 	"fmt"
@@ -24,7 +24,7 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 		return []PatchOperation{}
 	}
 	// envName
-	envName, _ := pod.Annotations[patcher.InjectConfigKind]
+	envName, _ := annotations[patcher.InjectConfigKind]
 	if envName == "" {
 		return []PatchOperation{}
 	}
@@ -65,6 +65,9 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 		return []PatchOperation{}
 	}
 	appName = strings.TrimSuffix(appName, "-logtty") // 兼容 logtty
+	z.Printf("Inject configuration by database, envName=[%s], appName=[%s], version=[%s]", envName, appName, version)
+	// container path
+	indexPath := fmt.Sprintf("/spec/containers/%d", cidx)
 	// pathces
 	patches := []PatchOperation{}
 	// envConf 环境变量是必须检索的，配置文件是可选配置
@@ -72,18 +75,18 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 		for index, data := range datas {
 			first := index == 0 && len(item.Env) == 0
 			env := corev1.EnvVar{Name: data.Code.String, Value: data.Data.String}
-			patches = append(patches, CreateArrayPatche(env, first, "/spec/containers/env"))
+			patches = append(patches, CreateArrayPatche(env, first, indexPath+"/env"))
 			item.Env = append(item.Env, env)
 		}
 	}
 	if kind != "" && kind != "env" {
 		// configuration file
 		if datas := patcher.ConfxRepository.GetConfigs(envName, appName, version, kind); len(datas) > 0 {
-			dirpath := patcher.InjectConfigPath
+			dirpath, _ := annotations[patcher.InjectConfigPath]
 			if dirpath == "" {
 				dirpath = "/confx" // 默认配置文件夹
 			}
-			rpath := fmt.Sprintf("/gitrepo?rand=%s&time=%d", z.GenStr("", 12), time.Now().Unix())
+			rpath := fmt.Sprintf("/archive?rand=%s&time=%d", z.GenStr("", 12), time.Now().Unix())
 			for index, data := range datas {
 				rpath += fmt.Sprintf("&id=%d", data.ID)
 				cpath := data.Code.String
@@ -91,10 +94,10 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 					cpath = filepath.Join(dirpath, cpath) // 配置文件绝对定制
 				}
 				spath := strings.ReplaceAll(data.Code.String, "/", "_")
-				vpath := corev1.VolumeMount{Name: "confx", MountPath: cpath, SubPath: spath}
 				first := index == 0 && len(item.VolumeMounts) == 0
 				// volumeMount
-				patches = append(patches, CreateArrayPatche(vpath, first, "/spec/containers/volumeMounts"))
+				vpath := corev1.VolumeMount{Name: "confx", MountPath: cpath, SubPath: spath}
+				patches = append(patches, CreateArrayPatche(vpath, first, indexPath+"/volumeMounts"))
 				item.VolumeMounts = append(item.VolumeMounts, vpath)
 			}
 			{
@@ -105,14 +108,26 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 				sign := fmt.Sprintf("%x", hash.Sum(nil))
 				rpath += fmt.Sprintf("&sign=%s", sign) // 40位长度
 			}
-			volume := corev1.Volume{Name: "confx", VolumeSource: corev1.VolumeSource{
-				GitRepo: &corev1.GitRepoVolumeSource{
-					Repository: patcher.InjectServerHost + rpath,
-				},
-			}}
+			tarurl := patcher.InjectServerHost + rpath
 			// volume
+			volume := corev1.Volume{Name: "confx", VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			}}
 			patches = append(patches, CreateArrayPatche(volume, len(pod.Spec.Volumes) == 0, "/spec/volumes"))
 			pod.Spec.Volumes = append(pod.Spec.Volumes, volume)
+			// init container busybox:1.37.0
+			// wget -q -S -O - ? | tar -x -C /conf
+			initc := corev1.Container{
+				Name:            "confx",
+				Image:           patcher.InitArchiveImage,
+				Command:         []string{"sh", "-c"},
+				Args:            []string{"wget -q -O - '$(TAR_URL)' | tar -xvC /conf"},
+				Env:             []corev1.EnvVar{{Name: "TAR_URL", Value: tarurl}},
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				VolumeMounts:    []corev1.VolumeMount{{Name: "confx", MountPath: "/conf"}},
+			}
+			patches = append(patches, CreateArrayPatche(initc, len(pod.Spec.InitContainers) == 0, "/spec/initContainers"))
+			pod.Spec.InitContainers = append(pod.Spec.InitContainers, initc)
 		}
 	}
 	return patches
@@ -120,7 +135,7 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 
 //=========================================================================================================================
 
-func (api *MutateApi) gitrepo(zrc *z.Ctx) {
+func (api *MutateApi) archive(zrc *z.Ctx) {
 	// 验证签名
 	{
 		rpath := zrc.Request.RequestURI
@@ -167,19 +182,20 @@ func (api *MutateApi) gitrepo(zrc *z.Ctx) {
 	if zrc.TraceID != "" {
 		zrc.Writer.Header().Set("X-Request-Id", zrc.TraceID)
 	}
-	zrc.Writer.Header().Set("Content-Type", "application/zip") // 档案(archive).zip
-	zrc.Writer.Header().Set("Content-Disposition", `attachment; filename="archive.zip"`)
+	zrc.Writer.Header().Set("Content-Type", "application/tar") // 档案(archive).tar
+	zrc.Writer.Header().Set("Content-Disposition", `attachment; filename="archive.tar"`)
 	// zrc.Writer.WriteHeader(http.StatusOK)
 	// 使用 zip 格式返回档案集合
-	zw := zip.NewWriter(zrc.Writer)
+	zw := tar.NewWriter(zrc.Writer)
 	defer zw.Close()
 	for _, data := range datas {
 		spath := strings.ReplaceAll(data.Code.String, "/", "_")
-		zf, err := zw.Create(spath)
+		hdr := &tar.Header{Name: spath, Mode: 0666, Size: int64(len(data.Data.String))}
+		err := zw.WriteHeader(hdr)
 		if err != nil {
-			z.Printf("zip create error [%s]: %s", data.Code.String, err)
+			z.Printf("tar create error [%s]: %s", data.Code.String, err)
 			continue
 		}
-		zf.Write([]byte(data.Data.String))
+		zw.Write([]byte(data.Data.String))
 	}
 }

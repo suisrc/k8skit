@@ -21,6 +21,7 @@ var (
 		InjectConfigKind string
 		InjectConfigPath string
 		InjectServerHost string
+		InitArchiveImage string
 	}{}
 )
 
@@ -31,6 +32,7 @@ func init() {
 	flag.StringVar(&C.InjectConfigKind, "injectConfigKind", "ksidecar/confkind", "injector configuration, [env](.json|yaml|prop|toml)(#0), #0 is containers offset from 0")
 	flag.StringVar(&C.InjectConfigPath, "injectConfigPath", "ksidecar/confpath", "injector configuration directory path")
 	flag.StringVar(&C.InjectServerHost, "injectServerHost", "http://ksidecar-injector.default.svc", "injector server host")
+	flag.StringVar(&C.InitArchiveImage, "initArchiveImage", "busybox:1.37.0", "init container archive image")
 
 	z.Register("99-app.sidecar", func(zgg *z.Zgg) z.Closed {
 		api := z.RegSvc(zgg.SvcKit, &MutateApi{Patcher: &Patcher{
@@ -41,10 +43,11 @@ func init() {
 			InjectConfigKind: C.InjectConfigKind,
 			InjectConfigPath: C.InjectConfigPath,
 			InjectServerHost: C.InjectServerHost,
+			InitArchiveImage: C.InitArchiveImage,
 		}})
 		// router
 		zgg.AddRouter(http.MethodPost+" mutate", api.mutate)
-		zgg.AddRouter(http.MethodGet+" gitrepo", api.gitrepo)
+		zgg.AddRouter(http.MethodGet+" archive", api.archive)
 		// z.POST("mutate", api.mutate, zgg) // 注册接口
 		return nil
 	})
@@ -61,6 +64,7 @@ type Patcher struct {
 	InjectConfigKind         string
 	InjectConfigPath         string
 	InjectServerHost         string
+	InitArchiveImage         string
 }
 
 // MutateApi Sidecar Injector api
@@ -81,6 +85,9 @@ func (aa *MutateApi) mutate(zrc *z.Ctx) {
 		writeErrorAdmissionReview(http.StatusInternalServerError, err.Error(), zrc.Writer)
 		return
 	}
+	// AdmissionReview
+	// bts, _ := json.Marshal(admReview)
+	// z.Println("AdmissionReview: ", string(bts))
 	req := admReview.Request
 
 	z.Printf("AdmissionReview for Kind=%v, Namespace=%v Name=%v UID=%v patchOperation=%v UserInfo=%v", //

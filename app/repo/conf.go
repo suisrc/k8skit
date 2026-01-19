@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"strings"
 
+	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/ze/sqlx"
 )
 
@@ -63,10 +64,14 @@ func (*ConfxRepo) TableName() string {
 	return C.DB.TablePrefix + "confx"
 }
 
+func (aa *ConfxRepo) SelectCols() string {
+	return "SELECT id, tag, env, app, ver, kind, code, data, dkey, disable, deleted FROM " + aa.TableName()
+}
+
 // 获取一个签名
 func (aa *ConfxRepo) GetConfig1(id int64) *ConfxDO {
 	cfx := &ConfxDO{}
-	err := aa.DS.Get(cfx, "SELECT * FROM "+aa.TableName()+" WHERE deleted=0 and id=?", id)
+	err := aa.DS.Get(cfx, aa.SelectCols()+" WHERE deleted=0 and id=?", id)
 	if err != nil {
 		return nil
 	}
@@ -92,7 +97,7 @@ func (aa *ConfxRepo) ConfLoop(tag, env, app, ver, kind string, cfs *[]ConfxDO, c
 		return // pass
 	}
 	//
-	sql_ := "SELECT * FROM " + aa.TableName() + " WHERE deleted=0"
+	sql_ := aa.SelectCols() + " WHERE deleted=0"
 	args := map[string]any{}
 	// tag
 	if tag != "" {
@@ -121,15 +126,18 @@ func (aa *ConfxRepo) ConfLoop(tag, env, app, ver, kind string, cfs *[]ConfxDO, c
 	args["kind"] = kind + "%"
 	// order by
 	sql_ += " ORDER BY ver DESC"
+	// z.Println("sql:", sql_)
 	// query by named
 	rows, err := aa.DS.NamedQuery(sql_, args)
 	if err != nil {
+		z.Println("sql qry error:", err.Error())
 		return
 	}
 	defer rows.Close()
 	for rows.Next() {
 		cfx := ConfxDO{}
 		if err := rows.StructScan(&cfx); err != nil {
+			z.Println("sql row error:", err.Error())
 			continue
 		}
 		if cfx.Disable || cfx.Deleted || cfx.Code.String == "" {

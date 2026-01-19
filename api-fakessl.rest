@@ -7,7 +7,7 @@ Content-Type: application/json
 
 
 ###
-POST {{BASE}}/api/ssl/v1/ca/init?token=va2792f4feeb0c8f5f0c4019f378ce10&key=dev&cn=kubernetes
+POST {{BASE}}/api/ssl/v1/ca/init?token=v3045f3e1c4c43062a1bb393cb90f4ed&key=dev&cn=kubernetes
 Content-Type: application/json
 
 {
@@ -35,7 +35,7 @@ Content-Type: application/json
 }
 
 ###
-POST {{BASE}}/api/ssl/v1/ca/init?token=va2792f4feeb0c8f5f0c4019f378ce10&key=dev
+POST {{BASE}}/api/ssl/v1/ca/init?token=v3045f3e1c4c43062a1bb393cb90f4ed&key=tst
 Content-Type: application/json
 
 
@@ -69,11 +69,14 @@ GET {{BASE}}/api/ssl/v1/ca/b64?key=tst
 GET {{BASE}}/api/ssl/v1/ca/txt?key=ksidecar
 
 ###
-GET {{BASE}}/api/ssl/v1/ce?token=Ckt1YmVybmV0ZXM&key=tst&domain=dev1.sims-cn.com&kind=1&cn=dev01
-Content-Type: application/json
+GET {{BASE}}/api/ssl/v1/ca/b64?key=ksidecar
 
 ###
-GET {{BASE}}/api/ssl/v1/ce?token=v34ed884903b854540a8c86299fe2308&key=tst&domain=dev1.sims-cn.com&kind=3&cn=dev01
+GET {{BASE}}/api/ssl/v1/ce?token=v3df7817b25a410fea1be77c50cd172b&key=tst&domain=dev1.sims-cn.com&kind=1&cn=dev01
+Content-Type: application/json
+
+### kind=1: 没有新建， kind=3: 强制新建， cn: common name, profile使用的key， 如不没有，使用 default
+GET {{BASE}}/api/ssl/v1/ce?token=v3df7817b25a410fea1be77c50cd172b&key=tst&domain=dev1.sims-cn.com&kind=3&cn=dev01
 Content-Type: application/json
 
 ###
