@@ -72,3 +72,11 @@ kwdog2:
 	-e 's|// proxy2.|proxy2.|g' -e '7i"github.com/suisrc/zgg/app/proxy2"' \
 	-e 's|// kwdog2.|kwdog2.|g' -e '7i"github.com/suisrc/zgg/app/kwdog2"' main.go
 	git commit -am "${tag}" && git tag -a $(tag)-kwdog2 -m "${tag}" && git push origin $(tag)-kwdog2 && git reset --hard HEAD~1
+
+wgetar:
+	@if [ -z "$(tag)" ]; then \
+		echo "error: 'tag' not specified! Please specify the 'tag' using 'make tflow tag=(version)";\
+		exit 1; \
+	fi
+	cp wget_tar Dockerfile
+	git commit -am "${tag}" && git tag -a $(tag)-wgetar -m "${tag}" && git push origin $(tag)-wgetar && git reset --hard HEAD~1
