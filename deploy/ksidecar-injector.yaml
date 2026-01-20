@@ -37,6 +37,8 @@ spec:
           imagePullPolicy: IfNotPresent
           args:
             - --dual
+            - --sidecarWithAppEnv
+            - ''
             - --sidecarDatasource
             - 'user:pass@tcp(mysql.base.svc:3306)/cfg?charset=utf8&parseTime=True&loc=Asia%2FShanghai'
           livenessProbe:
