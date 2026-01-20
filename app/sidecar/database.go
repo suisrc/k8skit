@@ -6,7 +6,6 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"k8skit/app"
-	"k8skit/app/repo"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -24,27 +23,27 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 		return []PatchOperation{}
 	}
 	// envName
-	envName, _ := annotations[patcher.InjectByDBConfig]
-	if envName == "" {
+	appName, _ := annotations[patcher.Config.ByDBConfig]
+	if appName == "" {
 		return []PatchOperation{}
 	}
 	if len(pod.Spec.Containers) == 0 {
 		return []PatchOperation{}
 	}
 	cidx := 0
-	if idx := strings.IndexByte(envName, '#'); idx >= 0 {
+	if idx := strings.IndexByte(appName, '#'); idx >= 0 {
 		var err error
-		cidx, err = strconv.Atoi(patcher.InjectByDBConfig[idx+1:])
+		cidx, err = strconv.Atoi(patcher.Config.ByDBConfig[idx+1:])
 		if err != nil {
-			z.Printf("Skipping configuration by database, invalid annotation [%s=%s]", patcher.InjectByDBConfig, envName)
+			z.Printf("Skipping configuration by database, invalid annotation [%s=%s]", patcher.Config.ByDBConfig, appName)
 			return []PatchOperation{}
 		}
-		envName = envName[:idx]
+		appName = appName[:idx]
 	}
 	kind := ""
-	if idx := strings.IndexByte(envName, '.'); idx >= 0 {
-		kind = envName[idx+1:]
-		envName = envName[:idx]
+	if idx := strings.IndexByte(appName, '.'); idx >= 0 {
+		kind = appName[idx+1:]
+		appName = appName[:idx]
 	}
 	item := &pod.Spec.Containers[cidx] // 取第一个容器作为主进程，抽取环境变量
 	// version
@@ -56,22 +55,29 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 		version = ""
 	}
 	// appName
-	appName := item.Name
-	if appName == "app" {
-		appName, _ = pod.Labels["app"]
-	}
+	// annotations[ksidecar/db.config] > container.name > labels[app]
 	if appName == "" {
-		z.Printf("Skipping configuration by database, invalid pod or container name for [%s].[%s]", pod.Name, item.Name)
-		return []PatchOperation{}
+		appName = item.Name
+		appName = strings.TrimSuffix(appName, "-logtty") // 兼容 logtty
+		if appName == "app" {
+			if pod.Labels != nil {
+				appName, _ = pod.Labels["app"]
+			} else {
+				appName = ""
+			}
+		}
+		if appName == "" {
+			z.Printf("Skipping configuration by database, invalid pod or container name for [%s].[%s]", pod.Name, item.Name)
+			return []PatchOperation{}
+		}
 	}
-	appName = strings.TrimSuffix(appName, "-logtty") // 兼容 logtty
-	z.Printf("Inject configuration by database, envName=[%s], appName=[%s], version=[%s]", envName, appName, version)
+	z.Printf("Inject configuration by database, envName=[%s], appName=[%s], version=[%s]", patcher.Config.WithAppEnv, appName, version)
 	// container path
 	indexPath := fmt.Sprintf("/spec/containers/%d", cidx)
 	// pathces
 	patches := []PatchOperation{}
 	// envConf 环境变量是必须检索的，配置文件是可选配置
-	if datas := patcher.ConfxRepository.GetConfigs(envName, appName, version, "env"); len(datas) != 0 {
+	if datas := patcher.ConfxRepository.GetConfigs(patcher.Config.WithAppEnv, appName, version, "env"); len(datas) != 0 {
 		for index, data := range datas {
 			first := index == 0 && len(item.Env) == 0
 			env := corev1.EnvVar{Name: data.Code.String, Value: data.Data.String}
@@ -81,8 +87,8 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 	}
 	if kind != "" && kind != "env" {
 		// configuration file
-		if datas := patcher.ConfxRepository.GetConfigs(envName, appName, version, kind); len(datas) > 0 {
-			dirpath, _ := annotations[patcher.InjectByDBFolder]
+		if datas := patcher.ConfxRepository.GetConfigs(patcher.Config.WithAppEnv, appName, version, kind); len(datas) > 0 {
+			dirpath, _ := annotations[patcher.Config.ByDBFolder]
 			if dirpath == "" {
 				dirpath = "/" // 默认配置文件夹
 			}
@@ -108,7 +114,7 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 				sign := fmt.Sprintf("%x", hash.Sum(nil))
 				rpath += fmt.Sprintf("&sign=%s", sign) // 40位长度
 			}
-			tarurl := patcher.InjectServerHost + rpath
+			tarurl := patcher.Config.ServerHost + rpath
 			// volume
 			volume := corev1.Volume{Name: "confx", VolumeSource: corev1.VolumeSource{
 				EmptyDir: &corev1.EmptyDirVolumeSource{},
@@ -118,7 +124,7 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 			// init container busybox:1.37.0 -> suisrc/k8skit:1.3.12-wgetar
 			initc := corev1.Container{
 				Name:            "confx",
-				Image:           patcher.InitArchiveImage,
+				Image:           patcher.Config.InitcImage,
 				Env:             []corev1.EnvVar{{Name: "TAR_URL", Value: tarurl}},
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				VolumeMounts:    []corev1.VolumeMount{{Name: "confx", MountPath: "/data"}},
@@ -158,7 +164,7 @@ func (api *MutateApi) archive(zrc *z.Ctx) {
 		}
 	}
 	// 配置列表
-	datas := []repo.ConfxDO{}
+	datas := []ConfxDO{}
 	if ids, ok := zrc.Request.URL.Query()["id"]; !ok {
 		zrc.TEXT("# forbidden, id is empty", http.StatusUnauthorized)
 		return

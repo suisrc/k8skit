@@ -26,10 +26,13 @@ helm:
 	helm -n default template deploy/chart > deploy/bundle.yml
 
 main:
-	go run main.go -debug -port 81 -dual \
-	--dsn "cfg:i3SbJ6snkQeZXt@tcp(mysql.base.svc:3306)/cfg?charset=utf8&parseTime=True&loc=Asia%2FShanghai" \
-	--injectServerHost http://vscode.default.svc:81
-	
+	go run main.go -debug -local -port 81 -dual \
+	--sidecarDatasource "cfg:i3SbJ6snkQeZXt@tcp(mysql.base.svc:3306)/cfg?charset=utf8&parseTime=True&loc=Asia%2FShanghai" \
+	--sidecarServerHost http://vscode.default.svc:81
+
+
+mcfg:
+	go run main.go -debug -local -port 81 -dual -c __zgg.toml
 # 	go run main.go -c zgg.toml
 # 	--secretName fkc-ksidecar-data \
 # 	--injectAnnotation ksidecar/configmap \

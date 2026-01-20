@@ -1,4 +1,4 @@
-package repo
+package sidecar
 
 import (
 	"database/sql"
@@ -57,11 +57,12 @@ CREATE TABLE `confx` (
 //=========================================================================================================================
 
 type ConfxRepo struct {
-	DS *sqlx.DB
+	Database    *sqlx.DB
+	TablePrefix string
 }
 
-func (*ConfxRepo) TableName() string {
-	return C.DB.TablePrefix + "confx"
+func (aa *ConfxRepo) TableName() string {
+	return aa.TablePrefix + "confx"
 }
 
 func (aa *ConfxRepo) SelectCols() string {
@@ -70,8 +71,11 @@ func (aa *ConfxRepo) SelectCols() string {
 
 // 获取一个签名
 func (aa *ConfxRepo) GetConfig1(id int64) *ConfxDO {
+	if aa.Database == nil {
+		return nil
+	}
 	cfx := &ConfxDO{}
-	err := aa.DS.Get(cfx, aa.SelectCols()+" WHERE deleted=0 and id=?", id)
+	err := aa.Database.Get(cfx, aa.SelectCols()+" WHERE deleted=0 and id=?", id)
 	if err != nil {
 		return nil
 	}
@@ -90,7 +94,7 @@ func (aa *ConfxRepo) GetConfigs(env, app, ver, kind string) []ConfxDO {
 
 // 递归获取签名
 func (aa *ConfxRepo) ConfLoop(tag, env, app, ver, kind string, cfs *[]ConfxDO, cfm map[string]bool) {
-	if aa.DS == nil {
+	if aa.Database == nil {
 		return // pass
 	}
 	if kind == "" {
@@ -128,7 +132,7 @@ func (aa *ConfxRepo) ConfLoop(tag, env, app, ver, kind string, cfs *[]ConfxDO, c
 	sql_ += " ORDER BY ver DESC"
 	// z.Println("sql:", sql_)
 	// query by named
-	rows, err := aa.DS.NamedQuery(sql_, args)
+	rows, err := aa.Database.NamedQuery(sql_, args)
 	if err != nil {
 		z.Println("sql qry error:", err.Error())
 		return

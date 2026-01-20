@@ -99,7 +99,7 @@ CREATE TABLE `confx` (
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 ```
 
-[ksidecar/db.config] 通过数据库 confx 表注入相关配置  
+[ksidecar/db.config] 通过数据库 confx 表注入相关配置 (app)(.json|yaml|prop|toml)(#0)  
 [ksidecar/db.folder] 如果注入的是配置文件，则指定配置文件所在目录  
 
 ## 鸣谢

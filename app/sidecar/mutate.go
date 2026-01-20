@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"k8skit/app"
-	"k8skit/app/repo"
 	"net/http"
 
 	"github.com/suisrc/zgg/z"
@@ -16,47 +15,64 @@ import (
 
 var (
 	C = struct {
-		Sidecar Config
+		Sidecar struct {
+			Config
+			DB app.DatabaseConfig `json:"database"`
+		}
 	}{}
 )
 
 type Config struct {
-	InjectAnnotation string
-	InjectDefaultKey string
-	InjectByDBConfig string
-	InjectByDBFolder string
-	InjectServerHost string
-	InitArchiveImage string
+	Annotation string `json:"annotation"`
+	DefaultKey string `json:"defaultKey"`
+	ByDBConfig string `json:"byDbConfig"`
+	ByDBFolder string `json:"byDbFolder"`
+	WithAppEnv string `json:"withAppEnv"`
+	ServerHost string `json:"serverHost"`
+	InitcImage string `json:"initcImage"`
 }
 
 func init() {
 	z.Config(&C)
-	flag.StringVar(&C.Sidecar.InjectAnnotation, "injectAnnotation", "ksidecar/configmap", "injector annotation, namespace/configmap#attribute")
-	flag.StringVar(&C.Sidecar.InjectDefaultKey, "injectDefaultKey", "value.yml", "injector default configmap attribute name")
-	flag.StringVar(&C.Sidecar.InjectByDBConfig, "injectConfigKind", "ksidecar/db.config", "injector configuration, [env](.json|yaml|prop|toml)(#0), #0 is containers offset from 0")
-	flag.StringVar(&C.Sidecar.InjectByDBFolder, "injectConfigPath", "ksidecar/db.folder", "injector configuration directory path")
-	flag.StringVar(&C.Sidecar.InjectServerHost, "injectServerHost", "http://ksidecar.default.svc", "injector server host")
-	flag.StringVar(&C.Sidecar.InitArchiveImage, "initArchiveImage", "suisrc/k8skit:1.3.12-wgetar", "init container archive image")
+	flag.StringVar(&C.Sidecar.Annotation, "sidecarAnnotation", "ksidecar/configmap", "injector annotation, namespace/configmap#attribute")
+	flag.StringVar(&C.Sidecar.DefaultKey, "sidecarDefaultKey", "value.yml", "injector default configmap attribute name")
+	flag.StringVar(&C.Sidecar.ByDBConfig, "sidecarByDBConfig", "ksidecar/db.config", "injector configuration, (app)(.json|yaml|prop|toml)(#0), db.config > container.name > labels[app]")
+	flag.StringVar(&C.Sidecar.ByDBFolder, "sidecarByDBFolder", "ksidecar/db.folder", "injector configuration directory path")
+	flag.StringVar(&C.Sidecar.WithAppEnv, "sidecarWithAppEnv", "", "run image environment, [dev, fat, uat, pro...]")
+	flag.StringVar(&C.Sidecar.ServerHost, "sidecarServerHost", "http://ksidecar.default.svc", "injector server host")
+	flag.StringVar(&C.Sidecar.InitcImage, "sidecarInitcImage", "suisrc/k8skit:1.3.12-wgetar", "init container archive image")
+
+	flag.StringVar(&C.Sidecar.DB.DN, "sidecarDriver", "mysql", "sqlx driver name")
+	flag.StringVar(&C.Sidecar.DB.DS, "sidecarDatasource", "", "sqlx data source name")
+	flag.StringVar(&C.Sidecar.DB.TablePrefix, "sidecarTablePrefix", "", "sqlx table prefix")
 
 	z.Register("99-app.sidecar", func(zgg *z.Zgg) z.Closed {
+		dsc, err := app.ConnectDatabase(&C.Sidecar.DB)
+		if err != nil {
+			z.Println("[_sidecar]:", err.Error())
+		}
+		// 注册服务
 		api := z.RegSvc(zgg.SvcKit, &MutateApi{Patcher: &Patcher{
-			Config:          C.Sidecar,
+			Config:          C.Sidecar.Config,
 			K8sClient:       zgg.SvcKit.Get("k8sclient").(kubernetes.Interface),
-			ConfxRepository: zgg.SvcKit.Get("repoconfx").(*repo.ConfxRepo),
+			ConfxRepository: &ConfxRepo{Database: dsc, TablePrefix: C.Sidecar.DB.TablePrefix},
 		}})
 		// router
 		zgg.AddRouter(http.MethodPost+" mutate", api.mutate)
 		zgg.AddRouter(http.MethodGet+" archive", api.archive)
 		// z.POST("mutate", api.mutate, zgg) // 注册接口
+		if dsc != nil {
+			return func() { dsc.Close() }
+		}
 		return nil
 	})
 }
 
 // Patcher Sidecar Injector patcher
 type Patcher struct {
-	Config
+	Config                   Config
 	K8sClient                kubernetes.Interface
-	ConfxRepository          *repo.ConfxRepo
+	ConfxRepository          *ConfxRepo
 	AllowAnnotationOverrides bool
 	AllowLabelOverrides      bool
 }

@@ -26,7 +26,7 @@ type Sidecar struct {
 
 // ConfigmapSidecarData
 func (patcher *Patcher) ConfigmapSidecarData(ctx context.Context, namespace, configmapSidecarName string, pod corev1.Pod) (*Sidecar, error) {
-	configKey := patcher.InjectDefaultKey // key of the configmap
+	configKey := patcher.Config.DefaultKey // key of the configmap
 	configName := configmapSidecarName
 	if idx := strings.IndexRune(configName, '/'); idx > 0 {
 		namespace = configName[:idx]
@@ -64,7 +64,7 @@ func (patcher *Patcher) ConfigmapSidecarNames(namespace string, pod corev1.Pod) 
 	if pod.GetAnnotations() != nil {
 		annotations = pod.GetAnnotations()
 	}
-	if sidecars, ok := annotations[patcher.InjectAnnotation]; ok {
+	if sidecars, ok := annotations[patcher.Config.Annotation]; ok {
 		parts := lo.Map(strings.Split(sidecars, ","), func(part string, _ int) string { // Map[string, string]
 			return strings.TrimSpace(part)
 		})
