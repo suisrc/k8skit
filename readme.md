@@ -38,12 +38,17 @@ k8s集群工具箱
 工具包内容：  
 
 [k8skit](https://github.com/suisrc/k8skit.git) k8s工具包
-- [sidecar](https://github.com/suisrc/k8skit/tree/sidecar): kube-injector + fake-ssl, 边车注入 + 模拟SSL
-- [fluentbit](https://github.com/suisrc/k8skit/tree/fluentbit): 支持阿里云 sls 日志服务
-- [front2s3](https://github.com/suisrc/k8skit/tree/front2s3): 在 front2 基础上，支持 S3 自动部署， 以便于使用CDN加速
-- [front2](https://hub.docker.com/r/suisrc/k8skit/tags?name=front2): 前端部署服务， 取代nginx部署前段
-- [kwdog2](https://hub.docker.com/r/suisrc/k8skit/tags?name=kwdog2): k8s 容器日志、监控、鉴权服务， kwdog2 + proxy2
-- [kwlog2](https://hub.docker.com/r/suisrc/k8skit/tags?name=kwlog2): fluentbit 日志收集服务，之后上报到 http 服务器
+
+
+[zgg](https://github.com/suisrc/zgg.git) Web服务框架
+
+[k8skit](https://github.com/suisrc/k8skit.git) k8s工具包
+- [ksidecar](https://github.com/suisrc/k8skit/tree/sidecar): k8s 边车注入服务
+- [wgetar](https://hub.docker.com/r/suisrc/k8skit/tags?name=wgetar): k8s 边车注入服务中，对于配置文件的获取服务， 基于busybox 的 wget+tar
+- [front2](https://hub.docker.com/r/suisrc/k8skit/tags?name=front2): 前端部署服务， 取代 nginx 作为前端容器，提供灵活的根路径配置等
+- [kwdog2](https://hub.docker.com/r/suisrc/k8skit/tags?name=kwdog2): 由 kwdog2 + proxy2 组成的服务， 提供了 k8s 容器日志、监控、鉴权服务
+- [kwlog2](https://hub.docker.com/r/suisrc/k8skit/tags?name=kwlog2): fluentbit 日志HTTP接受服务, 提供简单的日志存储和查询服务
+- [front2s3](https://github.com/suisrc/k8skit/tree/front2s3): 扩展前端部署服务，提供将前端部署到S3CDN的服务
 
 ## 其他模块
 
