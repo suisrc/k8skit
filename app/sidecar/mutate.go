@@ -40,7 +40,7 @@ func init() {
 	flag.StringVar(&C.Sidecar.ByDBFolder, "sidecarByDBFolder", "ksidecar/db.folder", "injector configuration directory path")
 	flag.StringVar(&C.Sidecar.WithAppEnv, "sidecarWithAppEnv", "", "run image environment, [dev, fat, uat, pro...]")
 	flag.StringVar(&C.Sidecar.ServerHost, "sidecarServerHost", "http://ksidecar.default.svc", "injector server host")
-	flag.StringVar(&C.Sidecar.InitcImage, "sidecarInitcImage", "suisrc/k8skit:1.3.12-wgetar", "init container archive image")
+	flag.StringVar(&C.Sidecar.InitcImage, "sidecarInitcImage", "suisrc/k8skit:1.3.15-wgetar", "init container archive image")
 
 	flag.StringVar(&C.Sidecar.DB.DN, "sidecarDriver", "mysql", "sqlx driver name")
 	flag.StringVar(&C.Sidecar.DB.DS, "sidecarDatasource", "", "sqlx data source name")
