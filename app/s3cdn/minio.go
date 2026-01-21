@@ -28,7 +28,7 @@ var (
 )
 
 type S3cdnConfig struct {
-	Enable   bool   `json:"disable"`  // 禁用
+	Enable   bool   `json:"enable"`   // 禁用
 	Access   string `json:"access"`   // 账号
 	Secret   string `json:"secret"`   // 秘钥
 	TToken   string `json:"token"`    // 临时令牌
@@ -45,7 +45,7 @@ type S3cdnConfig struct {
 func init() {
 	z.Config(&C)
 
-	flag.BoolVar(&C.S3cdn.Enable, "s3enable", true, "S3 启用")
+	flag.BoolVar(&C.S3cdn.Enable, "s3enable", false, "S3 启用")
 	flag.StringVar(&C.S3cdn.Access, "s3access", "", "S3 账号")
 	flag.StringVar(&C.S3cdn.Secret, "s3secret", "", "S3 秘钥")
 	flag.Var(z.NewStrVal(&C.S3cdn.TToken, ""), "s3ttoken", "S3 临时令牌")
