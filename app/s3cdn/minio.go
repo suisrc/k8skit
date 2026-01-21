@@ -107,11 +107,13 @@ func UploadToS3(hfs http.FileSystem, fim map[string]fs.FileInfo, ffc *front2.Fro
 		Secure: useSSL,
 	})
 	if err != nil {
+		z.Println("[_cdnskip] minio client error:", err.Error())
 		return err
 	}
 
 	exists, err := cli.BucketExists(ctx, cfg.Bucket)
 	if err != nil {
+		z.Println("[_cdnskip] bucket exists error, [", cfg.Bucket, "]", err.Error())
 		return err
 	} else if !exists {
 		// err = minioClient.MakeBucket(ctx, cfg.Bucket, minio.MakeBucketOptions{Region: cfg.Region})
