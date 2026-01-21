@@ -171,6 +171,9 @@ func UploadToS3(hfs http.FileSystem, fim map[string]fs.FileInfo, ffc *front2.Fro
 	// return UploadToS3Loop(ctx, cli, cfg.Bucket, rootdir, cfg.Domain, hfs, ffc)
 	// 遍历所有的文件夹执行上传 hfs.Readdir(-1)
 	for fpath, fstat := range fim {
+		if fpath == "cname" {
+			continue
+		}
 		if err := _UploadToS3(ctx, cli, fpath, fstat, rootdir, cnametext, hfs, fim, ffc, cfg); err != nil {
 			return err
 		}
@@ -202,17 +205,18 @@ func _UploadToS3(ctx context.Context, cli *minio.Client, fpath string, fstat fs.
 		rbts = file
 		size = fstat.Size()
 	}
-	cname := filepath.Join(rootdir, fpath)
-	ctype := mime.TypeByExtension(fstat.Name()) // 获取文件类型
-	_, err = cli.PutObject(ctx, cfg.Bucket, cname, rbts, size, minio.PutObjectOptions{ContentType: ctype})
+	objname := filepath.Join(rootdir, fpath)
+	objtype := mime.TypeByExtension(filepath.Ext(fstat.Name())) // 获取文件类型
+	// z.Println("[========] upload to s3:", objname, "|", objtype)
+	_, err = cli.PutObject(ctx, cfg.Bucket, objname, rbts, size, minio.PutObjectOptions{ContentType: objtype})
 	if err != nil {
 		z.Println("[_cdn_put_] upload to s3:", fpath, ", put error:", err.Error())
 		return err
 	}
 	if isrp {
-		z.Println("[_replace] upload to s3:", cname)
+		z.Println("[_replace] upload to s3:", objname)
 	} else {
-		z.Println("[_success] upload to s3:", cname)
+		z.Println("[_success] upload to s3:", objname)
 	}
 	return nil
 }
