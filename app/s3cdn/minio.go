@@ -62,7 +62,7 @@ func init() {
 // 初始化方法， 处理 api 的而外配置接口
 func Front2ServeByS3(api *front2.IndexApi, zgg *z.Zgg) {
 	if !C.S3cdn.Enable {
-		z.Println("[_cdnskip_] s3cdn is disable")
+		z.Println("[_cdnskip] s3cdn is disable")
 		return
 	}
 	if C.S3cdn.Endpoint != "" {
@@ -132,32 +132,35 @@ func UploadToS3(hfs http.FileSystem, fim map[string]fs.FileInfo, ffc *front2.Fro
 		// name := filepath.Join(rootdir, ffc.Index)
 		// _, err = cli.StatObject(ctx, cfg.Bucket, name, minio.StatObjectOptions{})
 		// if err == nil {
-		// 	z.Println("[_cdnskip_] upload to s3:", name, ", exists")
+		// 	z.Println("[_cdnskip] upload to s3:", name, ", exists")
 		// 	return nil
 		// }
 		// if minio.ToErrorResponse(err).Code != "NoSuchKey" {
 		// 	return err
 		// }
-		// z.Println("[_cdnskip_] upload to s3:", err.Error(), ", noskip")
+		// z.Println("[_cdnskip] upload to s3:", err.Error(), ", noskip")
 		// obj := <-cli.ListObjects(ctx, cfg.Bucket, minio.ListObjectsOptions{MaxKeys: 1, Prefix: rootdir})
 		obj, err := cli.GetObject(ctx, cfg.Bucket, cnamepath, minio.GetObjectOptions{})
 		if err == nil {
 			bts, err := io.ReadAll(obj)
 			if err != nil {
-				z.Println("[_cdnskip_] upload to s3:", cnamepath, ", read error:", err.Error())
-				return err
-			}
-			if string(bts) == cnametext {
-				z.Println("[_cdnskip_] upload to s3:", cnamepath, ", exists")
-				return nil // skip
+				if strings.ToLower(minio.ToErrorResponse(err).Code) != "nosuchkey" {
+					z.Println("[_cdnskip] upload to s3:", cnamepath, ", read error:", err.Error())
+					return err
+				}
 			} else {
-				z.Println("[_cdnskip_] upload to s3: cname no same", cnamepath, cnametext, string(bts))
+				if string(bts) == cnametext {
+					z.Println("[_cdnskip] upload to s3:", cnamepath, ", exists")
+					return nil // skip
+				} else {
+					z.Println("[_cdnskip] upload to s3: cname no same", cnamepath, cnametext, string(bts))
+				}
 			}
-		} else if minio.ToErrorResponse(err).Code != "NoSuchKey" {
-			z.Println("[_cdnskip_] upload to s3:", cnamepath, ", get object error:", err.Error())
+		} else if strings.ToLower(minio.ToErrorResponse(err).Code) != "nosuchkey" {
+			z.Println("[_cdnskip] upload to s3:", cnamepath, ", get object error:", err.Error())
 			return err
 		}
-		z.Println("[_cdnskip_] upload to s3:", cnamepath, ", noskip")
+		z.Println("[_cdnskip] upload to s3:", cnamepath, ", noskip")
 	}
 	cnamebyte := bytes.NewReader([]byte(cnametext))
 	cnamesize := cnamebyte.Size()
