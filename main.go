@@ -13,18 +13,21 @@ import (
 )
 
 func main() {
-	if _app, _ := os.ReadFile("vname"); _app != nil {
+	zc.CFG_ENV, zc.LogTrackFile = "KIT", false
+
+	if _app := os.Getenv(zc.CFG_ENV + "_VNAME"); _app != "" {
+		z.AppName = _app
+	} else if _app, _ := os.ReadFile("vname"); _app != nil {
 		z.AppName = string(_app)
 	}
-	if _ver, _ := os.ReadFile("version"); _ver != nil {
+	if _ver := os.Getenv(zc.CFG_ENV + "_VERSION"); _ver != "" {
+		z.Version = _ver
+	} else if _ver, _ := os.ReadFile("version"); _ver != nil {
 		z.Version = string(_ver)
 	}
 
-	zc.CFG_ENV, zc.LogTrackFile = "KIT", false
 	// zc.C.Syslog, zc.C.LogTty = "udp://klog.default.svc:5141", true
 
-	// front2.Init3(www_, "/www", s3cdn.Front2ServeByS3) // 前端应用，由于需要 wwwFS参数，必须人工初始化
-	front2.Init3(os.DirFS("www"), "/", s3cdn.Front2ServeByS3) // 前端应用, 使用系统文件夹中文件
-
+	front2.Init3(os.DirFS("www"), s3cdn.Front2ServeByS3) // 前端应用, 使用系统文件夹中文件
 	z.Execute(z.AppName, z.Version, "(https://github.com/suisrc/k8skit)")
 }

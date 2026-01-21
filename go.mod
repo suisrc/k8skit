@@ -4,7 +4,7 @@ go 1.25.5
 
 require (
 	github.com/minio/minio-go/v7 v7.0.97
-	github.com/suisrc/zgg v0.3.23
+	github.com/suisrc/zgg v0.3.25
 )
 
 require (

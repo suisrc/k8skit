@@ -23,11 +23,15 @@ func RunDeploy() {
 	flag.Parse()
 	zc.LoadConfig(cfs)
 	// upload to s3
-	hfs := http.FS(os.DirFS("www"))
-	err := s3cdn.UploadToS3(hfs, &front2.C.Front2, &s3cdn.C.S3cdn)
+	ffs := os.DirFS("www")
+	fim, err := front2.GetFileMap(ffs)
 	if err != nil {
 		z.Fatalln(err)
-	} else {
-		z.Println("Upload to S3 success")
 	}
+	hfs := http.FS(ffs)
+	err = s3cdn.UploadToS3(hfs, fim, &front2.C.Front2, &s3cdn.C.S3cdn)
+	if err != nil {
+		z.Fatalln(err)
+	}
+	z.Println("[_deploy_]:", "upload to S3 success")
 }
