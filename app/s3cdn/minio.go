@@ -28,6 +28,7 @@ var (
 )
 
 type S3cdnConfig struct {
+	Enable   bool   `json:"disable"`  // 禁用
 	Access   string `json:"access"`   // 账号
 	Secret   string `json:"secret"`   // 秘钥
 	TToken   string `json:"token"`    // 临时令牌
@@ -44,6 +45,7 @@ type S3cdnConfig struct {
 func init() {
 	z.Config(&C)
 
+	flag.BoolVar(&C.S3cdn.Enable, "s3enable", true, "S3 启用")
 	flag.StringVar(&C.S3cdn.Access, "s3access", "", "S3 账号")
 	flag.StringVar(&C.S3cdn.Secret, "s3secret", "", "S3 秘钥")
 	flag.Var(z.NewStrVal(&C.S3cdn.TToken, ""), "s3ttoken", "S3 临时令牌")
@@ -59,6 +61,10 @@ func init() {
 
 // 初始化方法， 处理 api 的而外配置接口
 func Front2ServeByS3(api *front2.IndexApi, zgg *z.Zgg) {
+	if !C.S3cdn.Enable {
+		z.Println("[_cdnskip_] s3cdn is disable")
+		return
+	}
 	if C.S3cdn.Endpoint != "" {
 		err := UploadToS3(api.HttpFS, api.FileFS, &api.Config, &C.S3cdn)
 		if err != nil {
