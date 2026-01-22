@@ -31,7 +31,7 @@ type ConfxDO struct {
 /*
 CREATE TABLE `confx` (
   `id` int NOT NULL AUTO_INCREMENT COMMENT 'ID',
-  `tag` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '标签: 特殊匹配， 用于追加一些特殊的匹配规则， key=val形式',
+  `tag` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '标签: 特殊匹配， 用于追加一些特殊的匹配规则， key=val形式',
   `env` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '环境: DEV(开发), FAT(功能验收), UAT(用户验收), PRO(生产);\r\nDevelopment Environment;\r\nFunctional Acceptance Testing;\r\nUser Acceptance Testing;\r\nProduction Environment;',
   `app` varchar(128) DEFAULT NULL COMMENT '应用名称',
   `ver` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '应用版本(高版本替换低版本，聚合低版本不同的配置)',
