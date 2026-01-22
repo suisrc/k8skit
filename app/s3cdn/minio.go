@@ -62,7 +62,7 @@ func init() {
 // 初始化方法， 处理 api 的而外配置接口
 func Front2ServeByS3(api *front2.IndexApi, zgg *z.Zgg) {
 	if !C.S3cdn.Enable {
-		z.Println("[_cdnskip] s3cdn is disable")
+		z.Println("[_cdnskip]: s3cdn is disable")
 		return
 	}
 	if C.S3cdn.Endpoint != "" {
@@ -107,13 +107,13 @@ func UploadToS3(hfs http.FileSystem, fim map[string]fs.FileInfo, ffc *front2.Fro
 		Secure: useSSL,
 	})
 	if err != nil {
-		z.Println("[_cdnskip] minio client error:", err.Error())
+		z.Println("[_cdnskip]: minio client error:", err.Error())
 		return err
 	}
 
 	exists, err := cli.BucketExists(ctx, cfg.Bucket)
 	if err != nil {
-		z.Println("[_cdnskip] bucket exists error, [", cfg.Bucket, "]", err.Error())
+		z.Println("[_cdnskip]: bucket exists error, [", cfg.Bucket, "]", err.Error())
 		return err
 	} else if !exists {
 		// err = minioClient.MakeBucket(ctx, cfg.Bucket, minio.MakeBucketOptions{Region: cfg.Region})
@@ -134,42 +134,42 @@ func UploadToS3(hfs http.FileSystem, fim map[string]fs.FileInfo, ffc *front2.Fro
 		// name := filepath.Join(rootdir, ffc.Index)
 		// _, err = cli.StatObject(ctx, cfg.Bucket, name, minio.StatObjectOptions{})
 		// if err == nil {
-		// 	z.Println("[_cdnskip] upload to s3:", name, ", exists")
+		// 	z.Println("[_cdnskip]: upload to s3:", name, ", exists")
 		// 	return nil
 		// }
 		// if minio.ToErrorResponse(err).Code != "NoSuchKey" {
 		// 	return err
 		// }
-		// z.Println("[_cdnskip] upload to s3:", err.Error(), ", noskip")
+		// z.Println("[_cdnskip]: upload to s3:", err.Error(), ", noskip")
 		// obj := <-cli.ListObjects(ctx, cfg.Bucket, minio.ListObjectsOptions{MaxKeys: 1, Prefix: rootdir})
 		obj, err := cli.GetObject(ctx, cfg.Bucket, cnamepath, minio.GetObjectOptions{})
 		if err == nil {
 			bts, err := io.ReadAll(obj)
 			if err != nil {
 				if strings.ToLower(minio.ToErrorResponse(err).Code) != "nosuchkey" {
-					z.Println("[_cdnskip] upload to s3:", cnamepath, ", read error:", err.Error())
+					z.Println("[_cdnskip]: upload to s3:", cnamepath, ", read error:", err.Error())
 					return err
 				}
 			} else {
 				if string(bts) == cnametext {
-					z.Println("[_cdnskip] upload to s3:", cnamepath, ", exists")
+					z.Println("[_cdnskip]: upload to s3:", cnamepath, ", exists")
 					return nil // skip
 				} else {
-					z.Println("[_cdnskip] upload to s3: cname no same", cnamepath, cnametext, string(bts))
+					z.Println("[_cdnskip]: upload to s3: cname no same", cnamepath, cnametext, string(bts))
 				}
 			}
 		} else if strings.ToLower(minio.ToErrorResponse(err).Code) != "nosuchkey" {
-			z.Println("[_cdnskip] upload to s3:", cnamepath, ", get object error:", err.Error())
+			z.Println("[_cdnskip]: upload to s3:", cnamepath, ", get object error:", err.Error())
 			return err
 		}
-		z.Println("[_cdnskip] upload to s3:", cnamepath, ", noskip")
+		z.Println("[_cdnskip]: upload to s3:", cnamepath, ", noskip")
 	}
 	cnamebyte := bytes.NewReader([]byte(cnametext))
 	cnamesize := cnamebyte.Size()
 	if _, err = cli.PutObject(ctx, cfg.Bucket, cnamepath, cnamebyte, cnamesize, minio.PutObjectOptions{ContentType: "text/plain"}); err != nil {
 		return err // panic(err) 上传标记域名文件
 	}
-	z.Println("[_success] upload to s3:", cnamepath)
+	z.Println("[_success]: upload to s3:", cnamepath)
 	// return UploadToS3Loop(ctx, cli, cfg.Bucket, rootdir, cfg.Domain, hfs, ffc)
 	// 遍历所有的文件夹执行上传 hfs.Readdir(-1)
 	for fpath, fstat := range fim {
@@ -187,7 +187,7 @@ func _UploadToS3(ctx context.Context, cli *minio.Client, fpath string, fstat fs.
 	hfs http.FileSystem, fim map[string]fs.FileInfo, ffc *front2.Front2Config, cfg *S3cdnConfig) error {
 	file, err := hfs.Open("/" + fpath)
 	if err != nil {
-		z.Println("[_cdn_put_] upload to s3:", fpath, ", open error:", err.Error())
+		z.Println("[_cdn_put_]: upload to s3:", fpath, ", open error:", err.Error())
 		return err
 	}
 	defer file.Close()
@@ -197,7 +197,7 @@ func _UploadToS3(ctx context.Context, cli *minio.Client, fpath string, fstat fs.
 	if front2.IsFixFile(fstat.Name(), ffc) {
 		tbts, err := front2.GetFixFile(file, fstat.Name(), ffc.TmplRoot, rootpath, fim)
 		if err != nil {
-			z.Println("[_cdn_put_] upload to s3:", fpath, ", read error:", err.Error())
+			z.Println("[_cdn_put_]: upload to s3:", fpath, ", read error:", err.Error())
 			return err
 		}
 		rbts = bytes.NewReader(tbts)
@@ -212,13 +212,13 @@ func _UploadToS3(ctx context.Context, cli *minio.Client, fpath string, fstat fs.
 	// z.Println("[========] upload to s3:", objname, "|", objtype)
 	_, err = cli.PutObject(ctx, cfg.Bucket, objname, rbts, size, minio.PutObjectOptions{ContentType: objtype})
 	if err != nil {
-		z.Println("[_cdn_put_] upload to s3:", fpath, ", put error:", err.Error())
+		z.Println("[_cdn_put_]: upload to s3:", fpath, ", put error:", err.Error())
 		return err
 	}
 	if isrp {
-		z.Println("[_replace] upload to s3:", objname)
+		z.Println("[_replace]: upload to s3:", objname)
 	} else {
-		z.Println("[_success] upload to s3:", objname)
+		z.Println("[_success]: upload to s3:", objname)
 	}
 	return nil
 }
@@ -240,7 +240,7 @@ func RunServeByS3(index string, indexs map[string]string, domain, rootdir string
 		path = domain + "/" + filepath.Join(rootdir, z.AppName, z.Version, path)
 		resp, err := http.Get(path)
 		if err != nil {
-			z.Println("[_s3serve_] error, redirect to:", path, err.Error())
+			z.Println("[_s3serve_]: error, redirect to:", path, err.Error())
 			http.Redirect(w, r, path, http.StatusMovedPermanently)
 		} else {
 			if ctype := resp.Header.Get("Content-Type"); strings.HasPrefix(ctype, "application/octet-stream") {

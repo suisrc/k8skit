@@ -13,17 +13,20 @@ import (
 
 func init() {
 	z.CMD["deploy"] = RunDeploy
+	z.CMD["imagex"] = RunImageX
 }
 
 func RunDeploy() {
 	// parse command line arguments
 	z.Initializ()
 	var cfs string
+	var www string
 	flag.StringVar(&cfs, "c", "", "config file path")
+	flag.StringVar(&www, "www", "www", "www directory")
 	flag.Parse()
 	zc.LoadConfig(cfs)
 	// upload to s3
-	ffs := os.DirFS("www")
+	ffs := os.DirFS(www)
 	fim, err := front2.GetFileMap(ffs)
 	if err != nil {
 		z.Fatalln(err)

@@ -14,6 +14,7 @@ import (
 
 func main() {
 	zc.CFG_ENV, zc.LogTrackFile = "KIT", false
+	// zc.C.Syslog, zc.C.LogTty = "udp://klog.default.svc:5141", true
 
 	if _app := os.Getenv(zc.CFG_ENV + "_VNAME"); _app != "" {
 		z.AppName = _app
@@ -24,9 +25,7 @@ func main() {
 		z.Version = _ver
 	} else if _ver, _ := os.ReadFile("version"); _ver != nil {
 		z.Version = string(_ver)
-	}
-
-	// zc.C.Syslog, zc.C.LogTty = "udp://klog.default.svc:5141", true
+	} // else app.C.Imagex.Version
 
 	front2.Init3(os.DirFS("www"), s3cdn.Front2ServeByS3) // 前端应用, 使用系统文件夹中文件
 	z.Execute(z.AppName, z.Version, "(https://github.com/suisrc/k8skit)")
