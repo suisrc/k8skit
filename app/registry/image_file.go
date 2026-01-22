@@ -2,6 +2,7 @@ package registry
 
 import (
 	"archive/tar"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -24,6 +25,7 @@ type Config struct {
 	SrcPath  string `json:"srcpath"`  // 源路径
 	OutPath  string `json:"outpath"`  // 目标路径
 	Version  string `json:"version"`  // 版本
+	DcrAuths string `json:"dcrauths"` // 认证， {"auths":{"exp.com":{"username":"user","password":"pass"}}}
 }
 
 // 提取镜像中的文件， PS: 注意，最好只提取小文件，尽量不要提取大镜像
@@ -50,6 +52,27 @@ func ExtractImageFile(cfg *Config) error {
 	auz := authn.Anonymous // 匿名访问
 	if cfg.Username != "" {
 		auz = authn.FromConfig(authn.AuthConfig{Username: cfg.Username, Password: cfg.Password})
+	} else if cfg.DcrAuths != "" {
+		aus := map[string]map[string]authn.AuthConfig{}
+		if err := json.Unmarshal([]byte(cfg.DcrAuths), &aus); err != nil {
+			return errors.New("parse dcrauths: " + err.Error())
+		}
+		dcr := ref.Name()
+		if idx := strings.IndexByte(dcr, '/'); idx > 0 {
+			dcr = dcr[:idx] // 支取域名
+		}
+		if idx := strings.IndexByte(dcr, '.'); idx < 0 {
+			dcr = "docker.io" // 使用默认
+		}
+		// z.Println(z.ToStr(aus), dcr)
+		if auths, ok := aus["auths"]; !ok {
+			// pass
+		} else if auth, ok := auths[dcr]; !ok {
+			// pass
+		} else {
+			auz = authn.FromConfig(auth)
+			z.Println(z.ToStr(auth))
+		}
 	}
 	z.Printf("[registry]: fetching image %s\n", ref.Name())
 	// 拉取镜像
