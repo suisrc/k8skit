@@ -71,7 +71,7 @@ func ExtractImageFile(cfg *Config) error {
 			// pass
 		} else {
 			auz = authn.FromConfig(auth)
-			z.Println(z.ToStr(auth))
+			// z.Println(z.ToStr(auth))
 		}
 	}
 	z.Printf("[registry]: fetching image %s\n", ref.Name())
