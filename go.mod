@@ -5,7 +5,7 @@ go 1.25.5
 require (
 	github.com/google/go-containerregistry v0.20.7
 	github.com/minio/minio-go/v7 v7.0.97
-	github.com/suisrc/zgg v0.3.29
+	github.com/suisrc/zgg v0.3.30
 )
 
 require (
