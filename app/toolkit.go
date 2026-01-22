@@ -33,9 +33,11 @@ func init() {
 		} else {
 			z.Println("[_imagex_]: pull", C.Imagex.Image)
 			// 创建输出目录
-			if err := os.MkdirAll(C.Imagex.OutPath, 0666); err != nil {
-				zgg.ServeStop("imagex, mkdir out dir:", err.Error())
-				return nil
+			if C.Imagex.OutPath != "" && C.Imagex.OutPath != "none" {
+				if err := os.MkdirAll(C.Imagex.OutPath, 0666); err != nil {
+					zgg.ServeStop("imagex, mkdir out dir:", err.Error())
+					return nil
+				}
 			}
 			// 提取镜像文件
 			if err := registry.ExtractImageFile(&C.Imagex); err != nil {

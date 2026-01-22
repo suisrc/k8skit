@@ -16,8 +16,10 @@ func RunImageX() {
 	flag.StringVar(&cfs, "c", "", "config file path")
 	flag.Parse()
 	zc.LoadConfig(cfs)
-	if err := os.MkdirAll(app.C.Imagex.OutPath, 0666); err != nil {
-		z.Fatalf("mkdir out dir: %v", err)
+	if app.C.Imagex.OutPath != "" && app.C.Imagex.OutPath != "none" {
+		if err := os.MkdirAll(app.C.Imagex.OutPath, 0666); err != nil {
+			z.Fatalf("mkdir out dir: %v", err)
+		}
 	}
 	if err := registry.ExtractImageFile(&app.C.Imagex); err != nil {
 		z.Fatalf("extract image file: %v", err)
