@@ -39,7 +39,13 @@ GET {{BASE}}/?action=xxx
 Content-Type: application/json
 
 ### 
-@BASE=http://127.0.0.1:8088
+@BASE=http://127.0.0.1:81
+### 
+GET {{BASE}}/front3/webhook?method=update.image&akey=66666666&image=dcr.dev.sims-cn.com/plus/iam-signin:v1.0.146
+Content-Type: application/json
+
+### 
+# @BASE=http://127.0.0.1:8088
 ### 
 GET {{BASE}}/?action=xxx
 Content-Type: application/json

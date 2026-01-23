@@ -56,8 +56,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/suisrc/zgg v0.3.38 h1:ZRosxLylXUS/BRyeu0eJod7LQdM8MTFug1q9IAFxuA4=
-github.com/suisrc/zgg v0.3.38/go.mod h1:xH+jv/cn5se2tT8v8LtAxsv5Pj6tR9uOtl4q92Lr/6E=
+github.com/suisrc/zgg v0.3.39 h1:FAelWKmvblSYSKd99ntelmMk7wSlLEidR151hKeWdHE=
+github.com/suisrc/zgg v0.3.39/go.mod h1:xH+jv/cn5se2tT8v8LtAxsv5Pj6tR9uOtl4q92Lr/6E=
 github.com/tinylib/msgp v1.3.0 h1:ULuf7GPooDaIlbyvgAxBV/FI7ynli6LZ1/nVUNu+0ww=
 github.com/tinylib/msgp v1.3.0/go.mod h1:ykjzy2wzgrlvpDCRc4LA8UXy6D8bzMSuAF3WD57Gok0=
 github.com/vbatts/tar-split v0.12.2 h1:w/Y6tjxpeiFMR47yzZPlPj/FcPLpXbTUi/9H7d3CPa4=

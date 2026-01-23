@@ -1,5 +1,22 @@
 
 ```sql
+CREATE TABLE `confa` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `akey` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '访问KEY',
+  `secret` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'KEY秘钥',
+  `role` varchar(255) DEFAULT NULL COMMENT '角色',
+  `remarks` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '备注信息',
+  `disable` int DEFAULT '0' COMMENT '禁用标记',
+  `deleted` int DEFAULT '0' COMMENT '删除标记',
+  `created` datetime DEFAULT NULL COMMENT '创建时间',
+  `creater` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '创建者',
+  `version` int DEFAULT '0' COMMENT '版本',
+  PRIMARY KEY (`id`),
+  KEY `conf_akey` (`akey`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+```
+
+```sql
 CREATE TABLE `fronta` (
   `id` int NOT NULL AUTO_INCREMENT,
   `tag` varchar(255) DEFAULT NULL COMMENT '标签',

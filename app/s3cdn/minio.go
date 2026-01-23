@@ -62,7 +62,7 @@ func init() {
 
 // 初始化方法， 处理 api 的而外配置接口
 func Front2ServeByS3(api *front2.IndexApi, zgg *z.Zgg) {
-	// z.RegKey(zgg.SvcKit, false, "front2", api) // 注入服务
+	z.RegKey(zgg.SvcKit, false, "front2", api) // 注入服务
 	if !C.S3cdn.Enable {
 		z.Println("[_cdnskip]: s3cdn is disable", zc.CFG_ENV+"_S3CDN_ENABLE=false")
 		return

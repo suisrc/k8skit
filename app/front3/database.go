@@ -6,6 +6,43 @@ import (
 	"github.com/suisrc/zgg/z/ze/sqlx"
 )
 
+// AccessKeyDO ...
+type AccessKeyDO struct {
+	ID      int64          `db:"id"`
+	Name    sql.NullString `db:"name"`    // 应用名称
+	Akey    sql.NullString `db:"akey"`    // 标签
+	Secret  sql.NullString `db:"secret"`  // 应用标识
+	Role    sql.NullString `db:"role"`    // 角色
+	Disable bool           `db:"disable"` // 禁用
+	Deleted bool           `db:"deleted"` // 删除
+	// Remarks sql.NullString `db:"remarks"`
+	// Updated sql.NullTime   `db:"updated"`
+	// Updater sql.NullString `db:"updater"`
+	// Created sql.NullTime   `db:"created"`
+	// Creater sql.NullString `db:"creater"`
+	// Version int            `db:"version"`
+}
+
+type AccessKeyRepo struct {
+	Database    *sqlx.DB
+	TablePrefix string
+}
+
+func (aa *AccessKeyRepo) TableName() string {
+	return aa.TablePrefix + "confa"
+}
+
+func (aa *AccessKeyRepo) SelectCols() string {
+	return "SELECT id, name, akey, secret, role, disable, deleted FROM " + aa.TableName()
+}
+
+// 通过 akey 获取令牌
+func (aa *AccessKeyRepo) GetByAkey(akey string) (*AccessKeyDO, error) {
+	var ret AccessKeyDO
+	err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE akey=? AND deleted=0", akey)
+	return &ret, err
+}
+
 // AppInfoDO ...
 type AppInfoDO struct {
 	ID       int64          `db:"id"`
@@ -15,6 +52,7 @@ type AppInfoDO struct {
 	Domain   sql.NullString `db:"domain"`   // 域名
 	RootDir  sql.NullString `db:"rootdir"`  // 根目录
 	Priority sql.NullString `db:"priority"` // 优先级
+	Routers  sql.NullString `db:"routers"`  // 路由
 	Disable  bool           `db:"disable"`  // 禁用
 	Deleted  bool           `db:"deleted"`  // 删除
 	// Updated sql.NullTime   `db:"updated"`
@@ -42,6 +80,13 @@ func (aa *AppInfoRepo) GetAllByDomain(domain string) ([]AppInfoDO, error) {
 	var ret []AppInfoDO
 	err := aa.Database.Select(&ret, aa.SelectCols()+" WHERE domain=? AND deleted=0", domain)
 	return ret, err
+}
+
+// 通过应用编码查找应用
+func (aa *AppInfoRepo) GetByApp(app string) (*AppInfoDO, error) {
+	var ret AppInfoDO
+	err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE app=? AND deleted=0 LIMIT 1", app)
+	return &ret, err
 }
 
 // VersionDO ...
@@ -80,24 +125,49 @@ func (aa *VersionRepo) TableName() string {
 }
 
 func (aa *VersionRepo) SelectCols() string {
-	return "SELECT id, tag, aid, ver, image, tproot, indexpath, indexs, imagepath, cdnname, cdnpath, cdnuse, cdnrew, started, indexhtml, disable, deleted FROM " + aa.TableName()
+	return `SELECT t1.id, t1.tag, t1.aid, t1.ver, t1.image, t1.tproot, t1.indexpath, t1.indexs, t1.imagepath, t1.cdnname, t1.cdnpath, t1.cdnuse, t1.cdnrew, t1.started, t1.indexhtml, t1.disable, t1.deleted FROM ` + aa.TableName() + " t1"
 }
 
 // 获取最新的版本， 排除禁用和删除和未生效的
 func (aa *VersionRepo) GetTop1ByAidAndVer(aid int64, ver string) (*VersionDO, error) {
 	var ret VersionDO
-	var err error
 	if ver == "" {
-		err = aa.Database.Get(&ret, aa.SelectCols()+" WHERE aid=? AND (started<=NOW() OR started IS NULL) AND disable=0 AND deleted=0 ORDER BY ver DESC LIMIT 1", aid)
+		err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE t1.aid=? AND (started<=NOW() OR started IS NULL) AND disable=0 AND deleted=0 ORDER BY ver DESC LIMIT 1", aid)
+		return &ret, err
 	} else {
-		// 忽略限制的条件, 除了deleted
-		err = aa.Database.Get(&ret, aa.SelectCols()+" WHERE aid=? AND ver=? AND deleted=0", aid, ver)
+		err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE t1.aid=? AND t1.ver=? AND deleted=0", aid, ver) // 忽略限制的条件, 除了deleted
+		return &ret, err
 	}
-	return &ret, err
 }
 
 // 更新CDN信息， 更新 cdnname, cdnpath, cdnrew 字段
 func (aa *VersionRepo) UpdateCdnInfo(data *VersionDO) error {
 	_, err := aa.Database.Exec("UPDATE "+aa.TableName()+" SET cdnname=?, cdnpath=?, cdnrew=? WHERE id=?", data.CdnName, data.CdnPath, data.CdnRew, data.ID)
+	return err
+}
+
+// 通过镜像名称获取版本， 确定版本是否存在
+func (aa *VersionRepo) GetByImage(image string) ([]VersionDO, error) {
+	var ret []VersionDO
+	err := aa.Database.Select(&ret, aa.SelectCols()+" WHERE t1.image=? AND deleted=0", image)
+	return ret, err
+}
+
+// 通过 image 获取 ver 最大的数据，然后使用 aid 去重, 考虑会有多个前端使用同一个镜像的问题
+func (aa *VersionRepo) GetByImageName(name string) ([]VersionDO, error) {
+	// SELECT * FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY aid ORDER BY ver DESC) AS rn FROM frontv) AS sub WHERE rn = 1; 8.0.0+支持
+	// SELECT * FROM frontv t1 WHERE NOT EXISTS (SELECT 1 FROM frontv t2 WHERE t2.aid = t1.aid AND t2.ver > t1.ver);
+	var ret []VersionDO
+	err := aa.Database.Select(&ret, aa.SelectCols()+" WHERE t1.image like ? AND t1.deleted=0 AND NOT EXISTS (SELECT 1 FROM frontv t2 WHERE t2.aid = t1.aid AND t2.ver > t1.ver);", name+":%")
+	return ret, err
+}
+
+// 插入一条数据
+func (aa *VersionRepo) Insert(data *VersionDO) error {
+	ret, err := aa.Database.Exec("INSERT "+aa.TableName()+" SET tag=?, aid=?, ver=?, image=?, tproot=?, indexpath=?, indexs=?, imagepath=?, cdnname=?, cdnpath=?, cdnuse=?, cdnrew=?, started=?, indexhtml=?, disable=?, deleted=?", //
+		data.Tag, data.Aid, data.Ver, data.Image, data.TPRoot, data.IndexPath, data.Indexs, data.ImagePath, data.CdnName, data.CdnPath, data.CdnUse, data.CdnRew, data.Started, data.IndexHtml, data.Disable, data.Deleted)
+	if err == nil {
+		data.ID, _ = ret.LastInsertId()
+	}
 	return err
 }
