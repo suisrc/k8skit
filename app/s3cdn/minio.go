@@ -12,6 +12,7 @@ import (
 	"mime"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/minio/minio-go/v7"
@@ -23,11 +24,11 @@ import (
 
 var (
 	C = struct {
-		S3cdn S3cdnConfig
+		S3cdn Config
 	}{}
 )
 
-type S3cdnConfig struct {
+type Config struct {
 	Enable   bool   `json:"enable"`   // 禁用
 	Access   string `json:"access"`   // 账号
 	Secret   string `json:"secret"`   // 秘钥
@@ -61,12 +62,13 @@ func init() {
 
 // 初始化方法， 处理 api 的而外配置接口
 func Front2ServeByS3(api *front2.IndexApi, zgg *z.Zgg) {
+	// z.RegKey(zgg.SvcKit, false, "front2", api) // 注入服务
 	if !C.S3cdn.Enable {
-		z.Println("[_cdnskip]: s3cdn is disable")
+		z.Println("[_cdnskip]: s3cdn is disable", zc.CFG_ENV+"_S3CDN_ENABLE=false")
 		return
 	}
 	if C.S3cdn.Endpoint != "" {
-		err := UploadToS3(api.HttpFS, api.FileFS, &api.Config, &C.S3cdn)
+		err := UploadToS3(api.HttpFS, api.FileFS, &api.Config, &C.S3cdn, z.AppName, z.Version)
 		if err != nil {
 			zgg.ServeStop("upload to s3 error:", err.Error())
 			return
@@ -77,12 +79,12 @@ func Front2ServeByS3(api *front2.IndexApi, zgg *z.Zgg) {
 		return
 	}
 	// 提供 S3 索引服务
-	zgg.Servers["(S3CDN)"] = &http.Server{Addr: C.S3cdn.AddrPort, //
-		Handler: RunServeByS3(api.Config.Index, api.Config.Indexs, C.S3cdn.Domain, C.S3cdn.RootDir)}
+	hdl := NewApi(api.Config.Index, api.Config.Indexs, C.S3cdn.Domain, C.S3cdn.RootDir, "[_s3serve]", z.AppName, z.Version)
+	zgg.Servers["(S3CDN)"] = &http.Server{Addr: C.S3cdn.AddrPort, Handler: hdl}
 }
 
 // 上传到 S3
-func UploadToS3(hfs http.FileSystem, fim map[string]fs.FileInfo, ffc *front2.Front2Config, cfg *S3cdnConfig) error {
+func UploadToS3(hfs http.FileSystem, fim map[string]fs.FileInfo, ffc *front2.Config, cfg *Config, app, ver string) error {
 	if cfg.Access == "" || cfg.Secret == "" || cfg.Region == "" || cfg.Bucket == "" || cfg.Domain == "" {
 		return errors.New("config error: empty")
 	}
@@ -119,7 +121,7 @@ func UploadToS3(hfs http.FileSystem, fim map[string]fs.FileInfo, ffc *front2.Fro
 		// err = minioClient.MakeBucket(ctx, cfg.Bucket, minio.MakeBucketOptions{Region: cfg.Region})
 		return fmt.Errorf("bucket [%s] is not exists.", cfg.Bucket)
 	}
-	rootdir := filepath.Join(cfg.RootDir, z.AppName, z.Version)
+	rootdir := filepath.Join(cfg.RootDir, app, ver)
 	cnamepath := filepath.Join(rootdir, "cname")
 	cnametext := cfg.Domain + "/" + rootdir
 	if strings.HasPrefix(cnametext, "https:") {
@@ -184,7 +186,7 @@ func UploadToS3(hfs http.FileSystem, fim map[string]fs.FileInfo, ffc *front2.Fro
 }
 
 func _UploadToS3(ctx context.Context, cli *minio.Client, fpath string, fstat fs.FileInfo, rootdir, rootpath string, //
-	hfs http.FileSystem, fim map[string]fs.FileInfo, ffc *front2.Front2Config, cfg *S3cdnConfig) error {
+	hfs http.FileSystem, fim map[string]fs.FileInfo, ffc *front2.Config, cfg *Config) error {
 	file, err := hfs.Open("/" + fpath)
 	if err != nil {
 		z.Println("[_cdn_put_]: upload to s3:", fpath, ", open error:", err.Error())
@@ -224,31 +226,68 @@ func _UploadToS3(ctx context.Context, cli *minio.Client, fpath string, fstat fs.
 }
 
 // 提供 S3 索引服务
-func RunServeByS3(index string, indexs map[string]string, domain, rootdir string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		path := index
-		if ext := filepath.Ext(r.URL.Path); ext != "" {
-			path = r.URL.Path
+func NewApi(index string, indexs map[string]string, domain, rootdir, logkey string, appname, version string) *S3IndexApi {
+	indexsKey := []string{}
+	for k := range indexs {
+		indexsKey = append(indexsKey, k)
+	}
+	slices.SortFunc(indexsKey, func(l, r string) int { return -len(l) + len(r) })
+
+	return &S3IndexApi{
+		Index:     index,
+		Indexs:    indexs,
+		IndexsKey: indexsKey,
+		Domain:    domain,
+		RootDir:   rootdir,
+		LogKey:    logkey,
+		AppName:   appname,
+		Version:   version,
+	}
+}
+
+type S3IndexApi struct {
+	Index     string
+	Indexs    map[string]string
+	IndexsKey []string
+	Domain    string
+	RootDir   string
+	LogKey    string
+	AppName   string
+	Version   string
+}
+
+func (aa *S3IndexApi) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	path := ""
+	if ext := filepath.Ext(r.URL.Path); ext != "" {
+		path = r.URL.Path
+	} else {
+		rp := r.Header.Get("X-Req-RootPath")
+		if rp != "" {
+			path, _ = aa.Indexs[rp]
 		} else {
-			for k, v := range indexs {
-				if r.URL.Path == k || zc.HasPrefixFold(r.URL.Path, k+"/") {
-					path = v // 匹配到, 使用 v 代替 index
+			for _, kk := range aa.IndexsKey {
+				if r.URL.Path == kk || zc.HasPrefixFold(r.URL.Path, kk+"/") {
+					path = aa.Indexs[kk] // 匹配到, 使用 v 代替 index
 					break
 				}
 			}
 		}
-		path = domain + "/" + filepath.Join(rootdir, z.AppName, z.Version, path)
-		resp, err := http.Get(path)
-		if err != nil {
-			z.Println("[_s3serve_]: error, redirect to:", path, err.Error())
-			http.Redirect(w, r, path, http.StatusMovedPermanently)
-		} else {
-			if ctype := resp.Header.Get("Content-Type"); strings.HasPrefix(ctype, "application/octet-stream") {
-				resp.Header.Set("Content-Type", "text/html; charset=utf-8")
-			}
-			maps.Copy(w.Header(), resp.Header)
-			w.WriteHeader(resp.StatusCode)
-			io.Copy(w, resp.Body)
+	}
+	if path == "" {
+		path = aa.Index
+	}
+	path = aa.Domain + "/" + filepath.Join(aa.RootDir, aa.AppName, aa.Version, path)
+	resp, err := http.Get(path)
+	if err != nil {
+		z.Println(aa.LogKey+": error, redirect to:", path, r.URL.Path, err.Error())
+		http.Redirect(w, r, path, http.StatusMovedPermanently)
+	} else {
+		// z.Println(aa.LogKey+": redirect to:", path, r.URL.Path)
+		if ctype := resp.Header.Get("Content-Type"); strings.HasPrefix(ctype, "application/octet-stream") {
+			resp.Header.Set("Content-Type", "text/html; charset=utf-8")
 		}
+		maps.Copy(w.Header(), resp.Header)
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
 	}
 }

@@ -32,7 +32,7 @@ func RunDeploy() {
 		z.Fatalln(err)
 	}
 	hfs := http.FS(ffs)
-	err = s3cdn.UploadToS3(hfs, fim, &front2.C.Front2, &s3cdn.C.S3cdn)
+	err = s3cdn.UploadToS3(hfs, fim, &front2.C.Front2, &s3cdn.C.S3cdn, z.AppName, z.Version)
 	if err != nil {
 		z.Fatalln(err)
 	}

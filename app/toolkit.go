@@ -18,18 +18,18 @@ var (
 func init() {
 	z.Config(&C)
 
-	flag.BoolVar(&C.Imagex.Disable, "disable", false, "username")
-	flag.StringVar(&C.Imagex.Username, "username", "", "username")
-	flag.StringVar(&C.Imagex.Password, "password", "", "password")
-	flag.StringVar(&C.Imagex.Image, "image", "", "image name")
-	flag.StringVar(&C.Imagex.SrcPath, "srcpath", "/www/data", "source path")
-	flag.StringVar(&C.Imagex.OutPath, "outpath", "/opt/www", "output path")
+	flag.BoolVar(&C.Imagex.Disable, "i5disable", false, "disable imagex")
+	flag.StringVar(&C.Imagex.Username, "i5username", "", "imagex username")
+	flag.StringVar(&C.Imagex.Password, "i5password", "", "imagex password")
+	flag.StringVar(&C.Imagex.Image, "i5image", "", "imagex image name")
+	flag.StringVar(&C.Imagex.SrcPath, "i5srcpath", "/opt/www", "imagex source path")
+	flag.StringVar(&C.Imagex.OutPath, "i5outpath", "/opt/www", "imagex output path")
 
 	z.Register("11-app.init", func(zgg *z.Zgg) z.Closed {
 		if C.Imagex.Image == "" {
 			z.Println("[_imagex_]: image name is empty, disable imagex")
 		} else if C.Imagex.Disable {
-			z.Println("[_imagex_]:", zc.CFG_ENV+"_IMAGEX_DISABLE=true")
+			z.Println("[_imagex_]: imagex is disable", zc.CFG_ENV+"_IMAGEX_DISABLE=true")
 		} else {
 			z.Println("[_imagex_]: pull", C.Imagex.Image)
 			// 创建输出目录

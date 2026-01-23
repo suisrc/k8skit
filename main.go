@@ -10,7 +10,12 @@ import (
 	"github.com/suisrc/zgg/app/front2"
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/zc"
+
 	// _ "github.com/suisrc/zgg/z/ze/log/syslog"
+
+	_ "k8skit/app/front3" // 提供多前端服务
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {

@@ -3,12 +3,14 @@ module k8skit
 go 1.25.5
 
 require (
+	github.com/go-sql-driver/mysql v1.9.3
 	github.com/google/go-containerregistry v0.20.7
 	github.com/minio/minio-go/v7 v7.0.97
-	github.com/suisrc/zgg v0.3.30
+	github.com/suisrc/zgg v0.3.38
 )
 
 require (
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.18.1 // indirect
 	github.com/docker/cli v29.0.3+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect

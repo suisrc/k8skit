@@ -37,3 +37,10 @@ Content-Type: application/json
 ### 
 GET {{BASE}}/?action=xxx
 Content-Type: application/json
+
+### 
+@BASE=http://127.0.0.1:8088
+### 
+GET {{BASE}}/?action=xxx
+Content-Type: application/json
+Host: sso.kfzx.sims-cn.com
