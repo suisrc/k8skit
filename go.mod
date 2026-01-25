@@ -9,7 +9,7 @@ require (
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/pkg/errors v0.9.1
 	github.com/samber/lo v1.52.0
-	github.com/suisrc/zgg v0.3.27
+	github.com/suisrc/zgg v0.3.39
 	k8s.io/api v0.34.3
 	k8s.io/apimachinery v0.34.3
 	k8s.io/client-go v0.34.3
