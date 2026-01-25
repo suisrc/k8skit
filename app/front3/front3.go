@@ -250,6 +250,16 @@ func (aa *F3Serve) NewApi(rw http.ResponseWriter, rr *http.Request, app AppInfoD
 			SrcPath:  ver.ImagePath.String,
 			OutPath:  abspath,
 		}
+		// 替换镜像地址
+		if len(C.Front3.ImageMaps) > 0 {
+			for kk, vv := range C.Front3.ImageMaps {
+				if strings.HasPrefix(cfg.Image, kk) {
+					cfg.Image = vv + cfg.Image[len(kk):]
+					break // 匹配到，更换镜像地址
+				}
+			}
+		}
+		// 提取镜像文件
 		if err := registry.ExtractImageFile(&cfg); err != nil {
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 			http.Error(rw, "Application pull image error: "+rr.Host+", "+err.Error(), http.StatusInternalServerError)

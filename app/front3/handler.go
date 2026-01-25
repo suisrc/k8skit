@@ -29,6 +29,7 @@ type Config struct {
 	AddrPort    string `json:"addrport"`    // 监听端口，不破坏源服务，独立新服务监控 CDN 索引
 	CacheTicker int64  `json:"cacheticker"` // 缓存清理间隔， 0 表示不启用, 默认为1天
 	CacheTime   int64  `json:"cachetime"`   // 缓存存储时间， 0 默认 30 天
+	ImageMaps   z.HM   `json:"imagemaps"`   // 镜像映射
 
 	// 验证方式？简单一点，confa 提供令牌支持， 但是 role 必须是 front3.* 权限
 	HookPath string `json:"hookpath"` // 钩子路径, 默认为空，不启动钩子
