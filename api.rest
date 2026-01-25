@@ -39,9 +39,9 @@ GET {{BASE}}/?action=xxx
 Content-Type: application/json
 
 ### 
-@BASE=http://127.0.0.1:81
+@BASE=http://frontend.default.svc
 ### 
-GET {{BASE}}/front3/webhook?method=update.image&akey=66666666&image=dcr.dev.sims-cn.com/plus/iam-signin:v1.0.146
+GET {{BASE}}/front3/webhook?method=update.image&akey=66666666&image=dcr.dev.sims-cn.com/plus/iam-signin:v1.0.153&app=sso
 Content-Type: application/json
 
 ### 
