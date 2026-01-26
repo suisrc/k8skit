@@ -263,6 +263,7 @@ func (aa *F3Serve) NewApi(rw http.ResponseWriter, rr *http.Request, app AppInfoD
 		if err := registry.ExtractImageFile(&cfg); err != nil {
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 			http.Error(rw, "Application pull image error: "+rr.Host+", "+err.Error(), http.StatusInternalServerError)
+			os.RemoveAll(abspath) // 删除本地缓存文件夹
 			return nil
 		}
 	} else if err != nil {
