@@ -50,6 +50,7 @@ CREATE TABLE `frontv` (
   `indexpath` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '索引文件, 默认 index.html',
   `indexs` text COMMENT '索引列表， /tas=,/tas/embed=index.htm',
   `imagepath` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '前端文件(在镜像中的)， 默认 /opt/www',
+  `recache` int DEFAULT '0' COMMENT '是否重新缓存',
   `cdnname` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'CDN加速域名， 不为空表示CDN可用，cdnuse控制',
   `cdnpath` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '使用CDN所在文件夹， 不包含app和ver',
   `cdnuse` int DEFAULT '0' COMMENT '是否使用cdn',

@@ -26,13 +26,13 @@ type F3Serve struct {
 	AppRepo   *AppInfoRepo
 	VerRepo   *VersionRepo
 	KeyRepo   *AccessKeyRepo
-	CacheApi  map[string]*ApiData
+	CacheApp  map[string]*AppData
 	Interval  int64        // 单位秒
 	_CacheMu  sync.Mutex   // 缓存操作锁
 	_ClsTime  *time.Ticker // 定时清理缓存
 }
 
-type ApiData struct {
+type AppData struct {
 	AppInfo AppInfoDO // 应用
 	Version VersionDO // 版本
 	Server  *front2.IndexApi
@@ -46,10 +46,10 @@ func (aa *F3Serve) CleanCaches() {
 	aa._CacheMu.Lock()
 	defer aa._CacheMu.Unlock()
 	now := time.Now().Unix()
-	for k, v := range aa.CacheApi {
+	for k, v := range aa.CacheApp {
 		if now-v.LastMod > aa.Interval {
 			z.Println("[_front3_]: clean cache1 ================", k, v.AppInfo.App.String, v.Abspath)
-			delete(aa.CacheApi, k)
+			delete(aa.CacheApp, k)
 			if v.Abspath != "" {
 				os.RemoveAll(v.Abspath) // 清理缓存
 			}
@@ -154,29 +154,29 @@ func (aa *F3Serve) ServeHTTP(rw http.ResponseWriter, rr *http.Request) {
 		return
 	}
 	key := fmt.Sprintf("%d-%s", ver.ID, ver.Ver.String)
-	api, ok := aa.CacheApi[key]
-	if ok && api != nil {
+	api, _ := aa.CacheApp[key]
+	if api != nil {
 		// 确认 CDN 和 LOC 模式是否 发生了切换
 		if ver.CdnUse.Bool && ver.CdnRew.Bool {
-			delete(aa.CacheApi, key) // 删除缓存
-			api, ok = nil, false
+			delete(aa.CacheApp, key) // 删除缓存
+			api = nil
 			z.Println("[_front3_]: CDN mode rewrite, delete cache:", key)
 		} else if ver.CdnUse.Bool == api.IsLocal {
-			delete(aa.CacheApi, key) // 删除缓存
-			api, ok = nil, false
+			delete(aa.CacheApp, key) // 删除缓存
+			api = nil
 			z.Println("[_front3_]: CDN mode changed, delete cache:", key)
 		}
 	}
 
-	if !ok || api == nil {
+	if api == nil {
 		// 没有缓存，则创建一个
 		aa._CacheMu.Lock()
 		defer aa._CacheMu.Unlock()
-		if api, ok = aa.CacheApi[key]; ok && api != nil {
+		if api, _ = aa.CacheApp[key]; api != nil {
 			// pass 已经存在，跳过
-		} else if api = aa.NewApi(rw, rr, *app, *ver); api != nil {
+		} else if api = aa.InitApi(rw, rr, &AppData{AppInfo: *app, Version: *ver}); api != nil {
 			api.LastMod = time.Now().Unix() // 防止被清理
-			aa.CacheApi[key] = api
+			aa.CacheApp[key] = api
 		}
 	}
 	if z.IsDebug() || C.Front3.Debug {
@@ -186,54 +186,58 @@ func (aa *F3Serve) ServeHTTP(rw http.ResponseWriter, rr *http.Request) {
 	api.Server.ServeHTTP(rw, rr)
 }
 
-func (aa *F3Serve) NewApi(rw http.ResponseWriter, rr *http.Request, app AppInfoDO, ver VersionDO) *ApiData {
-	api := &ApiData{AppInfo: app, Version: ver}
-
-	index := ver.IndexPath.String
+func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppData) *AppData {
+	index := av.Version.IndexPath.String
 	if index == "" {
 		index = front2.C.Front2.Index // 默认值
 	}
 	indexs := zc.StrMap{}
-	if ver.Indexs.String != "" {
-		indexs.Set(ver.Indexs.String)
+	if av.Version.Indexs.String != "" {
+		indexs.Set(av.Version.Indexs.String)
 	}
 	routers := zc.StrMap{}
-	if app.Routers.String != "" {
-		routers.Set(app.Routers.String)
+	if av.AppInfo.Routers.String != "" {
+		routers.Set(av.AppInfo.Routers.String)
 	}
 	config := front2.Config{
 		Index:      index,
 		Indexs:     indexs,
 		Routers:    routers,
-		TmplRoot:   ver.TPRoot.String,
+		TmplRoot:   av.Version.TPRoot.String,
 		TmplSuffix: front2.C.Front2.TmplSuffix,
 		TmplPrefix: front2.C.Front2.TmplPrefix,
 	}
-	if ver.CdnName.String != "" && ver.CdnUse.Bool && !ver.CdnRew.Bool {
+	if av.Version.CdnName.String != "" && av.Version.CdnUse.Bool && !av.Version.CdnRew.Bool {
 		// 直接使用 CDN 模式返回
-		cdn := s3cdn.NewApi(index, indexs, ver.CdnName.String, ver.CdnPath.String, //
-			fmt.Sprintf("[_s3serve]-%d", ver.ID), app.App.String, ver.Ver.String)
-		api.Server = &front2.IndexApi{
+		cdn := s3cdn.NewApi(index, indexs, av.Version.CdnName.String, av.Version.CdnPath.String, //
+			fmt.Sprintf("[_s3serve]-%d", av.Version.ID), av.AppInfo.App.String, av.Version.Ver.String)
+		av.Server = &front2.IndexApi{
 			Config:    config,
 			IndexsKey: cdn.IndexsKey,
 			ServeFS:   cdn,
 			// RouterKey: []string{}, // 基本是禁用路由功能
 		}
-		return api
+		return av
 	}
 	// 验证镜像文件地址
-	if ver.Image.String == "" {
+	if av.Version.Image.String == "" {
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 		http.Error(rw, "Application image empty: "+rr.Host, http.StatusInternalServerError)
 		return nil
 	}
 	// 处理本地缓存目录
-	outpath := filepath.Join(aa.RegConfig.OutPath, app.App.String, ver.Ver.String)
+	outpath := filepath.Join(aa.RegConfig.OutPath, av.AppInfo.App.String, av.Version.Ver.String)
 	abspath, err := filepath.Abs(outpath)
 	if err != nil {
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 		http.Error(rw, "Application local path error: "+rr.Host+" ["+outpath+"] "+err.Error(), http.StatusInternalServerError)
 		return nil
+	}
+	if av.Version.ReCache.Bool {
+		// 强制重新缓存
+		os.RemoveAll(abspath)
+		av.Version.ReCache = sql.NullBool{Bool: false, Valid: true}
+		aa.VerRepo.UpdateCacInfo(&av.Version)
 	}
 	// 获取前端文件镜像, 在本地部署前端资源文件 //os.WriteFile(filepath.Join(abspath, "aname"), []byte(time.Now().Format(time.RFC3339)), 0644)
 	if _, err := os.Stat(abspath); err != nil && os.IsNotExist(err) {
@@ -246,8 +250,8 @@ func (aa *F3Serve) NewApi(rw http.ResponseWriter, rr *http.Request, app AppInfoD
 			Username: aa.RegConfig.Username,
 			Password: aa.RegConfig.Password,
 			DcrAuths: aa.RegConfig.DcrAuths,
-			Image:    ver.Image.String,
-			SrcPath:  ver.ImagePath.String,
+			Image:    av.Version.Image.String,
+			SrcPath:  av.Version.ImagePath.String,
 			OutPath:  abspath,
 		}
 		// 替换镜像地址
@@ -273,37 +277,37 @@ func (aa *F3Serve) NewApi(rw http.ResponseWriter, rr *http.Request, app AppInfoD
 	} else {
 		z.Println("[_front3_]: local path, exist:", abspath)
 	}
-	api.Abspath = abspath
-	api.Server = front2.NewApi(os.DirFS(abspath), config, fmt.Sprintf("[_front2_]-%d", ver.ID))
+	av.Abspath = abspath
+	av.Server = front2.NewApi(os.DirFS(abspath), config, fmt.Sprintf("[_front2_]-%d", av.Version.ID))
 	// 使用 CDN 内容返回
-	if ver.CdnUse.Bool {
+	if av.Version.CdnUse.Bool {
 		// 上传到 cdn， 部署CDN
 		cfg := aa.CdnConfig // 赋值了新对象
-		cfg.Rewrite = ver.CdnRew.Bool
-		err = s3cdn.UploadToS3(api.Server.HttpFS, api.Server.FileFS, &api.Server.Config, &cfg, app.App.String, ver.Ver.String)
+		cfg.Rewrite = av.Version.CdnRew.Bool
+		err = s3cdn.UploadToS3(av.Server.HttpFS, av.Server.FileFS, &av.Server.Config, &cfg, av.AppInfo.App.String, av.Version.Ver.String)
 		if err != nil {
 			z.Println("[_f3serve]: error, upload cdn err:", err.Error())
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 			http.Error(rw, "Application upload cdn error: "+rr.Host+err.Error(), http.StatusInternalServerError)
 			return nil
 		}
-		api.Server.ServeFS = &s3cdn.S3IndexApi{
-			Index:     api.Server.Config.Index,
-			Indexs:    api.Server.Config.Indexs,
-			IndexsKey: api.Server.IndexsKey,
+		av.Server.ServeFS = &s3cdn.S3IndexApi{
+			Index:     av.Server.Config.Index,
+			Indexs:    av.Server.Config.Indexs,
+			IndexsKey: av.Server.IndexsKey,
 			Domain:    aa.CdnConfig.Domain,
 			RootDir:   aa.CdnConfig.RootDir,
-			LogKey:    fmt.Sprintf("[_s3serve]-%d", ver.ID),
-			AppName:   app.App.String,
-			Version:   ver.Ver.String,
+			LogKey:    fmt.Sprintf("[_s3serve]-%d", av.Version.ID),
+			AppName:   av.AppInfo.App.String,
+			Version:   av.Version.Ver.String,
 		}
 		// 更新CDN信息
-		api.Version.CdnName = sql.NullString{String: aa.CdnConfig.Domain, Valid: true}
-		api.Version.CdnPath = sql.NullString{String: aa.CdnConfig.RootDir, Valid: true}
-		api.Version.CdnRew = sql.NullBool{Bool: false, Valid: true}
-		aa.VerRepo.UpdateCdnInfo(&api.Version)
+		av.Version.CdnName = sql.NullString{String: aa.CdnConfig.Domain, Valid: true}
+		av.Version.CdnPath = sql.NullString{String: aa.CdnConfig.RootDir, Valid: true}
+		av.Version.CdnRew = sql.NullBool{Bool: false, Valid: true}
+		aa.VerRepo.UpdateCdnInfo(&av.Version)
 	} else {
-		api.IsLocal = true // 本地模式
+		av.IsLocal = true // 本地模式
 	}
-	return api
+	return av
 }

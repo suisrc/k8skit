@@ -69,7 +69,7 @@ func init() {
 			AppRepo:   &AppInfoRepo{Database: dsc, TablePrefix: tpx},
 			VerRepo:   &VersionRepo{Database: dsc, TablePrefix: tpx},
 			KeyRepo:   &AccessKeyRepo{Database: dsc, TablePrefix: tpx},
-			CacheApi:  make(map[string]*ApiData),
+			CacheApp:  make(map[string]*AppData),
 			Interval:  C.Front3.CacheTime * 60, // 缓存清理间隔， 单位秒
 			// Interval: 30, // 测试用
 		}
