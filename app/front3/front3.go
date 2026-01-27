@@ -202,7 +202,7 @@ func (aa *F3Serve) NewApi(rw http.ResponseWriter, rr *http.Request, app AppInfoD
 		routers.Set(app.Routers.String)
 	}
 	config := front2.Config{
-		Index:      ver.IndexPath.String,
+		Index:      index,
 		Indexs:     indexs,
 		Routers:    routers,
 		TmplRoot:   ver.TPRoot.String,
