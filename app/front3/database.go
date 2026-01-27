@@ -126,7 +126,7 @@ func (aa *VersionRepo) TableName() string {
 }
 
 func (aa *VersionRepo) SelectCols() string {
-	return `SELECT t1.id, t1.tag, t1.aid, t1.ver, t1.image, t1.tproot, t1.indexpath, t1.indexs, t1.imagepath, t1.rechache, t1.cdnname, t1.cdnpath, t1.cdnuse, t1.cdnrew, t1.started, t1.indexhtml, t1.disable, t1.deleted FROM ` + aa.TableName() + " t1"
+	return `SELECT t1.id, t1.tag, t1.aid, t1.ver, t1.image, t1.tproot, t1.indexpath, t1.indexs, t1.imagepath, t1.recache, t1.cdnname, t1.cdnpath, t1.cdnuse, t1.cdnrew, t1.started, t1.indexhtml, t1.disable, t1.deleted FROM ` + aa.TableName() + " t1"
 }
 
 // 获取最新的版本， 排除禁用和删除和未生效的
