@@ -137,9 +137,8 @@ func (aa *F3Serve) mutateProcess(req *admissionv1.AdmissionRequest) ([]PatchOper
 func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (result *PatchOperation, reserr error) {
 	if old != nil && len(old.GetAnnotations()) > 0 {
 		// 处理旧数据内容，从数据库中删除应用
-		if cfg, _ := old.GetAnnotations()["frontend/db.fronta"]; cfg != "" {
+		if oldapp, _ := old.GetAnnotations()["frontend/db.fronta"]; oldapp != "" {
 			// 对数据库进行配置, 确定增加或者删除应用
-			oldapp := cfg
 			if idx := strings.IndexByte(oldapp, '@'); idx > 0 {
 				oldapp = oldapp[:idx] // 获取应用名
 			}
@@ -154,7 +153,11 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 				// 删除应用
 				if err := aa.AppRepo.DelByApp(oldapp); err != nil {
 					z.Println("[_mutate_]:", "get app info form database error,", err.Error())
+				} else {
+					z.Println("[_mutate_]:", "delete app from database,", oldapp)
 				}
+			} else {
+				z.Println("[_mutate_]:", "app info no change [app] field,", oldapp)
 			}
 		}
 	}
