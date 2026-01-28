@@ -11,7 +11,7 @@ import (
 
 // 提供webhook，对影响进行升级
 
-func (aa *F3Serve) RunWebHook(zrc *z.Ctx) {
+func (aa *F3Serve) WebHook(zrc *z.Ctx) {
 	switch zrc.Request.URL.Query().Get("method") {
 	case "update.image":
 		aa.updateVersion(zrc)

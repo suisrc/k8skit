@@ -2,7 +2,9 @@ package front3
 
 import (
 	"database/sql"
+	"time"
 
+	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/ze/sqlx"
 )
 
@@ -49,6 +51,7 @@ type AppInfoDO struct {
 	Tag      sql.NullString `db:"tag"`      // 标签
 	Name     sql.NullString `db:"name"`     // 应用名称
 	App      sql.NullString `db:"app"`      // 应用标识
+	Ver      sql.NullString `db:"ver"`      // 应用标识
 	Domain   sql.NullString `db:"domain"`   // 域名
 	RootDir  sql.NullString `db:"rootdir"`  // 根目录
 	Priority sql.NullString `db:"priority"` // 优先级
@@ -72,7 +75,7 @@ func (aa *AppInfoRepo) TableName() string {
 }
 
 func (aa *AppInfoRepo) SelectCols() string {
-	return "SELECT id, tag, name, app, domain, rootdir, priority, disable, deleted FROM " + aa.TableName()
+	return "SELECT id, tag, name, app, ver, domain, rootdir, priority, disable, deleted FROM " + aa.TableName()
 }
 
 // 通过域名获取应用列表，排除删除的, 不排除禁用，以便于通知页面，应用被禁用
@@ -87,6 +90,25 @@ func (aa *AppInfoRepo) GetByApp(app string) (*AppInfoDO, error) {
 	var ret AppInfoDO
 	err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE app=? AND deleted=0 LIMIT 1", app)
 	return &ret, err
+}
+
+// 通过应用编码查找应用
+func (aa *AppInfoRepo) GetByAppWithDelete(app string) (*AppInfoDO, error) {
+	var ret AppInfoDO
+	err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE app=? LIMIT 1", app)
+	return &ret, err
+}
+
+// 逻辑删除应用
+func (aa *AppInfoRepo) DelByApp(app string) error {
+	_, err := aa.Database.Exec("UPDATE "+aa.TableName()+" SET deleted=1 AND updated=? AND updater=? WHERE app=?", app, time.Now(), z.AppName)
+	return err
+}
+
+// 逻辑删除应用
+func (aa *AppInfoRepo) DelByID(id int64) error {
+	_, err := aa.Database.Exec("UPDATE "+aa.TableName()+" SET deleted=1 AND updated=? AND updater=? WHERE id=?", id, time.Now(), z.AppName)
+	return err
 }
 
 // VersionDO ...
@@ -139,6 +161,13 @@ func (aa *VersionRepo) GetTop1ByAidAndVer(aid int64, ver string) (*VersionDO, er
 		err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE t1.aid=? AND t1.ver=? AND deleted=0", aid, ver) // 忽略限制的条件, 除了deleted
 		return &ret, err
 	}
+}
+
+// 获取最新的版本
+func (aa *VersionRepo) GetTop1ByAidAndVerWithDelete(aid int64, ver string) (*VersionDO, error) {
+	var ret VersionDO
+	err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE t1.aid=? AND t1.ver=?", aid, ver)
+	return &ret, err
 }
 
 // 更新CDN信息， 更新 cdnname, cdnpath, cdnrew 字段

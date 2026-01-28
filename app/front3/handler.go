@@ -32,7 +32,10 @@ type Config struct {
 	ImageMaps   z.HM   `json:"imagemaps"`   // 镜像映射
 
 	// 验证方式？简单一点，confa 提供令牌支持， 但是 role 必须是 front3.* 权限
-	HookPath string `json:"hookpath"` // 钩子路径, 默认为空，不启动钩子
+	WebHookPath string `json:"hookpath"`   // 钩子路径, 默认为空，不启动钩子
+	MutatePath  string `json:"mutatepath"` // 对于 ingress 的原生补丁， 默认不开启， 需要指定地址
+	MutateAddr  string `json:"mutateaddr" default:"0.0.0.0:443"`
+	MutateCert  string `json:"mutatecert" default:"mutatecert"` // 钩子证书文件夹
 }
 
 func init() {
@@ -73,14 +76,27 @@ func init() {
 			Interval:  C.Front3.CacheTime * 60, // 缓存清理间隔， 单位秒
 			// Interval: 30, // 测试用
 		}
+		// 原生钩子
+		if C.Front3.MutatePath != "" {
+			// mutate 接口必须在 https 上
+			tlc, err := srv.MutateTLS(C.Front3.MutateCert)
+			if err != nil { // 有可能证书不存在， 推荐使用 fkc-ksidecar-data 证书
+				zgg.ServeStop("[_front3_], init mutate tls config error, " + err.Error())
+				return nil
+			}
+			hdl := http.HandlerFunc(srv.Mutate)
+			zgg.Servers["(MUTAT)"] = &http.Server{Addr: C.Front3.MutateAddr, Handler: hdl, TLSConfig: tlc}
+			z.Println("[_front3_]: mutate path =", C.Front3.MutateAddr+C.Front3.MutatePath)
+		}
+		// 外部钩子， 原生钩子和外部钩子分开， 以便于权限控制和配置分流
+		if C.Front3.WebHookPath != "" {
+			zgg.AddRouter(C.Front3.WebHookPath, srv.WebHook)
+			z.Println("[_front3_]: webhook path =", C.Front3.WebHookPath)
+		}
+		// 本身服务
 		zgg.Servers["(F3SRV)"] = &http.Server{Addr: C.Front3.AddrPort, Handler: srv}
 		if C.Front3.CacheTicker > 0 {
 			srv.CleanerWork(time.Duration(C.Front3.CacheTicker) * time.Minute)
-		}
-
-		if C.Front3.HookPath != "" {
-			zgg.AddRouter(C.Front3.HookPath, srv.RunWebHook)
-			z.Println("[_front3_]: webhook path =", C.Front3.HookPath)
 		}
 
 		return srv.Stop

@@ -22,6 +22,7 @@ CREATE TABLE `fronta` (
   `tag` varchar(255) DEFAULT NULL COMMENT '标签',
   `name` varchar(255) DEFAULT NULL COMMENT '名称',
   `app` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '应用',
+  `ver` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '版本，不为空指定版本',
   `domain` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '域名',
   `rootdir` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '根目录',
   `priority` varchar(255) DEFAULT NULL COMMENT '优先级',

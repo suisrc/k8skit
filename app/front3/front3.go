@@ -91,11 +91,11 @@ func (aa *F3Serve) ServeHTTP(rw http.ResponseWriter, rr *http.Request) {
 	apps, err := aa.AppRepo.GetAllByDomain(host)
 	if err != nil {
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-		http.Error(rw, "Application query error: "+host+", "+err.Error(), http.StatusInternalServerError)
+		http.Error(rw, "application query error: "+host+", "+err.Error(), http.StatusInternalServerError)
 		return
 	} else if len(apps) == 0 {
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-		http.Error(rw, "Application not found: "+host, http.StatusNotFound)
+		http.Error(rw, "application not found: "+host, http.StatusNotFound)
 		return
 	}
 	if len(apps) > 1 { // Priority 降序排序
@@ -120,15 +120,15 @@ func (aa *F3Serve) ServeHTTP(rw http.ResponseWriter, rr *http.Request) {
 	}
 	if app == nil {
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-		http.Error(rw, "Application path not found: "+host, http.StatusNotFound)
+		http.Error(rw, "application path not found: "+host, http.StatusNotFound)
 		return
 	}
 	if app.Disable {
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-		http.Error(rw, "Application disabled: "+host, http.StatusNotFound)
+		http.Error(rw, "application disabled: "+host, http.StatusNotFound)
 		return
 	}
-	// 确认应用的最新版本
+	// 浏览器指定了版本，则优先使用
 	_ver := rr.URL.Query().Get("version") // 打开特定的版本
 	if _ver == "" {
 		if ref := rr.Referer(); ref == "" {
@@ -137,10 +137,20 @@ func (aa *F3Serve) ServeHTTP(rw http.ResponseWriter, rr *http.Request) {
 			_ver = ref.Query().Get("version")
 		}
 	}
+	// 数据库指定了版本, 则优先使用
+	if _ver == "" && app.Ver.String != "" {
+		_ver = app.Ver.String
+	}
+	// 如果未指定版本，使用当前系统最新版本， 指定的版本，只要没有删除，就可以使用
 	ver, err := aa.VerRepo.GetTop1ByAidAndVer(app.ID, _ver)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
+			http.Error(rw, "application version not found: "+host+", "+_ver, http.StatusNotFound)
+			return
+		}
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-		http.Error(rw, "Application version query error: "+host+", "+err.Error(), http.StatusInternalServerError)
+		http.Error(rw, "application version query error: "+host+", "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	// 优先返回已经存在的内容
@@ -222,7 +232,7 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppData
 	// 验证镜像文件地址
 	if av.Version.Image.String == "" {
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-		http.Error(rw, "Application image empty: "+rr.Host, http.StatusInternalServerError)
+		http.Error(rw, "application image empty: "+rr.Host, http.StatusInternalServerError)
 		return nil
 	}
 	// 处理本地缓存目录
@@ -230,7 +240,7 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppData
 	abspath, err := filepath.Abs(outpath)
 	if err != nil {
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-		http.Error(rw, "Application local path error: "+rr.Host+" ["+outpath+"] "+err.Error(), http.StatusInternalServerError)
+		http.Error(rw, "application local path error: "+rr.Host+" ["+outpath+"] "+err.Error(), http.StatusInternalServerError)
 		return nil
 	}
 	if av.Version.ReCache.Bool {
@@ -243,7 +253,7 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppData
 	if _, err := os.Stat(abspath); err != nil && os.IsNotExist(err) {
 		if err := os.MkdirAll(abspath, 0644); err != nil {
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-			http.Error(rw, "Application local path error: "+rr.Host+" ["+outpath+"] "+err.Error(), http.StatusInternalServerError)
+			http.Error(rw, "application local path error: "+rr.Host+" ["+outpath+"] "+err.Error(), http.StatusInternalServerError)
 			return nil
 		}
 		cfg := registry.Config{
@@ -266,13 +276,13 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppData
 		// 提取镜像文件
 		if err := registry.ExtractImageFile(&cfg); err != nil {
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-			http.Error(rw, "Application pull image error: "+rr.Host+", "+err.Error(), http.StatusInternalServerError)
+			http.Error(rw, "application pull image error: "+rr.Host+", "+err.Error(), http.StatusInternalServerError)
 			os.RemoveAll(abspath) // 删除本地缓存文件夹
 			return nil
 		}
 	} else if err != nil {
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-		http.Error(rw, "Application local path error: "+rr.Host+" ["+outpath+"] "+err.Error(), http.StatusInternalServerError)
+		http.Error(rw, "application local path error: "+rr.Host+" ["+outpath+"] "+err.Error(), http.StatusInternalServerError)
 		return nil
 	} else {
 		z.Println("[_front3_]: local path, exist:", abspath)
@@ -288,7 +298,7 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppData
 		if err != nil {
 			z.Println("[_f3serve]: error, upload cdn err:", err.Error())
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-			http.Error(rw, "Application upload cdn error: "+rr.Host+err.Error(), http.StatusInternalServerError)
+			http.Error(rw, "application upload cdn error: "+rr.Host+err.Error(), http.StatusInternalServerError)
 			return nil
 		}
 		av.Server.ServeFS = &s3cdn.S3IndexApi{
