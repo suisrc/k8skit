@@ -210,7 +210,7 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 		z.Println("[_mutate_]:", "get app info form database error,", err.Error())
 		return // 查询数据库发生异常
 	}
-	sql_ := "updated, updater, deleted=0, disable=0, app=?, ver=?, domain=?, rootdir=?"
+	sql_ := "updated=?, updater=?, deleted=0, disable=0, app=?, ver=?, domain=?, rootdir=?"
 	args := []any{time.Now(), z.AppName, app, ver, host2[0], host2[1]}
 	pre_ := "frontend/db.fronta."
 	len_ := len(pre_)
@@ -259,7 +259,7 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 		z.Println("[_mutate_]:", "get app version info form database error,", err.Error())
 		return // 获取数据库发生异常
 	}
-	sql_ = "updated, updater, deleted=0, disable=0, aid=?, ver=?, image=?"
+	sql_ = "updated=?, updater=?, deleted=0, disable=0, aid=?, ver=?, image=?"
 	args = []any{time.Now(), z.AppName, appInfo.ID, ver, img}
 	pre_ = "frontend/db.frontv."
 	len_ = len(pre_)
