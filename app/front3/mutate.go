@@ -379,6 +379,15 @@ func (aa *F3Serve) mutateFrontPath(ing *netv1.Ingress, svc string) (*PatchOperat
 		path.Backend.Service.Port.Name = servicePort // 端点名称
 	}
 	rule.HTTP.Paths = append(rule.HTTP.Paths, path)
+	if len(rule.HTTP.Paths) == 1 {
+		// 之前没有 http 节点，新增一个 http 节点
+		return &PatchOperation{
+			Op:    "replace",
+			Path:  "/spec/rules/0/http",
+			Value: rule.HTTP,
+		}, [2]string{rule.Host, path.Path}, nil
+	}
+	// 之前已有 http 节点，增加一个 path 节点
 	return &PatchOperation{
 		Op:    "add",
 		Path:  "/spec/rules/0/http/paths/-",
