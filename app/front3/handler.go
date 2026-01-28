@@ -48,6 +48,9 @@ func init() {
 	flag.Int64Var(&C.Front3.CacheTicker, "f3ticker", 86400, "front3 缓存清理间隔, 0 禁用, 默认 1 天")
 	flag.Int64Var(&C.Front3.CacheTime, "f3cachetime", 2592000, "front3 缓存存储时间, 0 默认 30 天")
 
+	flag.StringVar(&C.Front3.MutateAddr, "mutateaddr", "0.0.0.0:443", "钩子地址")
+	flag.StringVar(&C.Front3.MutateCert, "mutatecert", "mutatecert", "钩子路径")
+
 	z.Register("88-front3", func(zgg *z.Zgg) z.Closed {
 		if !C.Front3.Enable {
 			z.Println("[_front3_]: front3 is disable", zc.CFG_ENV+"_FRONT3_ENABLE=false")
