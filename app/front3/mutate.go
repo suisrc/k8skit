@@ -213,11 +213,18 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 		z.Println("[_mutate_]:", "get app info form database error,", err.Error())
 		return // 查询数据库发生异常
 	}
+	if rpath, _ := ing.GetAnnotations()["frontend/db.fronta.rootdir"]; rpath != "" {
+		host2[1] = strings.TrimSpace(rpath) // 特殊情况下， 需要覆盖默认的根目录
+	}
+	// host2[0] -> domain, 域名是不允许覆盖的
 	sql_ := "updated=?, updater=?, deleted=0, disable=0, app=?, ver=?, domain=?, rootdir=?"
 	args := []any{time.Now(), z.AppName, app, ver, host2[0], host2[1]}
 	pre_ := "frontend/db.fronta."
 	len_ := len(pre_)
 	for anno, data := range ing.GetAnnotations() {
+		if anno == pre_+"app" || anno == pre_+"ver" || anno == pre_+"domain" || anno == pre_+"rootdir" {
+			continue
+		}
 		if strings.HasPrefix(anno, pre_) {
 			key := anno[len_:]
 			switch data {
@@ -283,6 +290,9 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 	pre_ = "frontend/db.frontv."
 	len_ = len(pre_)
 	for anno, data := range ing.GetAnnotations() {
+		if anno == pre_+"image" || anno == pre_+"ver" || anno == pre_+"aid" {
+			continue
+		}
 		if strings.HasPrefix(anno, pre_) {
 			key := anno[len_:]
 			switch data {
