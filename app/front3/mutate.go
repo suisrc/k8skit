@@ -137,8 +137,7 @@ func (aa *F3Serve) mutateProcess(req *admissionv1.AdmissionRequest) ([]PatchOper
 func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (result *PatchOperation, reserr error) {
 	if old != nil && len(old.GetAnnotations()) > 0 {
 		// 处理旧数据内容，从数据库中删除应用
-		cfg, _ := old.GetAnnotations()["frontend/db.confa"]
-		if cfg != "" {
+		if cfg, _ := old.GetAnnotations()["frontend/db.confa"]; cfg != "" {
 			// 对数据库进行配置, 确定增加或者删除应用
 			oldapp := cfg
 			if idx := strings.IndexByte(oldapp, '@'); idx > 0 {
@@ -159,14 +158,14 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 			}
 		}
 	}
-	if ing == nil || len(ing.GetAnnotations()) == 0 {
-		if z.IsDebug() {
-			z.Println("[_mutate_]:", ing.Namespace, "|", ing.Name, "no annotations")
+	if ing == nil || len(ing.GetLabels()) == 0 {
+		if ing != nil && z.IsDebug() {
+			z.Println("[_mutate_]:", ing.Namespace, "|", ing.Name, "no labels")
 		}
 		return nil, nil // 没有新的配置
 	}
 	// 处理编排内容
-	svc, _ := ing.GetAnnotations()["frontend/service"]
+	svc, _ := ing.GetLabels()["frontend/service"]
 	if svc == "" {
 		if z.IsDebug() {
 			z.Println("[_mutate_]:", ing.Namespace, "|", ing.Name, "no frontend service")
@@ -180,6 +179,12 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 		result = patch // 保存处理的结果
 	}
 	// 处理数据内容, 忽略下面执行过程中的异常
+	if len(ing.GetAnnotations()) == 0 {
+		if z.IsDebug() {
+			z.Println("[_mutate_]:", ing.Namespace, "|", ing.Name, "no annotations")
+		}
+		return // 没有配置注解
+	}
 	cfg, _ := ing.GetAnnotations()["frontend/db.confa"]
 	if cfg == "" {
 		if z.IsDebug() {
