@@ -101,13 +101,13 @@ func (aa *AppInfoRepo) GetByAppWithDelete(app string) (*AppInfoDO, error) {
 
 // 逻辑删除应用
 func (aa *AppInfoRepo) DelByApp(app string) error {
-	_, err := aa.Database.Exec("UPDATE "+aa.TableName()+" SET deleted=1 AND updated=? AND updater=? WHERE app=?", app, time.Now(), z.AppName)
+	_, err := aa.Database.Exec("UPDATE "+aa.TableName()+" SET deleted=1 AND updated=? AND updater=? WHERE app=?", time.Now(), z.AppName, app)
 	return err
 }
 
 // 逻辑删除应用
 func (aa *AppInfoRepo) DelByID(id int64) error {
-	_, err := aa.Database.Exec("UPDATE "+aa.TableName()+" SET deleted=1 AND updated=? AND updater=? WHERE id=?", id, time.Now(), z.AppName)
+	_, err := aa.Database.Exec("UPDATE "+aa.TableName()+" SET deleted=1 AND updated=? AND updater=? WHERE id=?", time.Now(), z.AppName, id)
 	return err
 }
 
