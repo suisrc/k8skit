@@ -43,11 +43,6 @@ func ExtractImageFile(cfg *Config) error {
 	if cfg.Disable || cfg.Image == "" || cfg.OutPath == "" || cfg.OutPath == "none" {
 		return nil
 	}
-	// 解析镜像
-	ref, err := name.ParseReference(cfg.Image)
-	if err != nil {
-		return errors.New("parse image reference: " + err.Error())
-	}
 	// 拉取镜像 remote.WithAuthFromKeychain(authn.DefaultKeychain)
 	auz := authn.Anonymous // 匿名访问
 	if cfg.Username != "" {
@@ -57,22 +52,31 @@ func ExtractImageFile(cfg *Config) error {
 		if err := json.Unmarshal([]byte(cfg.DcrAuths), &aus); err != nil {
 			return errors.New("parse dcrauths: " + err.Error())
 		}
-		dcr := ref.Name()
-		if idx := strings.IndexByte(dcr, '/'); idx > 0 {
-			dcr = dcr[:idx] // 支取域名
+		hcr := ""
+		if idx := strings.IndexByte(cfg.Image, '/'); idx <= 0 {
+			hcr = "docker.io" // 基础镜像仓库
+		} else if cdx := strings.IndexByte(cfg.Image[:idx], '.'); cdx > 0 {
+			hcr = cfg.Image[:idx] // 镜像仓库
 		}
-		if idx := strings.IndexByte(dcr, '.'); idx < 0 {
-			dcr = "docker.io" // 使用默认
-		}
-		// z.Println(z.ToStr(aus), dcr)
 		if auths, ok := aus["auths"]; !ok {
-			// pass
-		} else if auth, ok := auths[dcr]; !ok {
-			// pass
-		} else {
+			// pass, 没有匹配的，使用匿名访问
+		} else if hcr == "" && len(auths) > 0 {
+			// 取第一个仓库， 并且补充镜像仓库地址
+			for key, auth := range auths {
+				cfg.Image = filepath.Join(key, cfg.Image)
+				auz = authn.FromConfig(auth)
+				break // 只取第一条
+			}
+		} else if auth, ok := auths[hcr]; ok {
+			// 通过域名获取访问令牌
 			auz = authn.FromConfig(auth)
 			// z.Println(z.ToStr(auth))
-		}
+		} // else 没有匹配的，使用匿名访问
+	}
+	// 解析镜像
+	ref, err := name.ParseReference(cfg.Image)
+	if err != nil {
+		return errors.New("parse image reference: " + err.Error())
 	}
 	z.Printf("[registry]: fetching image %s\n", ref.Name())
 	// 拉取镜像
