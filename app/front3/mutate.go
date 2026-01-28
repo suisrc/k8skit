@@ -198,8 +198,8 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 		app = app[:idx] // 获取应用名
 	}
 	if idx := strings.IndexByte(img, ':'); idx > 0 {
-		ver = cfg[idx+1:]
-		img = img[:idx] // 获取镜像
+		ver = img[idx+1:]
+		// img = img[:idx] // 获取镜像
 	}
 	if app == "" {
 		if z.IsDebug() {
