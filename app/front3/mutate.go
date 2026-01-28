@@ -73,7 +73,7 @@ func (aa *F3Serve) Mutate(rw http.ResponseWriter, rr *http.Request) {
 
 func (aa *F3Serve) mutateProcess(req *admissionv1.AdmissionRequest) ([]PatchOperation, error) {
 	/*
-		frontend/db.fronta: mdm-pla@fmes/iam-signin:v1.0.1 如果没有版本，不进行限制
+		frontend/db.fronta: sso@fmes/iam-signin:v1.0.1 如果没有版本，不进行限制
 		frontend/db.fronta.name: 登录系统
 		frontend/db.fronta.rootdir: /
 		frontend/db.frontv.tproot: /ROOT_PATH
@@ -135,27 +135,42 @@ func (aa *F3Serve) mutateProcess(req *admissionv1.AdmissionRequest) ([]PatchOper
 }
 
 func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (result *PatchOperation, reserr error) {
-	if old != nil {
+	if old != nil && len(old.GetAnnotations()) > 0 {
 		// 处理旧数据内容，从数据库中删除应用
 		cfg, _ := old.GetAnnotations()["frontend/db.confa"]
 		if cfg != "" {
 			// 对数据库进行配置, 确定增加或者删除应用
-			app := cfg
-			if idx := strings.IndexByte(app, '@'); idx > 0 {
-				app = app[:idx] // 获取应用名
+			oldapp := cfg
+			if idx := strings.IndexByte(oldapp, '@'); idx > 0 {
+				oldapp = oldapp[:idx] // 获取应用名
 			}
-			// 通过数据库获取应用信息， 包括已经删除的应用
-			if err := aa.AppRepo.DelByApp(app); err != nil {
-				z.Println("[_mutate_]:", "get app info form database error,", err.Error())
+			newapp := ""
+			if ing != nil && len(ing.GetAnnotations()) > 0 {
+				newapp = ing.GetAnnotations()["frontend/db.confa"]
+				if idx := strings.IndexByte(newapp, '@'); idx > 0 {
+					newapp = newapp[:idx] // 获取应用名
+				}
+			}
+			if oldapp != newapp {
+				// 删除应用
+				if err := aa.AppRepo.DelByApp(oldapp); err != nil {
+					z.Println("[_mutate_]:", "get app info form database error,", err.Error())
+				}
 			}
 		}
 	}
-	if ing == nil {
+	if ing == nil || len(ing.GetAnnotations()) == 0 {
+		if z.IsDebug() {
+			z.Println("[_mutate_]:", ing.Namespace, "|", ing.Name, "no annotations")
+		}
 		return nil, nil // 没有新的配置
 	}
 	// 处理编排内容
 	svc, _ := ing.GetAnnotations()["frontend/service"]
 	if svc == "" {
+		if z.IsDebug() {
+			z.Println("[_mutate_]:", ing.Namespace, "|", ing.Name, "no frontend service")
+		}
 		return nil, nil // 没有 service 是无法处理域名的
 	}
 	patch, host2, err := aa.mutateFrontPath(ing, svc)
@@ -167,6 +182,9 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 	// 处理数据内容, 忽略下面执行过程中的异常
 	cfg, _ := ing.GetAnnotations()["frontend/db.confa"]
 	if cfg == "" {
+		if z.IsDebug() {
+			z.Println("[_mutate_]:", ing.Namespace, "|", ing.Name, "no frontend database")
+		}
 		return // 没有配置注解
 	}
 	// 数据库中增加或者删除应用
@@ -174,14 +192,17 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 	img := ""
 	ver := ""
 	if idx := strings.IndexByte(app, '@'); idx > 0 {
-		ver = app[idx+1:]
+		img = app[idx+1:]
 		app = app[:idx] // 获取应用名
 	}
-	if idx := strings.IndexByte(ver, ':'); idx > 0 {
-		img = cfg[:idx] // 获取镜像
+	if idx := strings.IndexByte(img, ':'); idx > 0 {
 		ver = cfg[idx+1:]
+		img = img[:idx] // 获取镜像
 	}
 	if app == "" {
+		if z.IsDebug() {
+			z.Println("[_mutate_]:", ing.Namespace, "|", ing.Name, "no frontend database app")
+		}
 		return
 	}
 	// 通过数据库获取应用信息， 包括已经删除的应用
@@ -228,6 +249,9 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 	}
 	z.Println("[_mutate_]:", "update/insert app info into database,", sql_, z.ToStr(args))
 	if ver == "" || img == "" {
+		if z.IsDebug() {
+			z.Println("[_mutate_]:", ing.Namespace, "|", ing.Name, "no frontend database version or image")
+		}
 		return
 	}
 	// 需要更新应用版本信息
