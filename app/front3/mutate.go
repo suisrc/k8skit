@@ -250,6 +250,22 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 		args = append(args, appInfo.ID)
 	}
 	z.Println("[_mutate_]:", "update/insert app info into database,", sql_, z.ToStr(args))
+	if ver == "" {
+		// 通过 "frontend/db.frontv.ver" 获取版本
+		ver = ing.GetAnnotations()["frontend/db.frontv.ver"]
+		if ver != "" && img != "" {
+			img += ":" + ver
+		}
+	}
+	if img == "" {
+		// 通过 "frontend/db.frontv.image" 获取镜像
+		img = ing.GetAnnotations()["frontend/db.frontv.image"]
+		if img != "" && ver == "" {
+			if idx := strings.IndexByte(img, ':'); idx > 0 {
+				ver = img[idx+1:]
+			}
+		}
+	}
 	if ver == "" || img == "" {
 		if z.IsDebug() {
 			z.Println("[_mutate_]:", ing.Namespace, "|", ing.Name, "no frontend database version or image")
