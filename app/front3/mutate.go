@@ -216,6 +216,7 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 	if rpath, _ := ing.GetAnnotations()["frontend/db.fronta.rootdir"]; rpath != "" {
 		host2[1] = strings.TrimSpace(rpath) // 特殊情况下， 需要覆盖默认的根目录
 	}
+	appInfo.App.String = app // 确保在 appInfo 不存在的使用，也可以得到一个有效的 vpp 名称
 	// host2[0] -> domain, 域名是不允许覆盖的
 	sql_ := "updated=?, updater=?, deleted=0, disable=0, app=?, ver=?, domain=?, rootdir=?"
 	args := []any{time.Now(), z.AppName, app, ver, host2[0], host2[1]}
@@ -227,6 +228,9 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 		}
 		if strings.HasPrefix(anno, pre_) {
 			key := anno[len_:]
+			if key == "vpp" {
+				appInfo.Vpp.String = data // 更新应用名，后面需要使用最新的
+			}
 			switch data {
 			case "true":
 				sql_ += "," + key + "=1"
@@ -280,7 +284,7 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 		return
 	}
 	// 需要更新应用版本信息
-	vpp := appInfo.GVP()
+	vpp := appInfo.GVP() // 获取最新的 vpp 名称， 注意，修改了 vpp， 可以导致之前的应用版本不可使用
 	verInfo, err := aa.VerRepo.GetTop1ByVppAndVerWithDelete(vpp, ver)
 	if err != nil && err != sql.ErrNoRows {
 		z.Println("[_mutate_]:", "get app version info form database error,", err.Error())

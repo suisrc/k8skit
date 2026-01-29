@@ -34,8 +34,8 @@ type F3Serve struct {
 }
 
 type AppCache struct {
-	AppInfo AppInfoDO    // 应用
-	Version VersionDO    // 版本
+	AppInfo AppInfoDO    // 应用, 不存在共享情况
+	Version VersionDO    // 版本, 存在共享的情况
 	Handler http.Handler // *front2.IndexApi
 	LastMod int64        // 最后访问时间
 	IsLocal bool         // 是本地化
