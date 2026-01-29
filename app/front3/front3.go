@@ -224,8 +224,8 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppData
 	if av.Version.CdnName.String != "" && av.Version.CdnUse.Bool && !av.Version.CdnRew.Bool {
 		// 直接使用 CDN 模式返回
 		handler := front2.NewApi(nil, config, fmt.Sprintf("[_front3_]-%d", av.Version.ID))
-		s3cdn.InitCdnServe(handler, av.Version.CdnName.String, av.Version.CdnPath.String, av.AppInfo.App.String, av.Version.Ver.String)
 		av.Handler = handler
+		s3cdn.InitCdnServe(handler, av.Version.CdnName.String, av.Version.CdnPath.String, av.AppInfo.App.String, av.Version.Ver.String)
 		return av
 	}
 	// 验证镜像文件地址
@@ -288,6 +288,7 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppData
 	}
 	av.Abspath = abspath
 	handler := front2.NewApi(os.DirFS(abspath), config, fmt.Sprintf("[_front3_]-%d", av.Version.ID))
+	av.Handler = handler
 	// 使用 CDN 内容返回
 	if av.Version.CdnUse.Bool {
 		// 上传到 cdn， 部署CDN
