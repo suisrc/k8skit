@@ -40,7 +40,7 @@ func init() {
 				}
 			}
 			// 提取镜像文件
-			if err := registry.ExtractImageFile(&C.Imagex); err != nil {
+			if err := registry.ExportFile(&C.Imagex); err != nil {
 				zgg.ServeStop("imagex, extract image file:", err.Error())
 				return nil
 			}

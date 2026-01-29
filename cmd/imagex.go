@@ -10,7 +10,9 @@ import (
 	"github.com/suisrc/zgg/z/zc"
 )
 
-func RunImageX() {
+// 通过 imagex 命令，导出镜像文件
+
+func ExpImageX() {
 	var cfs string
 	z.Initializ()
 	flag.StringVar(&cfs, "c", "", "config file path")
@@ -21,7 +23,7 @@ func RunImageX() {
 			z.Fatalf("mkdir out dir: %v", err)
 		}
 	}
-	if err := registry.ExtractImageFile(&app.C.Imagex); err != nil {
+	if err := registry.ExportFile(&app.C.Imagex); err != nil {
 		z.Fatalf("extract image file: %v", err)
 	}
 	z.Println(z.ToStr2(app.C))

@@ -83,14 +83,13 @@ func Front2ServeByS3(api *front2.IndexApi, zgg *z.Zgg) {
 	zgg.Servers["(S3CDN)"] = &http.Server{Addr: C.S3cdn.AddrPort, Handler: hdl}
 }
 
-// 上传到 S3
-func UploadToS3(hfs http.FileSystem, fim map[string]fs.FileInfo, ffc *front2.Config, cfg *Config, app, ver string) error {
+// 获取访问客户端
+func GetClient(ctx context.Context, cfg *Config) (*minio.Client, error) {
 	if cfg.Access == "" || cfg.Secret == "" || cfg.Region == "" || cfg.Bucket == "" || cfg.Domain == "" {
-		return errors.New("config error: empty")
+		return nil, errors.New("config error: empty")
 	}
 	// https://github.com/minio/minio-go/
 
-	ctx := context.Background()
 	useSSL := false
 	if zc.HasPrefixFold(cfg.Endpoint, "https://") {
 		useSSL = true
@@ -110,16 +109,27 @@ func UploadToS3(hfs http.FileSystem, fim map[string]fs.FileInfo, ffc *front2.Con
 	})
 	if err != nil {
 		z.Println("[_cdnskip]: minio client error:", err.Error())
-		return err
+		return nil, err
 	}
 
 	exists, err := cli.BucketExists(ctx, cfg.Bucket)
 	if err != nil {
 		z.Println("[_cdnskip]: bucket exists error, [", cfg.Bucket, "]", err.Error())
-		return err
+		return nil, err
 	} else if !exists {
 		// err = minioClient.MakeBucket(ctx, cfg.Bucket, minio.MakeBucketOptions{Region: cfg.Region})
-		return fmt.Errorf("bucket [%s] is not exists.", cfg.Bucket)
+		return nil, fmt.Errorf("bucket [%s] is not exists.", cfg.Bucket)
+	}
+
+	return cli, nil
+}
+
+// 上传到 S3
+func UploadToS3(hfs http.FileSystem, fim map[string]fs.FileInfo, ffc *front2.Config, cfg *Config, app, ver string) error {
+	ctx := context.Background()
+	cli, err := GetClient(ctx, cfg)
+	if err != nil {
+		return err
 	}
 	rootdir := filepath.Join(cfg.RootDir, app, ver)
 	cnamepath := filepath.Join(rootdir, "cname")

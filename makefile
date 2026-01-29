@@ -37,6 +37,12 @@ imagex:
 tenv:
 	KIT_KWLOG2_TOKEN=xxxx123456789 go run main.go -debug -print -port 81
 
+tgzc:
+	go run main.go tgzc _out/image/www/sso/v1.0.152 _out/image/www/sso/v1.0.152.tgz
+
+tgzx:
+	go run main.go tgzx _out/image/www/sso/v1.0.152.tgz _out/image/www/sso/v1.0.152-copy
+
 test:
 	_out/$(APP) -local -debug -port 81
 

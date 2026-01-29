@@ -12,11 +12,13 @@ import (
 )
 
 func init() {
-	z.CMD["deploy"] = RunDeploy
-	z.CMD["imagex"] = RunImageX
+	z.CMD["deploy"] = ExeDeploy
+	z.CMD["imagex"] = ExpImageX
+	z.CMD["tgzc"] = CreateTgzFile  // 压缩文件
+	z.CMD["tgzx"] = ExtractTgzFile // 解压文件
 }
 
-func RunDeploy() {
+func ExeDeploy() {
 	// parse command line arguments
 	z.Initializ()
 	var cfs string

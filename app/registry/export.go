@@ -2,7 +2,6 @@ package registry
 
 import (
 	"archive/tar"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,30 +10,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/suisrc/zgg/z"
 )
 
-type Config struct {
-	Disable  bool   `json:"disable"`  // 禁用
-	Username string `json:"username"` // 用户, 为空时匿名访问
-	Password string `json:"password"` // 密码
-	Image    string `json:"image"`    // 镜像
-	SrcPath  string `json:"srcpath"`  // 源路径
-	OutPath  string `json:"outpath"`  // 目标路径
-	Version  string `json:"version"`  // 版本
-	DcrAuths string `json:"dcrauths"` // 认证， {"auths":{"exp.com":{"username":"user","password":"pass"}}}
-}
-
-// 提取镜像中的文件， PS: 注意，最好只提取小文件，尽量不要提取大镜像
-func ExtractImageFile(cfg *Config) error {
+// 从镜像中导出文件， PS: 注意，最好只提取小文件，尽量不要提取大镜像
+func ExportFile(cfg *Config) error {
 	if len(cfg.SrcPath) > 0 && cfg.SrcPath[0] == '/' {
 		cfg.SrcPath = cfg.SrcPath[1:]
 	}
 	if cfg.Version == "" {
-		if idx := strings.LastIndexByte(cfg.Image, ':'); idx > 0 {
+		if idx := strings.IndexByte(cfg.Image, ':'); idx > 0 {
 			cfg.Version = cfg.Image[idx+1:]
 		} else {
 			cfg.Version = "latest"
@@ -43,47 +28,13 @@ func ExtractImageFile(cfg *Config) error {
 	if cfg.Disable || cfg.Image == "" || cfg.OutPath == "" || cfg.OutPath == "none" {
 		return nil
 	}
-	// 拉取镜像 remote.WithAuthFromKeychain(authn.DefaultKeychain)
-	auz := authn.Anonymous // 匿名访问
-	if cfg.Username != "" {
-		auz = authn.FromConfig(authn.AuthConfig{Username: cfg.Username, Password: cfg.Password})
-	} else if cfg.DcrAuths != "" {
-		aus := map[string]map[string]authn.AuthConfig{}
-		if err := json.Unmarshal([]byte(cfg.DcrAuths), &aus); err != nil {
-			return errors.New("parse dcrauths: " + err.Error())
-		}
-		hcr := ""
-		if idx := strings.IndexByte(cfg.Image, '/'); idx <= 0 {
-			hcr = "docker.io" // 基础镜像仓库
-		} else if cdx := strings.IndexByte(cfg.Image[:idx], '.'); cdx > 0 {
-			hcr = cfg.Image[:idx] // 镜像仓库
-		}
-		if auths, ok := aus["auths"]; !ok {
-			// pass, 没有匹配的，使用匿名访问
-		} else if hcr == "" && len(auths) > 0 {
-			// 取第一个仓库， 并且补充镜像仓库地址
-			for key, auth := range auths {
-				cfg.Image = filepath.Join(key, cfg.Image)
-				auz = authn.FromConfig(auth)
-				break // 只取第一条
-			}
-		} else if auth, ok := auths[hcr]; ok {
-			// 通过域名获取访问令牌
-			auz = authn.FromConfig(auth)
-			// z.Println(z.ToStr(auth))
-		} // else 没有匹配的，使用匿名访问
-	}
-	// 解析镜像
-	ref, err := name.ParseReference(cfg.Image)
+	// 下载文件
+	img, err := PullImpage(cfg)
 	if err != nil {
-		return errors.New("parse image reference: " + err.Error())
+		return err
 	}
-	z.Printf("[registry]: fetching image %s\n", ref.Name())
-	// 拉取镜像
-	img, err := remote.Image(ref, remote.WithAuth(auz))
-	if err != nil {
-		return errors.New("fetch image: " + err.Error())
-	}
+	// ref, _ := name.ParseReference(cfg.Image)
+	// 获取镜像的层， 从中导出文件
 	layers, err := img.Layers()
 	if err != nil {
 		return errors.New("get layers: " + err.Error())
@@ -93,11 +44,11 @@ func ExtractImageFile(cfg *Config) error {
 		return errors.New("abs outpath: " + err.Error())
 	}
 	// 按顺序解层（layers 返回的顺序是从 base 到 top）
-	lkey := ref.Name()
-	if idx := strings.LastIndexByte(lkey, '/'); idx > 0 {
-		lkey = lkey[idx+1:]
+	key_ := cfg.Image
+	if idx := strings.LastIndexByte(key_, '/'); idx > 0 {
+		key_ = key_[idx+1:]
 	}
-	z.Printf("[registry]: (%s) fetching layers %d | %s -> %s\n", lkey, len(layers), cfg.SrcPath, cfg.OutPath)
+	z.Printf("[registry]: (%s) fetching layers %d | %s -> %s\n", key_, len(layers), cfg.SrcPath, cfg.OutPath)
 	for i, layer := range layers {
 		rc, err := layer.Uncompressed()
 		if err != nil {
@@ -108,9 +59,9 @@ func ExtractImageFile(cfg *Config) error {
 			return fmt.Errorf("apply layer[%d]: %v", i, err)
 		}
 		rc.Close()
-		z.Printf("[registry]: (%s) applied layer %d/%d\n", lkey, i+1, len(layers))
+		z.Printf("[registry]: (%s) applied layer %d/%d\n", key_, i+1, len(layers))
 	}
-	z.Printf("[registry]: completed done %s\n", ref.Name())
+	z.Printf("[registry]: completed done %s\n", cfg.Image)
 
 	return nil
 }
@@ -179,7 +130,7 @@ func applyTarTarget(r io.Reader, outDir string, srcPath string) error {
 			if err := os.MkdirAll(dest, fs.FileMode(hdr.Mode)); err != nil {
 				return fmt.Errorf("mkdir %s: %w", dest, err)
 			}
-		case tar.TypeReg:
+		case tar.TypeReg: //, tar.TypeRegA:
 			// Ensure parent dir exists
 			if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
 				return fmt.Errorf("mkdir parent for %s: %w", dest, err)

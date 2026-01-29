@@ -73,8 +73,8 @@ func (aa *F3Serve) updateVersion(zrc *z.Ctx) {
 		verInfo.ID = 0
 		verInfo.CdnName.Valid = false
 		verInfo.CdnPath.Valid = false
-		verInfo.CdnUse.Valid = false
-		verInfo.CdnRew.Valid = false
+		verInfo.CdnPush.Valid = false
+		verInfo.CdnRenew.Valid = false
 		verInfo.Image = sql.NullString{String: image, Valid: true}
 		verInfo.Vpp = vpp
 		verInfo.Ver = iver
@@ -92,8 +92,8 @@ func (aa *F3Serve) updateVersion(zrc *z.Ctx) {
 			ver.ID = 0
 			ver.CdnName.Valid = false
 			ver.CdnPath.Valid = false
-			ver.CdnUse.Valid = false
-			ver.CdnRew.Valid = false
+			ver.CdnPush.Valid = false
+			ver.CdnRenew.Valid = false
 			ver.Image = sql.NullString{String: image, Valid: true}
 			ver.Ver = iver // 只更新版本和镜像
 			ver.Started = sql.NullTime{Time: time.Now(), Valid: true}

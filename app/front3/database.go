@@ -131,10 +131,11 @@ type VersionDO struct {
 	Indexs    sql.NullString `db:"indexs"`    // 索引列表
 	ImagePath sql.NullString `db:"imagepath"` // 输入文件
 	ReCache   sql.NullBool   `db:"recache"`   // 重置缓存
+	CdnCache  sql.NullBool   `db:"cdncache"`  // cdn 缓存 解决镜像重复加载问题
 	CdnName   sql.NullString `db:"cdnname"`   // cdn 域
 	CdnPath   sql.NullString `db:"cdnpath"`   // cdn 路径
-	CdnUse    sql.NullBool   `db:"cdnuse"`    // cdn 使用
-	CdnRew    sql.NullBool   `db:"cdnrew"`    // nil or true 启用cdn重写
+	CdnPush   sql.NullBool   `db:"cdnpush"`   // cdn 使用
+	CdnRenew  sql.NullBool   `db:"cdnrenew"`  // nil or true 启用cdn重写
 	Started   sql.NullTime   `db:"started"`   // 生效时间
 	IndexHtml sql.NullString `db:"indexhtml"` // 索引文件内容
 	Disable   bool           `db:"disable"`   // 禁用
@@ -156,7 +157,7 @@ func (aa *VersionRepo) TableName() string {
 }
 
 func (aa *VersionRepo) SelectCols() string {
-	return `SELECT t1.id, t1.tag, t1.vpp, t1.ver, t1.image, t1.tproot, t1.indexpath, t1.indexs, t1.imagepath, t1.recache, t1.cdnname, t1.cdnpath, t1.cdnuse, t1.cdnrew, t1.started, t1.indexhtml, t1.disable, t1.deleted FROM ` + aa.TableName() + " t1"
+	return `SELECT t1.id, t1.tag, t1.vpp, t1.ver, t1.image, t1.tproot, t1.indexpath, t1.indexs, t1.imagepath, t1.recache, t1.cdncache t1.cdnname, t1.cdnpath, t1.cdnpush, t1.cdnrenew, t1.started, t1.indexhtml, t1.disable, t1.deleted FROM ` + aa.TableName() + " t1"
 }
 
 // 获取最新的版本， 排除禁用和删除和未生效的
@@ -180,7 +181,7 @@ func (aa *VersionRepo) GetTop1ByVppAndVerWithDelete(vpp, ver string) (*VersionDO
 
 // 更新CDN信息， 更新 cdnname, cdnpath, cdnrew 字段
 func (aa *VersionRepo) UpdateCdnInfo(data *VersionDO) error {
-	_, err := aa.Database.Exec("UPDATE "+aa.TableName()+" SET cdnname=?, cdnpath=?, cdnrew=? WHERE id=?", data.CdnName, data.CdnPath, data.CdnRew, data.ID)
+	_, err := aa.Database.Exec("UPDATE "+aa.TableName()+" SET cdnname=?, cdnpath=?, cdnrenew=? WHERE id=?", data.CdnName, data.CdnPath, data.CdnRenew, data.ID)
 	return err
 }
 
@@ -208,8 +209,8 @@ func (aa *VersionRepo) GetByImageName(name string) ([]VersionDO, error) {
 
 // 插入一条数据
 func (aa *VersionRepo) Insert(data *VersionDO) error {
-	ret, err := aa.Database.Exec("INSERT "+aa.TableName()+" SET tag=?, vpp=?, ver=?, image=?, tproot=?, indexpath=?, indexs=?, imagepath=?, cdnname=?, cdnpath=?, cdnuse=?, cdnrew=?, started=?, indexhtml=?, disable=?, deleted=?", //
-		data.Tag, data.Vpp, data.Ver, data.Image, data.TPRoot, data.IndexPath, data.Indexs, data.ImagePath, data.CdnName, data.CdnPath, data.CdnUse, data.CdnRew, data.Started, data.IndexHtml, data.Disable, data.Deleted)
+	ret, err := aa.Database.Exec("INSERT "+aa.TableName()+" SET tag=?, vpp=?, ver=?, image=?, tproot=?, indexpath=?, indexs=?, imagepath=?, cdnname=?, cdnpath=?, cdnpush=?, cdnrenew=?, started=?, indexhtml=?, disable=?, deleted=?", //
+		data.Tag, data.Vpp, data.Ver, data.Image, data.TPRoot, data.IndexPath, data.Indexs, data.ImagePath, data.CdnName, data.CdnPath, data.CdnPush, data.CdnRenew, data.Started, data.IndexHtml, data.Disable, data.Deleted)
 	if err == nil {
 		data.ID, _ = ret.LastInsertId()
 	}
