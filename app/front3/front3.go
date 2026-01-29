@@ -183,10 +183,12 @@ func (aa *F3Serve) ServeHTTP(rw http.ResponseWriter, rr *http.Request) {
 		aa._CacheMu.Lock()
 		defer aa._CacheMu.Unlock()
 		if api, _ = aa.CacheApp[key]; api != nil {
-			// pass 已经存在，跳过
+			// api 已经存在，跳过
 		} else if api = aa.InitApi(rw, rr, &AppData{AppInfo: *app, Version: *ver}); api != nil {
 			api.LastMod = time.Now().Unix() // 防止被清理
 			aa.CacheApp[key] = api
+		} else {
+			return // 无法处理， 不能创建 api
 		}
 	}
 	if z.IsDebug() || C.Front3.Debug {
@@ -221,7 +223,7 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppData
 	}
 	if av.Version.CdnName.String != "" && av.Version.CdnUse.Bool && !av.Version.CdnRew.Bool {
 		// 直接使用 CDN 模式返回
-		handler := front2.NewApi(nil, config, fmt.Sprintf("[_s3serve]-%d", av.Version.ID))
+		handler := front2.NewApi(nil, config, fmt.Sprintf("[_front3_]-%d", av.Version.ID))
 		s3cdn.InitCdnServe(handler, av.Version.CdnName.String, av.Version.CdnPath.String, av.AppInfo.App.String, av.Version.Ver.String)
 		av.Handler = handler
 		return av
@@ -230,7 +232,7 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppData
 	if av.Version.Image.String == "" {
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 		http.Error(rw, "application image empty: "+rr.Host, http.StatusInternalServerError)
-		return nil
+		return nil // 没有镜像地址
 	}
 	// 处理本地缓存目录
 	outpath := filepath.Join(aa.RegConfig.OutPath, av.AppInfo.App.String, av.Version.Ver.String)
@@ -238,7 +240,7 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppData
 	if err != nil {
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 		http.Error(rw, "application local path error: "+rr.Host+" ["+outpath+"] "+err.Error(), http.StatusInternalServerError)
-		return nil
+		return nil // 本地缓存地址无效
 	}
 	if av.Version.ReCache.Bool {
 		// 强制重新缓存
@@ -251,7 +253,7 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppData
 		if err := os.MkdirAll(abspath, 0644); err != nil {
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 			http.Error(rw, "application local path error: "+rr.Host+" ["+outpath+"] "+err.Error(), http.StatusInternalServerError)
-			return nil
+			return nil // 无法创建缓存文件夹
 		}
 		cfg := registry.Config{
 			Username: aa.RegConfig.Username,
@@ -275,17 +277,17 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppData
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 			http.Error(rw, "application pull image error: "+rr.Host+", "+err.Error(), http.StatusInternalServerError)
 			os.RemoveAll(abspath) // 删除本地缓存文件夹
-			return nil
+			return nil            // 无法提出镜像文件
 		}
 	} else if err != nil {
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 		http.Error(rw, "application local path error: "+rr.Host+" ["+outpath+"] "+err.Error(), http.StatusInternalServerError)
-		return nil
+		return nil // 查询本地缓存发生异常
 	} else {
 		z.Println("[_front3_]: local path, exist:", abspath)
 	}
 	av.Abspath = abspath
-	handler := front2.NewApi(os.DirFS(abspath), config, fmt.Sprintf("[_front2_]-%d", av.Version.ID))
+	handler := front2.NewApi(os.DirFS(abspath), config, fmt.Sprintf("[_front3_]-%d", av.Version.ID))
 	// 使用 CDN 内容返回
 	if av.Version.CdnUse.Bool {
 		// 上传到 cdn， 部署CDN
