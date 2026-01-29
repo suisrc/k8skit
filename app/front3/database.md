@@ -57,7 +57,7 @@ CREATE TABLE `frontv` (
   `cdnname` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT 'CDN加速域名， 不为空表示CDN可用，cdnuse控制',
   `cdnpath` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '使用CDN所在文件夹， 不包含app和ver',
   `cdnpush` int(11) DEFAULT '0' COMMENT '推送到CDN上，加速访问',
-  `cdnrenew` int(11) DEFAULT '1' COMMENT '标记重新cdn，一次有效',
+  `cdnrenew` int(11) DEFAULT '0' COMMENT '标记重新cdn，一次有效',
   `started` datetime DEFAULT NULL COMMENT '生效时间， 可用于提前发布',
   `indexhtml` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT '索引页面，人工指定, 优先级最高，存在即直接返回',
   `disable` int(11) DEFAULT '0' COMMENT '禁用标识，最高版本禁用，所有版本不可使用',

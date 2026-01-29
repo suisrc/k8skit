@@ -157,7 +157,7 @@ func (aa *VersionRepo) TableName() string {
 }
 
 func (aa *VersionRepo) SelectCols() string {
-	return `SELECT t1.id, t1.tag, t1.vpp, t1.ver, t1.image, t1.tproot, t1.indexpath, t1.indexs, t1.imagepath, t1.recache, t1.cdncache t1.cdnname, t1.cdnpath, t1.cdnpush, t1.cdnrenew, t1.started, t1.indexhtml, t1.disable, t1.deleted FROM ` + aa.TableName() + " t1"
+	return `SELECT t1.id, t1.tag, t1.vpp, t1.ver, t1.image, t1.tproot, t1.indexpath, t1.indexs, t1.imagepath, t1.recache, t1.cdncache, t1.cdnname, t1.cdnpath, t1.cdnpush, t1.cdnrenew, t1.started, t1.indexhtml, t1.disable, t1.deleted FROM ` + aa.TableName() + " t1"
 }
 
 // 获取最新的版本， 排除禁用和删除和未生效的
@@ -209,8 +209,8 @@ func (aa *VersionRepo) GetByImageName(name string) ([]VersionDO, error) {
 
 // 插入一条数据
 func (aa *VersionRepo) Insert(data *VersionDO) error {
-	ret, err := aa.Database.Exec("INSERT "+aa.TableName()+" SET tag=?, vpp=?, ver=?, image=?, tproot=?, indexpath=?, indexs=?, imagepath=?, cdnname=?, cdnpath=?, cdnpush=?, cdnrenew=?, started=?, indexhtml=?, disable=?, deleted=?", //
-		data.Tag, data.Vpp, data.Ver, data.Image, data.TPRoot, data.IndexPath, data.Indexs, data.ImagePath, data.CdnName, data.CdnPath, data.CdnPush, data.CdnRenew, data.Started, data.IndexHtml, data.Disable, data.Deleted)
+	ret, err := aa.Database.Exec("INSERT "+aa.TableName()+" SET tag=?, vpp=?, ver=?, image=?, tproot=?, indexpath=?, indexs=?, imagepath=?, cdncache=? cdnname=?, cdnpath=?, cdnpush=?, cdnrenew=?, started=?, indexhtml=?, disable=?, deleted=?", //
+		data.Tag, data.Vpp, data.Ver, data.Image, data.TPRoot, data.IndexPath, data.Indexs, data.ImagePath, data.CdnCache, data.CdnName, data.CdnPath, data.CdnPush, data.CdnRenew, data.Started, data.IndexHtml, data.Disable, data.Deleted)
 	if err == nil {
 		data.ID, _ = ret.LastInsertId()
 	}
