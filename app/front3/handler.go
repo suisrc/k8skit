@@ -24,12 +24,12 @@ var (
 type Config struct {
 	DB sqlx.DatabaseConfig `json:"database"`
 
-	Enable      bool   `json:"enable"`      // 禁用
-	Debug       bool   `json:"debug"`       // 调试模式
-	AddrPort    string `json:"addrport"`    // 监听端口，不破坏源服务，独立新服务监控 CDN 索引
-	CacheTicker int64  `json:"cacheticker"` // 缓存清理间隔， 0 表示不启用, 默认为1天
-	CacheTime   int64  `json:"cachetime"`   // 缓存存储时间， 0 默认 30 天
-	ImageMaps   z.HM   `json:"imagemaps"`   // 镜像映射
+	Enable       bool   `json:"enable"`       // 禁用
+	Debug        bool   `json:"debug"`        // 调试模式
+	AddrPort     string `json:"addrport"`     // 监听端口，不破坏源服务，独立新服务监控 CDN 索引
+	CacheTicker  int64  `json:"cacheticker"`  // 缓存清理间隔， 0 表示不启用, 默认为1天
+	CacheTimeout int64  `json:"cachetimeout"` // 缓存存储时间， 0 默认 30 天
+	ImageMaps    z.HM   `json:"imagemaps"`    // 镜像映射
 
 	// 验证方式？简单一点，confa 提供令牌支持， 但是 role 必须是 front3.* 权限
 	WebHookPath string `json:"hookpath"`   // 钩子路径, 默认为空，不启动钩子
@@ -46,7 +46,7 @@ func init() {
 	flag.StringVar(&C.Front3.AddrPort, "f3addrport", "0.0.0.0:8080", "front3 监听端口")
 	flag.StringVar(&C.Front3.DB.Driver, "f3driver", "mysql", "front3 数据库驱动")
 	flag.Int64Var(&C.Front3.CacheTicker, "f3ticker", 86400, "front3 缓存清理间隔, 0 禁用, 默认 1 天")
-	flag.Int64Var(&C.Front3.CacheTime, "f3cachetime", 2592000, "front3 缓存存储时间, 0 默认 30 天")
+	flag.Int64Var(&C.Front3.CacheTimeout, "f3cachetimeout", 2592000, "front3 缓存存储时间, 0 默认 30 天")
 
 	flag.StringVar(&C.Front3.MutateAddr, "mutateaddr", "0.0.0.0:443", "钩子地址")
 	flag.StringVar(&C.Front3.MutateCert, "mutatecert", "mutatecert", "钩子路径")
@@ -75,8 +75,8 @@ func init() {
 			AppRepo:   &AppInfoRepo{Database: dsc, TablePrefix: tpx},
 			VerRepo:   &VersionRepo{Database: dsc, TablePrefix: tpx},
 			KeyRepo:   &AccessKeyRepo{Database: dsc, TablePrefix: tpx},
-			CacheApp:  make(map[string]*AppData),
-			Interval:  C.Front3.CacheTime * 60, // 缓存清理间隔， 单位秒
+			Interval:  C.Front3.CacheTimeout * 60, // 缓存清理间隔， 单位秒
+			AppCache:  make(map[string]*AppCache),
 			// Interval: 30, // 测试用
 		}
 		// 原生钩子

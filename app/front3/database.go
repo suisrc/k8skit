@@ -51,7 +51,8 @@ type AppInfoDO struct {
 	Tag      sql.NullString `db:"tag"`      // 标签
 	Name     sql.NullString `db:"name"`     // 应用名称
 	App      sql.NullString `db:"app"`      // 应用标识
-	Ver      sql.NullString `db:"ver"`      // 应用标识
+	Vpp      sql.NullString `db:"vpp"`      // 版本名, 不存在，使用app代替
+	Ver      sql.NullString `db:"ver"`      // 版本号
 	Domain   sql.NullString `db:"domain"`   // 域名
 	RootDir  sql.NullString `db:"rootdir"`  // 根目录
 	Priority sql.NullString `db:"priority"` // 优先级
@@ -65,6 +66,13 @@ type AppInfoDO struct {
 	// Version int            `db:"version"`
 }
 
+func (aa AppInfoDO) GVP() string {
+	if aa.Vpp.String != "" {
+		return aa.Vpp.String
+	}
+	return aa.App.String
+}
+
 type AppInfoRepo struct {
 	Database    *sqlx.DB
 	TablePrefix string
@@ -75,7 +83,7 @@ func (aa *AppInfoRepo) TableName() string {
 }
 
 func (aa *AppInfoRepo) SelectCols() string {
-	return "SELECT id, tag, name, app, ver, domain, rootdir, priority, routers, disable, deleted FROM " + aa.TableName()
+	return "SELECT id, tag, name, app, vpp, ver, domain, rootdir, priority, routers, disable, deleted FROM " + aa.TableName()
 }
 
 // 通过域名获取应用列表，排除删除的, 不排除禁用，以便于通知页面，应用被禁用
@@ -115,8 +123,8 @@ func (aa *AppInfoRepo) DelByID(id int64) error {
 type VersionDO struct {
 	ID        int64          `db:"id"`
 	Tag       sql.NullString `db:"tag"`       // 标签
-	Aid       int64          `db:"aid"`       // 应用ID
-	Ver       sql.NullString `db:"ver"`       // 版本
+	Vpp       string         `db:"vpp"`       // 版本名
+	Ver       string         `db:"ver"`       // 版本号
 	Image     sql.NullString `db:"image"`     // 镜像
 	TPRoot    sql.NullString `db:"tproot"`    // 替换根目录
 	IndexPath sql.NullString `db:"indexpath"` // 索引文件
@@ -148,25 +156,25 @@ func (aa *VersionRepo) TableName() string {
 }
 
 func (aa *VersionRepo) SelectCols() string {
-	return `SELECT t1.id, t1.tag, t1.aid, t1.ver, t1.image, t1.tproot, t1.indexpath, t1.indexs, t1.imagepath, t1.recache, t1.cdnname, t1.cdnpath, t1.cdnuse, t1.cdnrew, t1.started, t1.indexhtml, t1.disable, t1.deleted FROM ` + aa.TableName() + " t1"
+	return `SELECT t1.id, t1.tag, t1.vpp, t1.ver, t1.image, t1.tproot, t1.indexpath, t1.indexs, t1.imagepath, t1.recache, t1.cdnname, t1.cdnpath, t1.cdnuse, t1.cdnrew, t1.started, t1.indexhtml, t1.disable, t1.deleted FROM ` + aa.TableName() + " t1"
 }
 
 // 获取最新的版本， 排除禁用和删除和未生效的
-func (aa *VersionRepo) GetTop1ByAidAndVer(aid int64, ver string) (*VersionDO, error) {
+func (aa *VersionRepo) GetTop1ByVppAndVer(vpp, ver string) (*VersionDO, error) {
 	var ret VersionDO
 	if ver == "" {
-		err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE t1.aid=? AND (started<=NOW() OR started IS NULL) AND disable=0 AND deleted=0 ORDER BY ver DESC LIMIT 1", aid)
+		err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE t1.vpp=? AND (started<=NOW() OR started IS NULL) AND disable=0 AND deleted=0 ORDER BY ver DESC LIMIT 1", vpp)
 		return &ret, err
 	} else {
-		err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE t1.aid=? AND t1.ver=? AND deleted=0", aid, ver) // 忽略限制的条件, 除了deleted
+		err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE t1.vpp=? AND t1.ver=? AND deleted=0", vpp, ver) // 忽略限制的条件, 除了deleted
 		return &ret, err
 	}
 }
 
 // 获取最新的版本
-func (aa *VersionRepo) GetTop1ByAidAndVerWithDelete(aid int64, ver string) (*VersionDO, error) {
+func (aa *VersionRepo) GetTop1ByVppAndVerWithDelete(vpp, ver string) (*VersionDO, error) {
 	var ret VersionDO
-	err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE t1.aid=? AND t1.ver=?", aid, ver)
+	err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE t1.vpp=? AND t1.ver=?", vpp, ver)
 	return &ret, err
 }
 
@@ -189,19 +197,19 @@ func (aa *VersionRepo) GetByImage(image string) ([]VersionDO, error) {
 	return ret, err
 }
 
-// 通过 image 获取 ver 最大的数据，然后使用 aid 去重, 考虑会有多个前端使用同一个镜像的问题
+// 通过 image 获取 ver 最大的数据，然后使用 vpp 去重, 考虑会有多个前端使用同一个镜像的问题
 func (aa *VersionRepo) GetByImageName(name string) ([]VersionDO, error) {
-	// SELECT * FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY aid ORDER BY ver DESC) AS rn FROM frontv) AS sub WHERE rn = 1; 8.0.0+支持
-	// SELECT * FROM frontv t1 WHERE NOT EXISTS (SELECT 1 FROM frontv t2 WHERE t2.aid = t1.aid AND t2.ver > t1.ver);
+	// SELECT * FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY vpp ORDER BY ver DESC) AS rn FROM frontv) AS sub WHERE rn = 1; 8.0.0+支持
+	// SELECT * FROM frontv t1 WHERE NOT EXISTS (SELECT 1 FROM frontv t2 WHERE t2.vpp = t1.vpp AND t2.ver > t1.ver);
 	var ret []VersionDO
-	err := aa.Database.Select(&ret, aa.SelectCols()+" WHERE t1.image like ? AND t1.deleted=0 AND NOT EXISTS (SELECT 1 FROM frontv t2 WHERE t2.aid = t1.aid AND t2.ver > t1.ver);", name+":%")
+	err := aa.Database.Select(&ret, aa.SelectCols()+" WHERE t1.image like ? AND t1.deleted=0 AND NOT EXISTS (SELECT 1 FROM frontv t2 WHERE t2.vpp = t1.vpp AND t2.ver > t1.ver);", name+":%")
 	return ret, err
 }
 
 // 插入一条数据
 func (aa *VersionRepo) Insert(data *VersionDO) error {
-	ret, err := aa.Database.Exec("INSERT "+aa.TableName()+" SET tag=?, aid=?, ver=?, image=?, tproot=?, indexpath=?, indexs=?, imagepath=?, cdnname=?, cdnpath=?, cdnuse=?, cdnrew=?, started=?, indexhtml=?, disable=?, deleted=?", //
-		data.Tag, data.Aid, data.Ver, data.Image, data.TPRoot, data.IndexPath, data.Indexs, data.ImagePath, data.CdnName, data.CdnPath, data.CdnUse, data.CdnRew, data.Started, data.IndexHtml, data.Disable, data.Deleted)
+	ret, err := aa.Database.Exec("INSERT "+aa.TableName()+" SET tag=?, vpp=?, ver=?, image=?, tproot=?, indexpath=?, indexs=?, imagepath=?, cdnname=?, cdnpath=?, cdnuse=?, cdnrew=?, started=?, indexhtml=?, disable=?, deleted=?", //
+		data.Tag, data.Vpp, data.Ver, data.Image, data.TPRoot, data.IndexPath, data.Indexs, data.ImagePath, data.CdnName, data.CdnPath, data.CdnUse, data.CdnRew, data.Started, data.IndexHtml, data.Disable, data.Deleted)
 	if err == nil {
 		data.ID, _ = ret.LastInsertId()
 	}

@@ -280,17 +280,18 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 		return
 	}
 	// 需要更新应用版本信息
-	verInfo, err := aa.VerRepo.GetTop1ByAidAndVerWithDelete(appInfo.ID, ver)
+	vpp := appInfo.GVP()
+	verInfo, err := aa.VerRepo.GetTop1ByVppAndVerWithDelete(vpp, ver)
 	if err != nil && err != sql.ErrNoRows {
 		z.Println("[_mutate_]:", "get app version info form database error,", err.Error())
 		return // 获取数据库发生异常
 	}
-	sql_ = "updated=?, updater=?, deleted=0, disable=0, aid=?, ver=?, image=?"
-	args = []any{time.Now(), z.AppName, appInfo.ID, ver, img}
+	sql_ = "updated=?, updater=?, deleted=0, disable=0, vpp=?, ver=?, image=?"
+	args = []any{time.Now(), z.AppName, vpp, ver, img}
 	pre_ = "frontend/db.frontv."
 	len_ = len(pre_)
 	for anno, data := range ing.GetAnnotations() {
-		if anno == pre_+"image" || anno == pre_+"ver" || anno == pre_+"aid" {
+		if anno == pre_+"image" || anno == pre_+"vpp" || anno == pre_+"ver" {
 			continue
 		}
 		if strings.HasPrefix(anno, pre_) {

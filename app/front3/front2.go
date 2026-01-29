@@ -57,27 +57,29 @@ func (aa *F3Serve) updateVersion(zrc *z.Ctx) {
 		return
 	}
 	ikey, iver := skey[0], skey[1]
-	if code := qry.Get("app"); code != "" {
+	if app := qry.Get("app"); app != "" {
 		// 通过应用编码查找应用
-		app, err := aa.AppRepo.GetByApp(code)
+		appInfo, err := aa.AppRepo.GetByApp(app)
 		if err != nil {
-			zrc.TEXT("application not found: "+code, http.StatusOK)
+			zrc.TEXT("application not found: "+app, http.StatusOK)
 			return
 		}
-		ver, err := aa.VerRepo.GetTop1ByAidAndVer(app.ID, "") // 最新版
+		vpp := appInfo.GVP()
+		verInfo, err := aa.VerRepo.GetTop1ByVppAndVer(vpp, "") // 最新版
 		if err != nil {
-			zrc.TEXT("application version not found: "+code, http.StatusOK)
+			zrc.TEXT("application version not found: "+app, http.StatusOK)
 			return
 		}
-		ver.ID = 0
-		ver.CdnName.Valid = false
-		ver.CdnPath.Valid = false
-		ver.CdnUse.Valid = false
-		ver.CdnRew.Valid = false
-		ver.Image = sql.NullString{String: image, Valid: true}
-		ver.Ver = sql.NullString{String: iver, Valid: true}
-		ver.Started = sql.NullTime{Time: time.Now(), Valid: true}
-		aa.VerRepo.Insert(ver)
+		verInfo.ID = 0
+		verInfo.CdnName.Valid = false
+		verInfo.CdnPath.Valid = false
+		verInfo.CdnUse.Valid = false
+		verInfo.CdnRew.Valid = false
+		verInfo.Image = sql.NullString{String: image, Valid: true}
+		verInfo.Vpp = vpp
+		verInfo.Ver = iver
+		verInfo.Started = sql.NullTime{Time: time.Now(), Valid: true}
+		aa.VerRepo.Insert(verInfo)
 	} else {
 		// 使用镜像 ikey 查询和替换应用版本， 需要考虑存在多个的情况
 		vers, err := aa.VerRepo.GetByImageName(ikey)
@@ -93,7 +95,7 @@ func (aa *F3Serve) updateVersion(zrc *z.Ctx) {
 			ver.CdnUse.Valid = false
 			ver.CdnRew.Valid = false
 			ver.Image = sql.NullString{String: image, Valid: true}
-			ver.Ver = sql.NullString{String: iver, Valid: true}
+			ver.Ver = iver // 只更新版本和镜像
 			ver.Started = sql.NullTime{Time: time.Now(), Valid: true}
 			aa.VerRepo.Insert(&ver)
 		}

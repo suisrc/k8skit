@@ -53,4 +53,4 @@ Host: sso.kfzx.sims-cn.com
 ### 
 GET {{BASE}}/123.txt
 Content-Type: application/json
-Host: sso.kfzx.sims-cn.com
+Host: account.kfzx.sims-cn.com
