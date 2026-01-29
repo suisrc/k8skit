@@ -33,12 +33,12 @@ type F3Serve struct {
 }
 
 type AppData struct {
-	AppInfo AppInfoDO // 应用
-	Version VersionDO // 版本
-	Server  *front2.IndexApi
-	LastMod int64  // 最后访问时间
-	IsLocal bool   // 是本地化
-	Abspath string // 绝对路径
+	AppInfo AppInfoDO    // 应用
+	Version VersionDO    // 版本
+	Handler http.Handler // *front2.IndexApi
+	LastMod int64        // 最后访问时间
+	IsLocal bool         // 是本地化
+	Abspath string       // 绝对路径
 }
 
 func (aa *F3Serve) CleanCaches() {
@@ -193,40 +193,37 @@ func (aa *F3Serve) ServeHTTP(rw http.ResponseWriter, rr *http.Request) {
 		z.Println("[_front3_]:", key, api.AppInfo.App.String, "->", rr.URL.Path)
 	}
 	api.LastMod = time.Now().Unix()
-	api.Server.ServeHTTP(rw, rr)
+	api.Handler.ServeHTTP(rw, rr)
 }
 
 func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppData) *AppData {
-	index := av.Version.IndexPath.String
-	if index == "" {
-		index = front2.C.Front2.Index // 默认值
-	}
-	indexs := zc.StrMap{}
-	if av.Version.Indexs.String != "" {
-		indexs.Set(av.Version.Indexs.String)
-	}
-	routers := zc.StrMap{}
-	if av.AppInfo.Routers.String != "" {
-		routers.Set(av.AppInfo.Routers.String)
-	}
 	config := front2.Config{
-		Index:      index,
-		Indexs:     indexs,
-		Routers:    routers,
 		TmplRoot:   av.Version.TPRoot.String,
 		TmplSuffix: front2.C.Front2.TmplSuffix,
 		TmplPrefix: front2.C.Front2.TmplPrefix,
 	}
+	{
+		index := av.Version.IndexPath.String
+		if index == "" {
+			index = front2.C.Front2.Index // 默认值
+		}
+		indexs := zc.StrMap{}
+		if av.Version.Indexs.String != "" {
+			indexs.Set(av.Version.Indexs.String)
+		}
+		routers := zc.StrMap{}
+		if av.AppInfo.Routers.String != "" {
+			routers.Set(av.AppInfo.Routers.String)
+		}
+		config.Index = index
+		config.Indexs = indexs
+		config.Routers = routers
+	}
 	if av.Version.CdnName.String != "" && av.Version.CdnUse.Bool && !av.Version.CdnRew.Bool {
 		// 直接使用 CDN 模式返回
-		cdn := s3cdn.NewApi(index, indexs, av.Version.CdnName.String, av.Version.CdnPath.String, //
-			fmt.Sprintf("[_s3serve]-%d", av.Version.ID), av.AppInfo.App.String, av.Version.Ver.String)
-		av.Server = &front2.IndexApi{
-			Config:    config,
-			IndexsKey: cdn.IndexsKey,
-			ServeFS:   cdn,
-			// RouterKey: []string{}, // 基本是禁用路由功能
-		}
+		handler := front2.NewApi(nil, config, fmt.Sprintf("[_s3serve]-%d", av.Version.ID))
+		s3cdn.InitCdnServe(handler, av.Version.CdnName.String, av.Version.CdnPath.String, av.AppInfo.App.String, av.Version.Ver.String)
+		av.Handler = handler
 		return av
 	}
 	// 验证镜像文件地址
@@ -288,29 +285,20 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppData
 		z.Println("[_front3_]: local path, exist:", abspath)
 	}
 	av.Abspath = abspath
-	av.Server = front2.NewApi(os.DirFS(abspath), config, fmt.Sprintf("[_front2_]-%d", av.Version.ID))
+	handler := front2.NewApi(os.DirFS(abspath), config, fmt.Sprintf("[_front2_]-%d", av.Version.ID))
 	// 使用 CDN 内容返回
 	if av.Version.CdnUse.Bool {
 		// 上传到 cdn， 部署CDN
 		cfg := aa.CdnConfig // 赋值了新对象
 		cfg.Rewrite = av.Version.CdnRew.Bool
-		err = s3cdn.UploadToS3(av.Server.HttpFS, av.Server.FileFS, &av.Server.Config, &cfg, av.AppInfo.App.String, av.Version.Ver.String)
+		err = s3cdn.UploadToS3(handler.HttpFS, handler.FileFS, &handler.Config, &cfg, av.AppInfo.App.String, av.Version.Ver.String)
 		if err != nil {
 			z.Println("[_f3serve]: error, upload cdn err:", err.Error())
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 			http.Error(rw, "application upload cdn error: "+rr.Host+err.Error(), http.StatusInternalServerError)
 			return nil
 		}
-		av.Server.ServeFS = &s3cdn.S3IndexApi{
-			Index:     av.Server.Config.Index,
-			Indexs:    av.Server.Config.Indexs,
-			IndexsKey: av.Server.IndexsKey,
-			Domain:    aa.CdnConfig.Domain,
-			RootDir:   aa.CdnConfig.RootDir,
-			LogKey:    fmt.Sprintf("[_s3serve]-%d", av.Version.ID),
-			AppName:   av.AppInfo.App.String,
-			Version:   av.Version.Ver.String,
-		}
+		s3cdn.InitCdnServe(handler, aa.CdnConfig.Domain, aa.CdnConfig.RootDir, av.AppInfo.App.String, av.Version.Ver.String)
 		// 更新CDN信息
 		av.Version.CdnName = sql.NullString{String: aa.CdnConfig.Domain, Valid: true}
 		av.Version.CdnPath = sql.NullString{String: aa.CdnConfig.RootDir, Valid: true}

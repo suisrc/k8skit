@@ -12,7 +12,6 @@ import (
 	"mime"
 	"net/http"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/minio/minio-go/v7"
@@ -78,8 +77,9 @@ func Front2ServeByS3(api *front2.IndexApi, zgg *z.Zgg) {
 		zgg.ServeStop("run s3 serve config error: domain, addrport empty")
 		return
 	}
-	// 提供 S3 索引服务
-	hdl := NewApi(api.Config.Index, api.Config.Indexs, C.S3cdn.Domain, C.S3cdn.RootDir, "[_s3serve]", z.AppName, z.Version)
+	// c创建 S3 CDN 应答桥接服务
+	hdl := front2.NewApi(nil, api.Config, "[_s3serve]")
+	InitCdnServe(hdl, C.S3cdn.Domain, C.S3cdn.RootDir, z.AppName, z.Version)
 	zgg.Servers["(S3CDN)"] = &http.Server{Addr: C.S3cdn.AddrPort, Handler: hdl}
 }
 
@@ -226,37 +226,31 @@ func _UploadToS3(ctx context.Context, cli *minio.Client, fpath string, fstat fs.
 }
 
 // 提供 S3 索引服务
-func NewApi(index string, indexs map[string]string, domain, rootdir, logkey string, appname, version string) *S3IndexApi {
-	indexsKey := []string{}
-	for k := range indexs {
-		indexsKey = append(indexsKey, k)
-	}
-	slices.SortFunc(indexsKey, func(l, r string) int { return -len(l) + len(r) })
-
-	return &S3IndexApi{
-		Index:     index,
-		Indexs:    indexs,
-		IndexsKey: indexsKey,
+func InitCdnServe(api *front2.IndexApi, domain, rootdir string, appname, version string) {
+	api.ServeFS = &ServeS3{
+		LogKey:    api.LogKey,
+		Index:     api.Config.Index,
+		Indexs:    api.Config.Indexs,
+		IndexsKey: api.IndexsKey,
 		Domain:    domain,
 		RootDir:   rootdir,
-		LogKey:    logkey,
 		AppName:   appname,
 		Version:   version,
 	}
 }
 
-type S3IndexApi struct {
+type ServeS3 struct {
+	LogKey    string
 	Index     string
 	Indexs    map[string]string
 	IndexsKey []string
 	Domain    string
 	RootDir   string
-	LogKey    string
 	AppName   string
 	Version   string
 }
 
-func (aa *S3IndexApi) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (aa *ServeS3) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := ""
 	if ext := filepath.Ext(r.URL.Path); ext != "" {
 		path = r.URL.Path
