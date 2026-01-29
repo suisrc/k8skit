@@ -45,8 +45,12 @@ GET {{BASE}}/front3/webhook?method=update.image&akey=66666666&image=dcr.dev.sims
 Content-Type: application/json
 
 ### 
-# @BASE=http://127.0.0.1:8088
+@BASE=http://127.0.0.1:8088
 ### 
 GET {{BASE}}/?action=xxx
+Content-Type: application/json
+Host: sso.kfzx.sims-cn.com
+### 
+GET {{BASE}}/123.txt
 Content-Type: application/json
 Host: sso.kfzx.sims-cn.com

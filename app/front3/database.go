@@ -75,7 +75,7 @@ func (aa *AppInfoRepo) TableName() string {
 }
 
 func (aa *AppInfoRepo) SelectCols() string {
-	return "SELECT id, tag, name, app, ver, domain, rootdir, priority, disable, deleted FROM " + aa.TableName()
+	return "SELECT id, tag, name, app, ver, domain, rootdir, priority, routers, disable, deleted FROM " + aa.TableName()
 }
 
 // 通过域名获取应用列表，排除删除的, 不排除禁用，以便于通知页面，应用被禁用
