@@ -289,8 +289,8 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCach
 			return nil // 无法创建缓存文件夹
 		}
 		// 优先使用 cdn 缓存
-		abort := false
-		tgzobj := filepath.Join(aa.CdnConfig.RootDir, av.Version.Vpp, av.Version.Ver) + ".tgz"
+		completed := false
+		tgzobject := filepath.Join(aa.CdnConfig.RootDir, av.Version.Vpp, av.Version.Ver) + ".tgz"
 		var s3cli *minio.Client = nil
 		if av.Version.CdnCache.Bool && av.Version.CdnRenew.Bool {
 			// 获取 s3 client， 以便用于后面更新
@@ -298,17 +298,41 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCach
 		} else if av.Version.CdnCache.Bool {
 			// 优先尝试使用 cdn 缓存
 			if s3cli, err = s3cdn.GetClient(context.Background(), &aa.CdnConfig); err != nil {
-				z.Println("[_front3_]: used cdn cache error:", tgzobj, err.Error())
-			} else if obj, err := s3cli.GetObject(context.TODO(), aa.CdnConfig.Bucket, tgzobj, minio.GetObjectOptions{}); err != nil {
-				z.Println("[_front3_]: used cdn cache error:", tgzobj, err.Error())
-			} else if err := registry.ExtractTgzByReader(abspath, obj); err != nil {
-				z.Println("[_front3_]: used cdn cache error:", tgzobj, err.Error())
+				z.Println("[_front3_]: used cdn cache error:", tgzobject, err.Error())
+			} else if obj, err := s3cli.GetObject(context.TODO(), aa.CdnConfig.Bucket, tgzobject, minio.GetObjectOptions{}); err != nil {
+				z.Println("[_front3_]: used cdn cache error:", tgzobject, err.Error())
+			} else if err := registry.ExtractTgzByReader(abspath, "", obj); err != nil {
+				z.Println("[_front3_]: used cdn cache error:", tgzobject, err.Error())
 			} else {
-				z.Println("[_front3_]: used cdn cache success:", tgzobj)
-				abort = true
+				z.Println("[_front3_]: used cdn cache success:", tgzobject)
+				completed = true
 			}
 		}
-		if !abort {
+		if !completed && (strings.HasPrefix(av.Version.Image.String, "http://") ||
+			strings.HasPrefix(av.Version.Image.String, "https://")) {
+			// 使用 http 获取镜像文件
+			var rerr error
+			if resp, err := http.Get(av.Version.Image.String); err != nil {
+				z.Println("[_front3_]: download by http error:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String, err.Error())
+				rerr = err
+			} else if err := registry.ExtractTgzByReader(abspath, av.Version.ImagePath.String, resp.Body); err != nil {
+				z.Println("[_front3_]: download by http error:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String, err.Error())
+				rerr = err
+				_ = resp.Body.Close()
+			} else {
+				z.Println("[_front3_]: download by http success:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String)
+				_ = resp.Body.Close()
+				completed = true
+			}
+			if rerr != nil {
+				rw.Header().Set("Content-Type", "text/html; charset=utf-8")
+				http.Error(rw, "application download package error: "+rr.Host+", "+rerr.Error(), http.StatusInternalServerError)
+				os.RemoveAll(abspath) // 删除本地缓存文件夹
+				return nil            // 无法下载镜像文件
+			}
+		}
+		if !completed {
+			// 使用 registry 获取镜像文件
 			cfg := registry.Config{
 				Username: aa.RegConfig.Username,
 				Password: aa.RegConfig.Password,
@@ -328,6 +352,7 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCach
 			}
 			// 提取镜像文件
 			if err := registry.ExportFile(&cfg); err != nil {
+				z.Println("[_front3_]: export image file error:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String, err.Error())
 				rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 				http.Error(rw, "application pull image error: "+rr.Host+", "+err.Error(), http.StatusInternalServerError)
 				os.RemoveAll(abspath) // 删除本地缓存文件夹
@@ -343,16 +368,15 @@ func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCach
 					}
 					_ = pw.Close()
 				}()
-				if _, err := s3cli.PutObject(context.TODO(), aa.CdnConfig.Bucket, tgzobj, pr, -1, minio.PutObjectOptions{}); err != nil {
-					z.Println("[_front3_]: error, upload cdn cache error:", tgzobj, err.Error())
+				if _, err := s3cli.PutObject(context.TODO(), aa.CdnConfig.Bucket, tgzobject, pr, -1, minio.PutObjectOptions{}); err != nil {
+					z.Println("[_front3_]: error, upload cdn cache error:", tgzobject, err.Error())
 					_ = pr.CloseWithError(err)
 				} else {
-					z.Println("[_front3_]: upload cdn cache success:", tgzobj)
+					z.Println("[_front3_]: upload cdn cache success:", tgzobject)
 					_ = pr.Close()
 				}
 			}
 		}
-
 	} else if err != nil {
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 		http.Error(rw, "application local path error: "+rr.Host+" ["+outpath+"] "+err.Error(), http.StatusInternalServerError)

@@ -66,16 +66,16 @@ func CreateTgzByWriter(srcDir string, writer io.Writer) error {
 	})
 }
 
-func ExtractTgzFile(srcTgz, outDir string) error {
+func ExtractTgzFile(srcTgz, preDir, outDir string) error {
 	ff, err := os.Open(srcTgz)
 	if err != nil {
 		return err
 	}
 	defer ff.Close()
-	return ExtractTgzByReader(outDir, ff)
+	return ExtractTgzByReader(outDir, preDir, ff)
 }
 
-func ExtractTgzByReader(outDir string, reader io.Reader) error {
+func ExtractTgzByReader(outDir, preDir string, reader io.Reader) error {
 	gr, err := gzip.NewReader(reader)
 	if err != nil {
 		return err
@@ -91,7 +91,15 @@ func ExtractTgzByReader(outDir string, reader io.Reader) error {
 		if err != nil {
 			return err
 		}
-		target, err := SafeJoin(outDir, hdr.Name)
+		name := hdr.Name
+		if preDir != "" {
+			if !strings.HasPrefix(name, preDir) {
+				continue
+			}
+			name = name[len(preDir):]
+
+		}
+		target, err := SafeJoin(outDir, name)
 		if err != nil {
 			return err
 		}

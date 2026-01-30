@@ -152,10 +152,12 @@ func getLayerOpener(cfg *Config, pre string) (tarball.Opener, error) {
 					if name == "." || name == "/" {
 						continue
 					}
-					if pre != "" && !strings.HasPrefix(name, pre) {
-						continue // 跳过非指定路径下的文件
-					} else if pre != "" {
-						name = strings.TrimPrefix(name, pre)
+					if pre != "" {
+						if !strings.HasPrefix(name, pre) {
+							continue // 跳过非指定路径下的文件
+						} else {
+							name = name[len(pre):]
+						}
 					}
 					// 防止以 / 开头
 					name = filepath.ToSlash(filepath.Join(cfg.OutPath, name))

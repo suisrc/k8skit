@@ -29,7 +29,7 @@ func ExtractTgzFile() {
 	src := os.Args[1]
 	out := os.Args[2]
 	z.Println("[_extract_]:", "extract tgz file: ", src)
-	err := registry.ExtractTgzFile(src, out)
+	err := registry.ExtractTgzFile(src, "", out)
 	if err != nil {
 		z.Println(err)
 	}
