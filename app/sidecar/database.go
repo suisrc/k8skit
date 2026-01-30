@@ -22,7 +22,7 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 	if annotations == nil {
 		return []PatchOperation{}
 	}
-	// envName
+	// envName (app)(.json|yaml|prop|toml)(#0) 应用名称.参数类型#容器索引
 	appName, _ := annotations[patcher.Config.ByDBConfig]
 	if appName == "" {
 		return []PatchOperation{}
