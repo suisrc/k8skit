@@ -176,6 +176,12 @@ func (aa *F3Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw 
 		if err := json.Unmarshal(raw, &obj); err == nil {
 			delete(obj, "status")
 			if mate, ok := obj["metadata"].(map[string]any); ok {
+				// 补充扩展信息
+				uid_, _ := mate["uid"].(string)
+				ver_, _ := mate["resourceVersion"].(string)
+				ado.MetaUid = sql.NullString{String: uid_, Valid: true}
+				ado.MetaVer = sql.NullString{String: ver_, Valid: true}
+				// 删除扩展信息
 				delete(mate, "uid")
 				delete(mate, "resourceVersion")
 				delete(mate, "generation")

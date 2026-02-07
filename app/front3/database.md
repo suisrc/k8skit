@@ -80,6 +80,8 @@ CREATE TABLE `ingress` (
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '标识',
   `clazz` varchar(255) DEFAULT NULL COMMENT '默认：nginx',
   `host` varchar(255) DEFAULT NULL COMMENT '域名',
+  `metauid` varchar(255) DEFAULT NULL COMMENT 'UID',
+  `metaver` varchar(255) DEFAULT NULL COMMENT 'VER',
   `template` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT '模版内容',
   `disable` int(11) DEFAULT '0' COMMENT '禁用标识，最高版本禁用，所有版本不可使用',
   `deleted` int(11) DEFAULT '0' COMMENT '删除标识，只对当前版本，其他版本依然可用',

@@ -228,14 +228,16 @@ type IngressDO struct {
 	Name     sql.NullString `db:"name"`
 	Clzz     sql.NullString `db:"clzz"`
 	Host     sql.NullString `db:"host"`
+	MetaUid  sql.NullString `db:"metauid"`
+	MetaVer  sql.NullString `db:"metaver"`
 	Template sql.NullString `db:"template"`
 	Disable  bool           `db:"disable"`
 	Deleted  bool           `db:"deleted"`
-	Version  int            `db:"version"`
 	Updated  sql.NullTime   `db:"updated"`
 	Updater  sql.NullString `db:"updater"`
 	Created  sql.NullTime   `db:"created"`
 	Creater  sql.NullString `db:"creater"`
+	Version  int            `db:"version"`
 }
 
 type IngressRepo struct {
@@ -258,14 +260,14 @@ func (aa *IngressRepo) GetByNsAndName(ns, name string) (*IngressDO, error) {
 }
 
 func (aa *IngressRepo) UpdateOne(data *IngressDO) error {
-	_, err := aa.Database.Exec("UPDATE "+aa.TableName()+" SET ns=?, name=?, clzz=?, host=?, template=?, deleted=?, version=?, updated=?, updater=? WHERE id=?", //
-		data.Ns, data.Name, data.Clzz, data.Host, data.Template, data.Deleted, data.Version+1, data.Updated, data.Updater, data.ID)
+	_, err := aa.Database.Exec("UPDATE "+aa.TableName()+" SET ns=?, name=?, clzz=?, host=?, metauid=?, metaver=?, template=?, deleted=?, version=?, updated=?, updater=? WHERE id=?", //
+		data.Ns, data.Name, data.Clzz, data.Host, data.MetaUid, data.MetaVer, data.Template, data.Deleted, data.Version+1, data.Updated, data.Updater, data.ID)
 	return err
 }
 
 func (aa *IngressRepo) InsertOne(data *IngressDO) error {
-	rst, err := aa.Database.Exec("INSERT "+aa.TableName()+" SET ns=?, name=?, clzz=?, host=?, template=?, deleted=?, version=?, created=?, creater=?", //
-		data.Ns, data.Name, data.Clzz, data.Host, data.Template, data.Deleted, data.Version, data.Created, data.Creater)
+	rst, err := aa.Database.Exec("INSERT "+aa.TableName()+" SET ns=?, name=?, clzz=?, host=?, metauid=?, metaver=?, template=?, deleted=?, version=?, created=?, creater=?", //
+		data.Ns, data.Name, data.Clzz, data.Host, data.MetaUid, data.MetaVer, data.Template, data.Deleted, data.Version, data.Created, data.Creater)
 	if err == nil {
 		data.ID, _ = rst.LastInsertId()
 	}
