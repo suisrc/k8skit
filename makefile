@@ -57,4 +57,4 @@ git:
 		echo "error: 'tag' not specified! Please specify the 'tag' using 'make tflow tag=(version)'";\
 		exit 1; \
 	fi
-	git commit -am "${tag}" && git tag -a $(tag)-front2s3 -m "${tag}" && git push && git push origin $(tag)-front2s3
+	git commit -am "${tag}" && git tag -a $(tag)-front3 -m "${tag}" && git push && git push origin $(tag)-front3

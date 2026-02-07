@@ -88,4 +88,4 @@
 - [front2]: 前端部署服务， 取代 nginx 作为前端容器，提供灵活的根路径配置等
 - [kwdog2]: 由 kwdog2 + proxy2 组成的服务， 提供了 k8s 容器日志、监控、鉴权服务
 - [kwlog2]: fluentbit 日志HTTP接受服务, 提供简单的日志存储和查询服务
-- [front2s3](https://github.com/suisrc/k8skit/tree/front2s3): 扩展前端部署服务，提供将前端部署到S3CDN的服务
+- [front3](https://github.com/suisrc/k8skit/tree/front3): 扩展前端部署服务，提供将前端部署到S3CDN的服务
