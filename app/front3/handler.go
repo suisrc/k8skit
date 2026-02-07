@@ -74,7 +74,7 @@ func init() {
 			RegConfig: app.C.Imagex,
 			AppRepo:   &AppInfoRepo{Database: dsc, TablePrefix: tpx},
 			VerRepo:   &VersionRepo{Database: dsc, TablePrefix: tpx},
-			KeyRepo:   &AccessKeyRepo{Database: dsc, TablePrefix: tpx},
+			AuzRepo:   &AuthzRepo{Database: dsc, TablePrefix: tpx},
 			Interval:  C.Front3.CacheTimeout * 60, // 缓存清理间隔， 单位秒
 			AppCache:  make(map[string]*AppCache),
 			// Interval: 30, // 测试用

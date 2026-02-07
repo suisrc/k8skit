@@ -28,7 +28,7 @@ type F3Serve struct {
 	RegConfig registry.Config
 	AppRepo   *AppInfoRepo
 	VerRepo   *VersionRepo
-	KeyRepo   *AccessKeyRepo
+	AuzRepo   *AuthzRepo
 	Interval  int64                // 单位秒, 巡检间隔
 	AppCache  map[string]*AppCache // sync.Map vs map[string]*AppCache & _CacheMu
 	_CacheMu  sync.Mutex           // 缓存操作锁

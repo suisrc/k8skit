@@ -22,41 +22,42 @@ func (aa *F3Serve) WebHook(zrc *z.Ctx) {
 
 func (aa *F3Serve) updateVersion(zrc *z.Ctx) {
 	qry := zrc.Request.URL.Query()
-	key := qry.Get("akey")
-	if key == "" {
+	akk := qry.Get("ak")
+	if akk == "" {
 		zrc.TEXT("token is empty", http.StatusOK)
 		return
 	}
-	akey, err := aa.KeyRepo.GetByAkey(key)
+	akey, err := aa.AuzRepo.GetByAppKey(akk)
 	if err != nil || akey == nil {
 		zrc.TEXT("token is invalid", http.StatusOK)
 		return
 	} else if akey.Disable {
 		zrc.TEXT("token is disable", http.StatusOK)
 		return
-	} else if role := akey.Role.String; role == "" {
-		zrc.TEXT("role is empty", http.StatusOK)
+	} else if perm := akey.Permiss.String; perm == "" {
+		zrc.TEXT("permission is empty", http.StatusOK)
 		return
-	} else if strings.HasSuffix(role, ".*") && //
-		strings.HasPrefix("front3.update.image", role[0:len(role)-1]) {
+	} else if strings.HasSuffix(perm, ".*") && //
+		strings.HasPrefix("front3.update.image", perm[0:len(perm)-1]) {
 		// pass
-	} else if role == "front3.update.image" {
+	} else if perm == "front3.update.image" {
 		// pass
 	} else {
-		zrc.TEXT("role is forbidden", http.StatusOK)
+		zrc.TEXT("permission is forbidden", http.StatusOK)
 		return
 	}
 	image := qry.Get("image")
-	skey := strings.SplitN(image, ":", 2)
-	if len(skey) != 2 {
-		zrc.TEXT("image is invalid", http.StatusOK)
-		return
-	}
+	// 验证镜像是否已经存在， 防止重复更新
 	if vers, err := aa.VerRepo.GetByImage(image); err == nil && len(vers) > 0 {
 		zrc.TEXT("image is exist", http.StatusOK)
 		return
 	}
-	ikey, iver := skey[0], skey[1]
+	kver := strings.SplitN(image, ":", 2)
+	if len(kver) != 2 {
+		zrc.TEXT("image is invalid", http.StatusOK)
+		return
+	}
+	ikey, iver := kver[0], kver[1]
 	if app := qry.Get("app"); app != "" {
 		// 通过应用编码查找应用
 		appInfo, err := aa.AppRepo.GetByApp(app)

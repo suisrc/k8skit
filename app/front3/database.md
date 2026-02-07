@@ -1,10 +1,11 @@
 
 ```sql
-CREATE TABLE `confa` (
+CREATE TABLE `authz` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `akey` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '访问KEY',
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'KEY名称',
+  `appkey` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '访问KEY',
   `secret` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'KEY秘钥',
-  `role` varchar(255) DEFAULT NULL COMMENT '角色',
+  `permiss` varchar(255) DEFAULT NULL COMMENT '角色',
   `remarks` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '备注信息',
   `disable` int DEFAULT '0' COMMENT '禁用标记',
   `deleted` int DEFAULT '0' COMMENT '删除标记',
@@ -12,7 +13,7 @@ CREATE TABLE `confa` (
   `creater` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '创建者',
   `version` int DEFAULT '0' COMMENT '版本',
   PRIMARY KEY (`id`),
-  KEY `conf_akey` (`akey`)
+  KEY `authz_key` (`appkey`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 ```
 

@@ -8,13 +8,12 @@ import (
 	"github.com/suisrc/zgg/z/ze/sqlx"
 )
 
-// AccessKeyDO ...
-type AccessKeyDO struct {
+// AuthzDO ...
+type AuthzDO struct {
 	ID      int64          `db:"id"`
-	Name    sql.NullString `db:"name"`    // 应用名称
-	Akey    sql.NullString `db:"akey"`    // 标签
-	Secret  sql.NullString `db:"secret"`  // 应用标识
-	Role    sql.NullString `db:"role"`    // 角色
+	AppKey  sql.NullString `db:"appkey"`  // 标识
+	Secret  sql.NullString `db:"secret"`  // 秘钥
+	Permiss sql.NullString `db:"permiss"` // 权限
 	Disable bool           `db:"disable"` // 禁用
 	Deleted bool           `db:"deleted"` // 删除
 	// Remarks sql.NullString `db:"remarks"`
@@ -25,23 +24,23 @@ type AccessKeyDO struct {
 	// Version int            `db:"version"`
 }
 
-type AccessKeyRepo struct {
+type AuthzRepo struct {
 	Database    *sqlx.DB
 	TablePrefix string
 }
 
-func (aa *AccessKeyRepo) TableName() string {
-	return aa.TablePrefix + "confa"
+func (aa *AuthzRepo) TableName() string {
+	return aa.TablePrefix + "authz"
 }
 
-func (aa *AccessKeyRepo) SelectCols() string {
-	return "SELECT id, name, akey, secret, role, disable, deleted FROM " + aa.TableName()
+func (aa *AuthzRepo) SelectCols() string {
+	return "SELECT id, appkey, secret, permiss, disable, deleted FROM " + aa.TableName()
 }
 
-// 通过 akey 获取令牌
-func (aa *AccessKeyRepo) GetByAkey(akey string) (*AccessKeyDO, error) {
-	var ret AccessKeyDO
-	err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE akey=? AND deleted=0", akey)
+// 通过 ak 获取令牌
+func (aa *AuthzRepo) GetByAppKey(ak string) (*AuthzDO, error) {
+	var ret AuthzDO
+	err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE appkey=? AND deleted=0", ak)
 	return &ret, err
 }
 
