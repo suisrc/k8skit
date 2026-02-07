@@ -142,7 +142,6 @@ func (aa *F3Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw 
 	if !C.Front3.LogIngress {
 		return // 不记录
 	}
-	z.Println("[_mutate_]: log ingress to database,", ing.Namespace, "|", ing.Name)
 	if old != nil && (ing == nil || ing.Name != old.Name) {
 		// 删除旧版本
 		if ado, err := aa.IngRepo.GetByNsAndName(old.Namespace, old.Name); err != nil && err != sql.ErrNoRows {
@@ -156,6 +155,7 @@ func (aa *F3Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw 
 	if ing == nil {
 		return // 删除时该字段不存在
 	}
+	z.Println("[_mutate_]: log ingress to database,", ing.Namespace, "|", ing.Name)
 	ado, err := aa.IngRepo.GetByNsAndName(ing.Namespace, ing.Name)
 	if err != nil && err != sql.ErrNoRows {
 		z.Println("[_mutate_]:", "get ingress form database error,", err.Error())
@@ -193,13 +193,13 @@ func (aa *F3Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw 
 	ado.Deleted = false
 	if ado.ID > 0 {
 		ado.Updated = sql.NullTime{Time: time.Now(), Valid: true}
-		ado.Updater = sql.NullString{String: "system", Valid: true}
+		ado.Updater = sql.NullString{String: z.AppName, Valid: true}
 		ado.Version++
 		aa.IngRepo.UpdateOne(ado)
 	} else {
 		ado.ID = 0
 		ado.Created = sql.NullTime{Time: time.Now(), Valid: true}
-		ado.Creater = sql.NullString{String: "system", Valid: true}
+		ado.Creater = sql.NullString{String: z.AppName, Valid: true}
 		ado.Version = 1
 		aa.IngRepo.InsertOne(ado)
 	}
