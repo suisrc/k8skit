@@ -81,7 +81,7 @@ func (aa *F3Serve) mutateProcess(req *admissionv1.AdmissionRequest) ([]PatchOper
 		frontend/db.frontv.indexs: /www=,/embed=index.htm
 		frontend/db.frontv.cdnuse: 'true'
 		------------------------------------------------------------------
-		frontend/service: frontend:http/path # 默认不执行注入
+		frontend/service: frontend:http/path # 如果不存在，不执行注入
 		http:
 		  paths:
 		    - backend:
@@ -105,6 +105,7 @@ func (aa *F3Serve) mutateProcess(req *admissionv1.AdmissionRequest) ([]PatchOper
 		} else if patch != nil {
 			patchs = append(patchs, *patch)
 		}
+		aa.mutateLogIngress(nil, &ing, req.Object.Raw)
 	case admissionv1.Update: // 更新, 更新应用版本信息
 		var old netv1.Ingress
 		if err := json.Unmarshal(req.OldObject.Raw, &old); err != nil {
@@ -119,6 +120,7 @@ func (aa *F3Serve) mutateProcess(req *admissionv1.AdmissionRequest) ([]PatchOper
 		} else if patch != nil {
 			patchs = append(patchs, *patch)
 		}
+		aa.mutateLogIngress(&old, &ing, req.Object.Raw)
 	case admissionv1.Delete: // 删除, 对应服务逻辑删除
 		var old netv1.Ingress
 		if err := json.Unmarshal(req.OldObject.Raw, &old); err != nil {
@@ -127,6 +129,7 @@ func (aa *F3Serve) mutateProcess(req *admissionv1.AdmissionRequest) ([]PatchOper
 		if _, err := aa.mutateUpdateFronta(&old, nil); err != nil {
 			return nil, err // 错误处理
 		}
+		aa.mutateLogIngress(&old, nil, nil)
 	default:
 		return nil, fmt.Errorf("unhandled request operations type %s", req.Operation)
 	}
@@ -134,7 +137,56 @@ func (aa *F3Serve) mutateProcess(req *admissionv1.AdmissionRequest) ([]PatchOper
 	return patchs, nil
 }
 
+func (aa *F3Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw []byte) { // 记录网关数据
+	if C.Front3.LogIngress {
+		return // 不记录
+	}
+	z.Println("[_mutate_]: log ingress to database", ing.Namespace, "|", ing.Name)
+	if old != nil && (ing == nil || ing.Name != old.Name) {
+		// 删除旧版本
+		if ado, err := aa.IngRepo.GetByNsAndName(old.Namespace, old.Name); err != nil {
+			z.Println("[_mutate_]:", "get ingress form database error,", err.Error())
+			return // 数据库异常
+		} else {
+			ado.Deleted = true
+			aa.IngRepo.DeleteOne(ado)
+		}
+	}
+	if ing == nil {
+		return // 删除时该字段不存在
+	}
+	ado, err := aa.IngRepo.GetByNsAndName(ing.Namespace, ing.Name)
+	if err != nil || err != sql.ErrNoRows {
+		z.Println("[_mutate_]:", "get ingress form database error,", err.Error())
+		return // 数据库异常
+	}
+	clzz := ""
+	if ing.Spec.IngressClassName != nil {
+		clzz = *ing.Spec.IngressClassName
+	}
+	ado.Ns = sql.NullString{String: ing.Namespace, Valid: true}
+	ado.Name = sql.NullString{String: ing.Name, Valid: true}
+	ado.Clzz = sql.NullString{String: clzz, Valid: true}
+	ado.Host = sql.NullString{String: getIngressHosts(ing)[0], Valid: true}
+	ado.Template = sql.NullString{String: string(raw), Valid: true}
+	ado.Disable = false
+	ado.Deleted = false
+	if ado.ID > 0 {
+		ado.Updated = sql.NullTime{Time: time.Now(), Valid: true}
+		ado.Updater = sql.NullString{String: "system", Valid: true}
+		ado.Version++
+		aa.IngRepo.UpdateOne(ado)
+	} else {
+		ado.ID = 0
+		ado.Created = sql.NullTime{Time: time.Now(), Valid: true}
+		ado.Creater = sql.NullString{String: "system", Valid: true}
+		ado.Version = 1
+		aa.IngRepo.InsertOne(ado)
+	}
+}
+
 func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (result *PatchOperation, reserr error) {
+	// 处理前端应用
 	if old != nil && len(old.GetAnnotations()) > 0 {
 		// 处理旧数据内容，从数据库中删除应用
 		if oldapp, _ := old.GetAnnotations()["frontend/db.fronta"]; oldapp != "" {
@@ -167,7 +219,7 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 		}
 		return nil, nil // 没有新的配置
 	}
-	// 处理编排内容
+	// 处理编排内容=================================================================
 	svc, _ := ing.GetAnnotations()["frontend/service"]
 	if svc == "" {
 		if z.IsDebug() {

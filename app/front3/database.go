@@ -44,6 +44,8 @@ func (aa *AuthzRepo) GetByAppKey(ak string) (*AuthzDO, error) {
 	return &ret, err
 }
 
+// ======================================================================================================================================================
+
 // AppInfoDO ...
 type AppInfoDO struct {
 	ID       int64          `db:"id"`
@@ -117,6 +119,8 @@ func (aa *AppInfoRepo) DelByID(id int64) error {
 	_, err := aa.Database.Exec("UPDATE "+aa.TableName()+" SET deleted=1, updated=?, updater=? WHERE id=?", time.Now(), z.AppName, id)
 	return err
 }
+
+// ======================================================================================================================================================
 
 // VersionDO ...
 type VersionDO struct {
@@ -213,5 +217,63 @@ func (aa *VersionRepo) Insert(data *VersionDO) error {
 	if err == nil {
 		data.ID, _ = ret.LastInsertId()
 	}
+	return err
+}
+
+// ======================================================================================================================================================
+
+type IngressDO struct {
+	ID       int64          `db:"id"`
+	Ns       sql.NullString `db:"ns"`
+	Name     sql.NullString `db:"name"`
+	Clzz     sql.NullString `db:"clzz"`
+	Host     sql.NullString `db:"host"`
+	Template sql.NullString `db:"template"`
+	Disable  bool           `db:"disable"`
+	Deleted  bool           `db:"deleted"`
+	Version  int            `db:"version"`
+	Updated  sql.NullTime   `db:"updated"`
+	Updater  sql.NullString `db:"updater"`
+	Created  sql.NullTime   `db:"created"`
+	Creater  sql.NullString `db:"creater"`
+}
+
+type IngressRepo struct {
+	Database    *sqlx.DB
+	TablePrefix string
+}
+
+func (aa *IngressRepo) TableName() string {
+	return aa.TablePrefix + "ingress"
+}
+
+func (aa *IngressRepo) SelectCols() string {
+	return `SELECT id, ns, name, clzz, host, htls, template, deleted, version ` + aa.TableName()
+}
+
+func (aa *IngressRepo) GetByNsAndName(ns, name string) (*IngressDO, error) {
+	var ret IngressDO
+	err := aa.Database.Get(&ret, aa.SelectCols()+" WHERE ns=? AND name=?", ns, name)
+	return &ret, err
+}
+
+func (aa *IngressRepo) UpdateOne(data *IngressDO) error {
+	_, err := aa.Database.Exec("UPDATE "+aa.TableName()+" SET ns=?, name=?, clzz=?, host=?, template=?, deleted=?, version=?, updated=?, updater=? WHERE id=?", //
+		data.Ns, data.Name, data.Clzz, data.Host, data.Template, data.Deleted, data.Version+1, data.Updated, data.Updater, data.ID)
+	return err
+}
+
+func (aa *IngressRepo) InsertOne(data *IngressDO) error {
+	rst, err := aa.Database.Exec("INSERT "+aa.TableName()+" SET ns=?, name=?, clzz=?, host=?, template=?, deleted=?, version=?, created=?, creater=?", //
+		data.Ns, data.Name, data.Clzz, data.Host, data.Template, data.Deleted, 0, data.Created, data.Creater)
+	if err == nil {
+		data.ID, _ = rst.LastInsertId()
+	}
+	return err
+}
+
+func (aa *IngressRepo) DeleteOne(data *IngressDO) error {
+	// _, err := aa.Database.Exec("DELETE FROM "+aa.TableName()+" WHERE id=?", data.ID)
+	_, err := aa.Database.Exec("UPDATE "+aa.TableName()+" SET deleted=1 WHERE id=?", data.ID)
 	return err
 }

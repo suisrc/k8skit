@@ -36,6 +36,7 @@ type Config struct {
 	MutatePath  string `json:"mutatepath"` // 对于 ingress 的原生补丁， 默认不开启， 需要指定地址
 	MutateAddr  string `json:"mutateaddr" default:"0.0.0.0:443"`
 	MutateCert  string `json:"mutatecert" default:"mutatecert"` // 钩子证书文件夹
+	LogIngress  bool   `json:"logingress" default:"false"`
 }
 
 func init() {
@@ -75,6 +76,7 @@ func init() {
 			AppRepo:   &AppInfoRepo{Database: dsc, TablePrefix: tpx},
 			VerRepo:   &VersionRepo{Database: dsc, TablePrefix: tpx},
 			AuzRepo:   &AuthzRepo{Database: dsc, TablePrefix: tpx},
+			IngRepo:   &IngressRepo{Database: dsc, TablePrefix: tpx},
 			Interval:  C.Front3.CacheTimeout * 60, // 缓存清理间隔， 单位秒
 			AppCache:  make(map[string]*AppCache),
 			// Interval: 30, // 测试用

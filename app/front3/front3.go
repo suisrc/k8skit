@@ -29,6 +29,7 @@ type F3Serve struct {
 	AppRepo   *AppInfoRepo
 	VerRepo   *VersionRepo
 	AuzRepo   *AuthzRepo
+	IngRepo   *IngressRepo
 	Interval  int64                // 单位秒, 巡检间隔
 	AppCache  map[string]*AppCache // sync.Map vs map[string]*AppCache & _CacheMu
 	_CacheMu  sync.Mutex           // 缓存操作锁

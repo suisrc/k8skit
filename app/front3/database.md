@@ -73,4 +73,21 @@ CREATE TABLE `frontv` (
   KEY `f2_stt` (`started` DESC) USING BTREE,
   KEY `f2_vpp` (`vpp`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE `ingress` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `ns` varchar(255) DEFAULT NULL COMMENT '空间',
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '标识',
+  `clazz` varchar(255) DEFAULT NULL COMMENT '默认：nginx',
+  `host` varchar(255) DEFAULT NULL COMMENT '域名',
+  `template` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT '模版内容',
+  `disable` int(11) DEFAULT '0' COMMENT '禁用标识，最高版本禁用，所有版本不可使用',
+  `deleted` int(11) DEFAULT '0' COMMENT '删除标识，只对当前版本，其他版本依然可用',
+  `updated` datetime DEFAULT NULL COMMENT '更新时间',
+  `updater` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '更新者',
+  `created` datetime DEFAULT NULL COMMENT '创建时间',
+  `creater` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '创建者',
+  `version` int(11) DEFAULT '0' COMMENT '版本',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 ```
