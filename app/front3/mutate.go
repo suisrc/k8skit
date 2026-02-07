@@ -141,7 +141,7 @@ func (aa *F3Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw 
 	if !C.Front3.LogIngress {
 		return // 不记录
 	}
-	z.Println("[_mutate_]: log ingress to database", ing.Namespace, "|", ing.Name)
+	z.Println("[_mutate_]: log ingress to database,", ing.Namespace, "|", ing.Name)
 	if old != nil && (ing == nil || ing.Name != old.Name) {
 		// 删除旧版本
 		if ado, err := aa.IngRepo.GetByNsAndName(old.Namespace, old.Name); err != nil {
@@ -204,12 +204,12 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 			if oldapp != newapp {
 				// 删除应用
 				if err := aa.AppRepo.DelByApp(oldapp); err != nil {
-					z.Println("[_mutate_]:", "get app info form database error,", err.Error())
+					z.Println("[_mutate_]:", "get appinfo form database error,", err.Error())
 				} else {
 					z.Println("[_mutate_]:", "delete app from database,", oldapp)
 				}
 			} else {
-				z.Println("[_mutate_]:", "app info field [app] no change,", oldapp)
+				z.Println("[_mutate_]:", "appinfo field [app] no change,", oldapp)
 			}
 		}
 	}
@@ -262,7 +262,7 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 	// 通过数据库获取应用信息， 包括已经删除的应用
 	appInfo, err := aa.AppRepo.GetByAppWithDelete(app)
 	if err != nil && err != sql.ErrNoRows {
-		z.Println("[_mutate_]:", "get app info form database error,", err.Error())
+		z.Println("[_mutate_]:", "get appinfo form database error,", err.Error())
 		return // 查询数据库发生异常
 	}
 	if rpath, _ := ing.GetAnnotations()["frontend/db.fronta.rootdir"]; rpath != "" {
@@ -298,7 +298,7 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 		args = append(args, appInfo.ID)
 		_, err = aa.AppRepo.Database.Exec("UPDATE "+aa.AppRepo.TableName()+" SET "+sql_+" WHERE id=?", args...)
 		if err != nil {
-			z.Println("[_mutate_]:", "update app info into database error,", err.Error())
+			z.Println("[_mutate_]:", "update appinfo into database error,", err.Error())
 			return // 更新数据库发生异常
 		}
 	} else {
@@ -306,13 +306,13 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 		args = append(args, time.Now(), z.AppName)
 		ret, err := aa.AppRepo.Database.Exec("INSERT "+aa.AppRepo.TableName()+" SET "+sql_, args...)
 		if err != nil {
-			z.Println("[_mutate_]:", "insert app info into database error,", err.Error())
+			z.Println("[_mutate_]:", "insert appinfo into database error,", err.Error())
 			return // 插入数据库发生异常
 		}
 		appInfo.ID, _ = ret.LastInsertId()
 		args = append(args, appInfo.ID)
 	}
-	z.Println("[_mutate_]:", "update/insert app info into database,", sql_, z.ToStr(args))
+	z.Println("[_mutate_]:", "update/insert appinfo into database,", sql_, z.ToStr(args))
 	if ver == "" {
 		// 通过 "frontend/db.frontv.ver" 获取版本
 		ver = ing.GetAnnotations()["frontend/db.frontv.ver"]
