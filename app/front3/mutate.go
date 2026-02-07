@@ -138,7 +138,7 @@ func (aa *F3Serve) mutateProcess(req *admissionv1.AdmissionRequest) ([]PatchOper
 }
 
 func (aa *F3Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw []byte) { // 记录网关数据
-	if C.Front3.LogIngress {
+	if !C.Front3.LogIngress {
 		return // 不记录
 	}
 	z.Println("[_mutate_]: log ingress to database", ing.Namespace, "|", ing.Name)
@@ -209,7 +209,7 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 					z.Println("[_mutate_]:", "delete app from database,", oldapp)
 				}
 			} else {
-				z.Println("[_mutate_]:", "app info no change [app] field,", oldapp)
+				z.Println("[_mutate_]:", "app info field [app] no change,", oldapp)
 			}
 		}
 	}
