@@ -1,55 +1,18 @@
-# k8skit
+# fmesui
 
-高度集成， 封装了一个前端服务
+为 FMES 平台定制的配置管理工具
 
-```
-k8skit 
-  -addr string
-        http server addr (default "0.0.0.0")
-  -api string
-        http server api path
-  -c string
-        config file path
-  -crt string
-        http server cer file
-  -debug
-        debug mode
-  -eng string
-        http server router engine (default "map")
-  -key string
-        http server key file
-  -local
-        http server local mode
-  -port int
-        http server Port (default 80)
-  -tpl string
-        templates folder path
-  -xrt string
-        X-Request-Rt default value
-```
+## 主要功能
 
-## 使用说明
+1. 配置应用参数， 便于 Sidecar 服务注入
+2. 配置前端应用， 用于 Front3 服务提供访问策略
+3. 部署后端应用， 为 K8S 提供后端部署的快速方式
+4. 提供 K8S 有限的 Ingress 部署和修改 (未确定)
 
 
-k8s集群工具箱  
+## 页面描述
 
-[zgg](https://github.com/suisrc/zgg.git) Web服务框架  
-
-工具包内容：  
-
-[k8skit](https://github.com/suisrc/k8skit.git) k8s工具包
-
-
-[zgg](https://github.com/suisrc/zgg.git) Web服务框架
-
-[k8skit](https://github.com/suisrc/k8skit.git) k8s工具包
-- [ksidecar](https://github.com/suisrc/k8skit/tree/sidecar): k8s 边车注入服务
-- [wgetar](https://hub.docker.com/r/suisrc/k8skit/tags?name=wgetar): k8s 边车注入服务中，对于配置文件的获取服务， 基于busybox 的 wget+tar
-- [front2](https://hub.docker.com/r/suisrc/k8skit/tags?name=front2): 前端部署服务， 取代 nginx 作为前端容器，提供灵活的根路径配置等
-- [kwdog2](https://hub.docker.com/r/suisrc/k8skit/tags?name=kwdog2): 由 kwdog2 + proxy2 组成的服务， 提供了 k8s 容器日志、监控、鉴权服务
-- [kwlog2](https://hub.docker.com/r/suisrc/k8skit/tags?name=kwlog2): fluentbit 日志HTTP接受服务, 提供简单的日志存储和查询服务
-- [front2s3](https://github.com/suisrc/k8skit/tree/front2s3): 扩展前端部署服务，提供将前端部署到S3CDN的服务
-
-## 其他模块
-
-- [alidns-webhook](https://github.com/suisrc/alidns-webhook.git) 为 cert-manager 模块提供 阿里云, 腾讯云， 华为云 DNS 支持
+1. 路由管理 - 路由中的 annotations[frontend/*] 是可以直接修改和替换 Front3 服务基础数据，他是借助 Front3 服务的 /mutate 接口完成的
+2. 前端应用 - 借助 Front3 服务，可以实现多版本共存， 同时通过 version=xxx 访问指定的版本， 默认访问最新版本
+3. 后端服务 - 由于 Sidecar 的存在，所以可以对当前应用提供标准
+4. 后端参数 - 提供 Sidecar 注入的参数配置

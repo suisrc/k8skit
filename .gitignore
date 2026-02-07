@@ -14,7 +14,7 @@
 *.out
 
 # Ignore the built binary
-
+node_modules
 
 # Make artifacts
 dist
@@ -25,3 +25,6 @@ www2
 tmpl
 __zgg.toml
 __debug_*
+
+
+web
