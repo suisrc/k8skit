@@ -156,7 +156,7 @@ func (aa *F3Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw 
 		return // 删除时该字段不存在
 	}
 	ado, err := aa.IngRepo.GetByNsAndName(ing.Namespace, ing.Name)
-	if err != nil || err != sql.ErrNoRows {
+	if err != nil && err != sql.ErrNoRows {
 		z.Println("[_mutate_]:", "get ingress form database error,", err.Error())
 		return // 数据库异常
 	}
