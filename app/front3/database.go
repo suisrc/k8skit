@@ -248,7 +248,7 @@ func (aa *IngressRepo) TableName() string {
 }
 
 func (aa *IngressRepo) SelectCols() string {
-	return `SELECT id, ns, name, clzz, host, htls, template, deleted, version FROM ` + aa.TableName()
+	return `SELECT id, ns, name, clzz, host, deleted, version FROM ` + aa.TableName()
 }
 
 func (aa *IngressRepo) GetByNsAndName(ns, name string) (*IngressDO, error) {
