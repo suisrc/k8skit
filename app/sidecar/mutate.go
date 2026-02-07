@@ -27,7 +27,7 @@ type Config struct {
 	DefaultKey string `json:"defaultKey"`
 	ByDBConfig string `json:"byDbConfig"`
 	ByDBFolder string `json:"byDbFolder"`
-	WithAppEnv string `json:"withAppEnv"`
+	ByDBAppEnv string `json:"byDbAppEnv"`
 	ServerHost string `json:"serverHost"`
 	InitcImage string `json:"initcImage"`
 }
@@ -36,9 +36,9 @@ func init() {
 	z.Config(&C)
 	flag.StringVar(&C.Sidecar.Annotation, "sidecarAnnotation", "ksidecar/configmap", "injector annotation, namespace/configmap#attribute")
 	flag.StringVar(&C.Sidecar.DefaultKey, "sidecarDefaultKey", "value.yml", "injector default configmap attribute name")
-	flag.StringVar(&C.Sidecar.ByDBConfig, "sidecarByDBConfig", "ksidecar/db.config", "injector configuration, (app)(.json|yaml|prop|toml)(#0), db.config > container.name > labels[app]")
+	flag.StringVar(&C.Sidecar.ByDBConfig, "sidecarByDBConfig", "ksidecar/db.config", "injector configuration, (app)(.json|yaml|prop|toml)(:version)(#0), db.config > container.name > labels[app]")
 	flag.StringVar(&C.Sidecar.ByDBFolder, "sidecarByDBFolder", "ksidecar/db.folder", "injector configuration directory path")
-	flag.StringVar(&C.Sidecar.WithAppEnv, "sidecarWithAppEnv", "", "run image environment, [dev, fat, uat, pro...]")
+	flag.StringVar(&C.Sidecar.ByDBAppEnv, "sidecarByDBAppEnv", "ksidecar/db.appenv", "run image environment, [dev, fat, uat, pro...]")
 	flag.StringVar(&C.Sidecar.ServerHost, "sidecarServerHost", "http://ksidecar.default.svc", "injector server host")
 	flag.StringVar(&C.Sidecar.InitcImage, "sidecarInitcImage", "suisrc/k8skit:1.3.15-wgetar", "init container archive image")
 

@@ -30,26 +30,27 @@ type ConfxDO struct {
 
 /*
 CREATE TABLE `confx` (
-  `id` int NOT NULL AUTO_INCREMENT COMMENT 'ID',
-  `tag` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '标签: 特殊匹配， 用于追加一些特殊的匹配规则， key=val形式',
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `tag` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '标签',
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '名称',
   `env` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '环境: DEV(开发), FAT(功能验收), UAT(用户验收), PRO(生产);\r\nDevelopment Environment;\r\nFunctional Acceptance Testing;\r\nUser Acceptance Testing;\r\nProduction Environment;',
-  `app` varchar(128) DEFAULT NULL COMMENT '应用名称',
+  `app` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '应用名称',
   `ver` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '应用版本(高版本替换低版本，聚合低版本不同的配置)',
   `kind` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '类型: ref(引用), env(环境), json，prop, yaml, toml ...',
   `code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '编码: 应用名称_版本/环境名称/文件名称（''/''开头abspath)',
   `data` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT '内容',
   `dkey` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '秘钥，与应用秘钥合用，完成data加密',
-  `disable` int DEFAULT '0' COMMENT '禁用(禁用后，低版本会被删除)',
-  `deleted` int DEFAULT '0' COMMENT '删除(删除后，使用低版本替代)',
+  `disable` int(11) DEFAULT '0' COMMENT '禁用(禁用后，低版本会被删除)',
+  `deleted` int(11) DEFAULT '0' COMMENT '删除(删除后，使用低版本替代)',
   `updated` datetime DEFAULT NULL COMMENT '更新时间',
   `updater` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '更新者',
   `created` datetime DEFAULT NULL COMMENT '创建时间',
-  `creater` varchar(255) DEFAULT NULL COMMENT '创建者',
-  `version` int DEFAULT '0' COMMENT '版本',
-  PRIMARY KEY (`id`),
-  KEY `conf_app` (`app`),
-  KEY `conf_code` (`code`),
-  KEY `conf_env` (`env`),
+  `creater` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '创建者',
+  `version` int(11) DEFAULT '0' COMMENT '版本',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `conf_app` (`app`) USING BTREE,
+  KEY `conf_code` (`code`) USING BTREE,
+  KEY `conf_env` (`env`) USING BTREE,
   KEY `conf_ver` (`ver` DESC) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 */

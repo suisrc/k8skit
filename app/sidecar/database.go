@@ -22,7 +22,7 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 	if annotations == nil {
 		return []PatchOperation{}
 	}
-	// envName (app)(.json|yaml|prop|toml)(#0) 应用名称.参数类型#容器索引
+	// (app)(.json|yaml|prop|toml)(:version)(#0) 应用名称.参数类型#容器索引
 	appName, _ := annotations[patcher.Config.ByDBConfig]
 	if appName == "" {
 		return []PatchOperation{}
@@ -40,44 +40,60 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 		}
 		appName = appName[:idx]
 	}
-	kind := ""
-	if idx := strings.IndexByte(appName, '.'); idx >= 0 {
-		kind = appName[idx+1:]
-		appName = appName[:idx]
+	if cidx >= len(pod.Spec.Containers) {
+		z.Printf("Skipping configuration by database, invalid container index [%s=%s#%d]", patcher.Config.ByDBConfig, appName, cidx)
+		return []PatchOperation{}
 	}
 	item := &pod.Spec.Containers[cidx] // 取第一个容器作为主进程，抽取环境变量
 	// version
-	version := item.Image
-	if idx := strings.LastIndexByte(version, ':'); idx >= 0 {
-		version = version[idx+1:]
-	}
-	if version == "latest" {
-		version = ""
-	}
-	// appName
-	// annotations[ksidecar/db.config] > container.name > labels[app]
-	if appName == "" {
-		appName = item.Name
-		appName = strings.TrimSuffix(appName, "-logtty") // 兼容 logtty
-		if appName == "app" {
-			if pod.Labels != nil {
-				appName, _ = pod.Labels["app"]
-			} else {
-				appName = ""
-			}
+	version := ""
+	if idx := strings.IndexByte(appName, ':'); idx >= 0 {
+		// 优先通过配置获取
+		version = appName[idx+1:]
+		appName = appName[:idx]
+	} else {
+		// 配置没有，通过容器镜像获取版本
+		version = item.Image
+		if idx := strings.LastIndexByte(version, ':'); idx >= 0 {
+			version = version[idx+1:]
 		}
+		if version == "latest" {
+			// 容器镜像是 latest，取系统最新版本即可
+			version = ""
+		}
+	}
+	// kind = env, prop, toml, json, yaml..., 注意，只有 env 是特殊的
+	kind := ""
+	if idx := strings.IndexByte(appName, '.'); idx >= 0 {
+		// 获取系统配置的类型
+		kind = appName[idx+1:]
+		appName = appName[:idx]
+	}
+	// annotations[ksidecar/db.config] > labels[app] > container.name
+	if appName == "" {
+		// 优先使用 label:app 的名字作为 app 的名字
+		if pod.Labels != nil {
+			appName, _ = pod.Labels["app"]
+		}
+		// 其次使用容器名称作为 app 的名字
 		if appName == "" {
+			appName = item.Name
+			appName = strings.TrimSuffix(appName, "-logtty") // 兼容 logtty
+		}
+		// 无法得到 app 名称，忽略
+		if appName == "app" {
 			z.Printf("Skipping configuration by database, invalid pod or container name for [%s].[%s]", pod.Name, item.Name)
 			return []PatchOperation{}
 		}
 	}
-	z.Printf("Inject configuration by database, envName=[%s], appName=[%s], version=[%s]", patcher.Config.WithAppEnv, appName, version)
+	envName, _ := annotations[patcher.Config.ByDBAppEnv]
+	z.Printf("Inject configuration by database, envName=[%s], appName=[%s], version=[%s]", envName, appName, version)
 	// container path
 	indexPath := fmt.Sprintf("/spec/containers/%d", cidx)
 	// pathces
 	patches := []PatchOperation{}
-	// envConf 环境变量是必须检索的，配置文件是可选配置
-	if datas := patcher.ConfxRepository.GetConfigs(patcher.Config.WithAppEnv, appName, version, "env"); len(datas) != 0 {
+	// env 环境变量是必须检索
+	if datas := patcher.ConfxRepository.GetConfigs(envName, appName, version, "env"); len(datas) != 0 {
 		for index, data := range datas {
 			first := index == 0 && len(item.Env) == 0
 			env := corev1.EnvVar{Name: data.Code.String, Value: data.Data.String}
@@ -85,19 +101,20 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 			item.Env = append(item.Env, env)
 		}
 	}
+	// 配置文件是可选配置
 	if kind != "" && kind != "env" {
 		// configuration file
-		if datas := patcher.ConfxRepository.GetConfigs(patcher.Config.WithAppEnv, appName, version, kind); len(datas) > 0 {
-			dirpath, _ := annotations[patcher.Config.ByDBFolder]
-			if dirpath == "" {
-				dirpath = "/" // 默认配置文件夹
+		if datas := patcher.ConfxRepository.GetConfigs(envName, appName, version, kind); len(datas) > 0 {
+			bpath, _ := annotations[patcher.Config.ByDBFolder]
+			if bpath == "" {
+				bpath = "/" // 默认配置文件夹
 			}
 			rpath := fmt.Sprintf("/archive?rand=%s&time=%d", z.GenStr("", 12), time.Now().Unix())
 			for index, data := range datas {
 				rpath += fmt.Sprintf("&id=%d", data.ID)
 				cpath := data.Code.String
 				if cpath[0] != '/' {
-					cpath = filepath.Join(dirpath, cpath) // 配置文件绝对定制
+					cpath = filepath.Join(bpath, cpath) // 配置文件绝对定制
 				}
 				spath := strings.ReplaceAll(data.Code.String, "/", "_")
 				first := index == 0 && len(item.VolumeMounts) == 0
@@ -128,7 +145,6 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 				Env:             []corev1.EnvVar{{Name: "TAR_URL", Value: tarurl}},
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				VolumeMounts:    []corev1.VolumeMount{{Name: "confx", MountPath: "/data"}},
-
 				// Command: []string{"sh", "-c", "wget -q -O - '$(TAR_URL)' | tar -xvC /data"},
 			}
 			patches = append(patches, CreateArrayPatche(initc, len(pod.Spec.InitContainers) == 0, "/spec/initContainers"))
