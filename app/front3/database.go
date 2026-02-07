@@ -265,7 +265,7 @@ func (aa *IngressRepo) UpdateOne(data *IngressDO) error {
 
 func (aa *IngressRepo) InsertOne(data *IngressDO) error {
 	rst, err := aa.Database.Exec("INSERT "+aa.TableName()+" SET ns=?, name=?, clzz=?, host=?, template=?, deleted=?, version=?, created=?, creater=?", //
-		data.Ns, data.Name, data.Clzz, data.Host, data.Template, data.Deleted, 0, data.Created, data.Creater)
+		data.Ns, data.Name, data.Clzz, data.Host, data.Template, data.Deleted, data.Version, data.Created, data.Creater)
 	if err == nil {
 		data.ID, _ = rst.LastInsertId()
 	}

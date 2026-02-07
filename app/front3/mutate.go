@@ -194,13 +194,11 @@ func (aa *F3Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw 
 	if ado.ID > 0 {
 		ado.Updated = sql.NullTime{Time: time.Now(), Valid: true}
 		ado.Updater = sql.NullString{String: z.AppName, Valid: true}
-		ado.Version++
 		aa.IngRepo.UpdateOne(ado)
 	} else {
 		ado.ID = 0
 		ado.Created = sql.NullTime{Time: time.Now(), Valid: true}
 		ado.Creater = sql.NullString{String: z.AppName, Valid: true}
-		ado.Version = 1
 		aa.IngRepo.InsertOne(ado)
 	}
 }
