@@ -144,10 +144,10 @@ func (aa *F3Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw 
 	z.Println("[_mutate_]: log ingress to database,", ing.Namespace, "|", ing.Name)
 	if old != nil && (ing == nil || ing.Name != old.Name) {
 		// 删除旧版本
-		if ado, err := aa.IngRepo.GetByNsAndName(old.Namespace, old.Name); err != nil {
+		if ado, err := aa.IngRepo.GetByNsAndName(old.Namespace, old.Name); err != nil && err != sql.ErrNoRows {
 			z.Println("[_mutate_]:", "get ingress form database error,", err.Error())
 			return // 数据库异常
-		} else {
+		} else if ado.ID > 0 {
 			ado.Deleted = true
 			aa.IngRepo.DeleteOne(ado)
 		}
