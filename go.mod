@@ -7,6 +7,7 @@ require (
 	github.com/google/go-containerregistry v0.20.7
 	github.com/minio/minio-go/v7 v7.0.97
 	github.com/suisrc/zgg v0.3.49
+	go.yaml.in/yaml/v2 v2.4.3
 	k8s.io/api v0.35.0
 	k8s.io/apimachinery v0.35.0
 )
@@ -40,7 +41,6 @@ require (
 	github.com/tinylib/msgp v1.3.0 // indirect
 	github.com/vbatts/tar-split v0.12.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/crypto v0.44.0 // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect

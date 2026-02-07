@@ -15,6 +15,7 @@ import (
 
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/ze/tlsx"
+	"go.yaml.in/yaml/v2"
 	admissionv1 "k8s.io/api/admission/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -168,7 +169,26 @@ func (aa *F3Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw 
 	ado.Name = sql.NullString{String: ing.Name, Valid: true}
 	ado.Clzz = sql.NullString{String: clzz, Valid: true}
 	ado.Host = sql.NullString{String: getIngressHosts(ing)[0], Valid: true}
-	ado.Template = sql.NullString{String: string(raw), Valid: true}
+	// ado.Template = sql.NullString{String: string(raw), Valid: true}
+	// 使用 yaml 格式存储
+	{
+		obj := map[string]any{}
+		if err := json.Unmarshal(raw, &obj); err == nil {
+			delete(obj, "status")
+			if mate, ok := obj["metadata"].(map[string]any); ok {
+				delete(mate, "uid")
+				delete(mate, "resourceVersion")
+				delete(mate, "generation")
+				delete(mate, "creationTimestamp")
+				delete(mate, "managedFields")
+				if anno, ok := mate["annotations"].(map[string]any); ok {
+					delete(anno, "kubectl.kubernetes.io/last-applied-configuration")
+				}
+			}
+		}
+		template, _ := yaml.Marshal(obj)
+		ado.Template = sql.NullString{String: string(template), Valid: true}
+	}
 	ado.Disable = false
 	ado.Deleted = false
 	if ado.ID > 0 {
