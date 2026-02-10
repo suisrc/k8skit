@@ -84,7 +84,13 @@ func (aa *Serve) recordSave(old, raw map[string]any) { // 记录网关数据
 	version := 0
 	if old != nil {
 		// 删除旧版本
-		if mateold, ok := old["metadata"].(map[string]any); !ok {
+		if kind, ok := old["kind"].(string); !ok {
+			z.Println("[_record_]:", "get old kind is not found.")
+			return
+		} else if apiv, ok := old["apiVersion"].(string); !ok {
+			z.Println("[_record_]:", "get old apiVersion is not found.")
+			return
+		} else if mateold, ok := old["metadata"].(map[string]any); !ok {
 			z.Println("[_record_]:", "get old metadata is not found.")
 			return
 		} else if namespace, ok := mateold["namespace"].(string); !ok {
@@ -93,13 +99,14 @@ func (aa *Serve) recordSave(old, raw map[string]any) { // 记录网关数据
 		} else if name, ok := mateold["name"].(string); !ok {
 			z.Println("[_record_]:", "get old metadata.name is not found.")
 			return
-		} else if ads, err := aa.RecRepo.LstByNamespaceAndNameAndDeleted(namespace, name, false); err != nil && err != sql.ErrNoRows {
+		} else if ads, err := aa.RecRepo.LstByKindAndApiVersionAndNamespaceAndNameAndDeleted( //
+			kind, apiv, namespace, name, false); err != nil && err != sql.ErrNoRows {
 			z.Println("[_record_]:", "get object form database error,", err.Error())
 			return // 数据库异常
 		} else if len(ads) > 0 {
 			for _, ado := range ads {
-				if version < ado.Version {
-					version = ado.Version
+				if version <= ado.Version {
+					version = ado.Version + 1
 				}
 				ado.Deleted = true
 				ado.Updated = sql.NullTime{Time: time.Now(), Valid: true}
