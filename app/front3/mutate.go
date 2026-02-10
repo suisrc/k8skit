@@ -19,34 +19,34 @@ import (
 
 func (aa *Serve) Mutate(rw http.ResponseWriter, rr *http.Request) {
 	if err := checkPostJson(rr); err != nil {
-		z.Println(err.Error())
+		z.Println("[_mutate_]:", err.Error())
 		writeErrorAdmissionReview(http.StatusBadRequest, err.Error(), rw)
 		return
 	}
 	admReview, err := z.ReadBody(rr, &admissionv1.AdmissionReview{})
 	if err != nil {
-		z.Printf("Could not decode body: %v", err)
+		z.Printf("[_mutate_]: Could not decode body: %v", err)
 		writeErrorAdmissionReview(http.StatusInternalServerError, err.Error(), rw)
 		return
 	}
 	// bts, _ := json.Marshal(admReview)
-	// z.Println("AdmissionReview: ", string(bts))
+	// z.Println("[_mutate_]: AdmissionReview: ", string(bts))
 	req := admReview.Request
 
-	z.Printf("AdmissionReview for Kind=%v, Namespace=%v Name=%v UID=%v patchOperation=%v UserInfo=%v", //
+	z.Printf("[_mutate_]: AdmissionReview for Kind=%v, Namespace=%v Name=%v UID=%v patchOperation=%v UserInfo=%v", //
 		req.Kind, req.Namespace, req.Name, req.UID, req.Operation, req.UserInfo)
 
 	if patchOperations, err := aa.mutateProcess(req); err != nil {
 		message := fmt.Sprintf("request for object '%s' with name '%s' in namespace '%s' denied: %v", //
 			req.Kind.String(), req.Name, req.Namespace, err)
-		z.Println(message)
+		z.Println("[_mutate_]:", message)
 		writeDeniedAdmissionResponse(admReview, message, rw)
 	} else if /*len(patchOperations) == 0*/ patchOperations == nil {
 		writeAllowedAdmissionReview(admReview, nil, rw)
 	} else if patchBytes, err := json.Marshal(patchOperations); err != nil {
 		message := fmt.Sprintf("request for object '%s' with name '%s' in namespace '%s' denied: %v", //
 			req.Kind.String(), req.Name, req.Namespace, err)
-		z.Println(message)
+		z.Println("[_mutate_]:", message)
 		writeDeniedAdmissionResponse(admReview, message, rw)
 	} else {
 		writeAllowedAdmissionReview(admReview, patchBytes, rw)

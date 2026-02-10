@@ -15,32 +15,32 @@ import (
 
 func (aa *Serve) Record(rw http.ResponseWriter, rr *http.Request) {
 	if err := checkPostJson(rr); err != nil {
-		z.Println(err.Error())
+		z.Println("[_record_]:", err.Error())
 		writeErrorAdmissionReview(http.StatusBadRequest, err.Error(), rw)
 		return
 	}
 	admReview, err := z.ReadBody(rr, &admissionv1.AdmissionReview{})
 	if err != nil {
-		z.Printf("Could not decode body: %v", err)
+		z.Printf("[_record_]: Could not decode body: %v", err)
 		writeErrorAdmissionReview(http.StatusInternalServerError, err.Error(), rw)
 		return
 	}
 	req := admReview.Request
 
-	z.Printf("AdmissionReview for Kind=%v, Namespace=%v Name=%v UID=%v patchOperation=%v UserInfo=%v", //
+	z.Printf("[_record_]: AdmissionReview for Kind=%v, Namespace=%v Name=%v UID=%v patchOperation=%v UserInfo=%v", //
 		req.Kind, req.Namespace, req.Name, req.UID, req.Operation, req.UserInfo)
 
 	if patchOperations, err := aa.recordProcess(req); err != nil {
 		message := fmt.Sprintf("request for object '%s' with name '%s' in namespace '%s' denied: %v", //
 			req.Kind.String(), req.Name, req.Namespace, err)
-		z.Println(message)
+		z.Println("[_record_]:", message)
 		writeDeniedAdmissionResponse(admReview, message, rw)
 	} else if /*len(patchOperations) == 0*/ patchOperations == nil {
 		writeAllowedAdmissionReview(admReview, nil, rw)
 	} else if patchBytes, err := json.Marshal(patchOperations); err != nil {
 		message := fmt.Sprintf("request for object '%s' with name '%s' in namespace '%s' denied: %v", //
 			req.Kind.String(), req.Name, req.Namespace, err)
-		z.Println(message)
+		z.Println("[_record_]:", message)
 		writeDeniedAdmissionResponse(admReview, message, rw)
 	} else {
 		writeAllowedAdmissionReview(admReview, patchBytes, rw)
@@ -125,7 +125,6 @@ func (aa *Serve) recordSave(old, raw map[string]any) { // 记录网关数据
 		z.Println("[_record_]:", "get new metadata is not found.")
 		return
 	}
-	z.Println("[_record_]: log record to database,", rawns, "|", rawna)
 	ado := &RecordDO{}
 	// 基础信息
 	ado.Version = version
@@ -144,6 +143,8 @@ func (aa *Serve) recordSave(old, raw map[string]any) { // 记录网关数据
 	if apiv, ok := raw["apiVersion"].(string); ok {
 		ado.ApiVersion = sql.NullString{String: apiv, Valid: true}
 	}
+	z.Println("[_record_]: log record to database,", ado.Kind.String, "|", rawns, "|", rawna, "|", ado.ApiVersion.String)
+
 	delete(raw, "status") // 删除状态字段
 	if mate, ok := raw["metadata"].(map[string]any); ok {
 		// 补充扩展信息
@@ -151,14 +152,33 @@ func (aa *Serve) recordSave(old, raw map[string]any) { // 记录网关数据
 		ver_, _ := mate["resourceVersion"].(string)
 		ado.MetaUid = sql.NullString{String: uid_, Valid: true}
 		ado.MetaVer = sql.NullString{String: ver_, Valid: true}
-		// 删除扩展信息
-		delete(mate, "uid")
-		delete(mate, "resourceVersion")
-		delete(mate, "generation")
-		delete(mate, "creationTimestamp")
-		delete(mate, "managedFields")
 		if anno, ok := mate["annotations"].(map[string]any); ok {
 			delete(anno, "kubectl.kubernetes.io/last-applied-configuration")
+		}
+		// 删除扩展信息
+		if len(C.Front3.RecordPassMeta) != 0 {
+			for _, kk := range C.Front3.RecordPassMeta {
+				delete(mate, kk)
+			}
+		} else {
+			delete(mate, "uid")
+			delete(mate, "resourceVersion")
+			delete(mate, "generation")
+			delete(mate, "creationTimestamp")
+			delete(mate, "managedFields")
+		}
+	}
+	if spec, ok := raw["spec"].(map[string]any); ok {
+		if len(C.Front3.RecordPassSpec) != 0 {
+			for _, kk := range C.Front3.RecordPassSpec {
+				delete(spec, kk)
+			}
+		} else {
+			delete(spec, "clusterIP")
+			delete(spec, "clusterIPs")
+			delete(spec, "internalTrafficPolicy")
+			delete(spec, "ipFamilies")
+			delete(spec, "ipFamilyPolicy")
 		}
 	}
 	template, _ := yaml.Marshal(raw)

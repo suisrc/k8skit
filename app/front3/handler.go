@@ -42,9 +42,11 @@ type Config struct {
 	MutateAddr  string `json:"mutateaddr" default:"0.0.0.0:443"`
 	MutateCert  string `json:"mutatecert" default:"mutatecert"` // 钩子证书文件夹
 
-	MutatePath string `json:"mutatepath"` // 对于 ingress 的原生补丁， 默认不开启， 需要指定地址
-	LogIngress bool   `json:"logingress" default:"false"`
-	RecordPath string `json:"recordpath"` // 记录全部模版, 默认为空，不启动记录
+	MutatePath     string   `json:"mutatepath"` // 对于 ingress 的原生补丁， 默认不开启， 需要指定地址
+	LogIngress     bool     `json:"logingress" default:"false"`
+	RecordPath     string   `json:"recordpath"` // 记录全部模版, 默认为空，不启动记录
+	RecordPassMeta []string `json:"recordpassmeta"`
+	RecordPassSpec []string `json:"recordpassspec"`
 }
 
 func init() {
