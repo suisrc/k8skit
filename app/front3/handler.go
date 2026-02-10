@@ -173,12 +173,14 @@ func (aa *Serve) WebHook(zrc *z.Ctx) {
 func (aa *Serve) MutateServe(rw http.ResponseWriter, rr *http.Request) {
 	switch rr.URL.Path {
 	case "":
+		z.Println("[_mutate_]: serve endpoint, mutate path is empty")
 		writeErrorAdmissionReview(http.StatusBadRequest, "mutate path is empty", rw)
 	case C.Front3.MutatePath:
 		aa.Mutate(rw, rr) // 对 ingress 原生修改， 提供 ServeS3 配置的原生支持
 	case C.Front3.RecordPath:
 		aa.Record(rw, rr) // 可记录 k8s 所有的原生模版信息
 	default:
+		z.Println("[_mutate_]: serve endpoint, mutate path is invalid:", rr.URL.Path)
 		writeErrorAdmissionReview(http.StatusBadRequest, "mutate path is invalid: "+rr.URL.Path, rw)
 	}
 }
