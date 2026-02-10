@@ -1,5 +1,8 @@
 package front3
 
+// 为 前端 提供 静态文件服务， 包括 s3 CDN 加速， 前端镜像缓存， http 前端缓存
+// 是 front3 服务的 核心部分
+
 import (
 	"context"
 	"database/sql"
@@ -14,7 +17,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -22,20 +24,6 @@ import (
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/zc"
 )
-
-type F3Serve struct {
-	CdnConfig s3cdn.Config
-	RegConfig registry.Config
-	AppRepo   *AppInfoRepo
-	VerRepo   *VersionRepo
-	AuzRepo   *AuthzRepo
-	IngRepo   *IngressRepo
-	Interval  int64                // 单位秒, 巡检间隔
-	AppCache  map[string]*AppCache // sync.Map vs map[string]*AppCache & _CacheMu
-	_CacheMu  sync.Mutex           // 缓存操作锁
-	_ClrTime  *time.Ticker         // 定时清理缓存
-	_ClrCout  int64
-}
 
 type AppCache struct {
 	AppInfo AppInfoDO    // 应用, 不存在共享情况
@@ -46,7 +34,7 @@ type AppCache struct {
 	Abspath string       // 绝对路径
 }
 
-func (aa *F3Serve) CleanCaches() {
+func (aa *Serve) CleanCaches() {
 	z.Println("[_front3_]: clean caches ================", aa._ClrCout)
 	aa._CacheMu.Lock()
 	defer aa._CacheMu.Unlock()
@@ -79,7 +67,7 @@ func (aa *F3Serve) CleanCaches() {
 	}
 }
 
-func (aa *F3Serve) CleanerWork(interval time.Duration) error {
+func (aa *Serve) CleanerStart(interval time.Duration) error {
 	if aa._ClrTime != nil {
 		return errors.New("cleaner is working") // 定时清理运行中
 	}
@@ -93,22 +81,26 @@ func (aa *F3Serve) CleanerWork(interval time.Duration) error {
 	return nil
 }
 
-func (aa *F3Serve) CleanerStop() {
+func (aa *Serve) CleanerClose() {
 	if aa._ClrTime != nil {
 		aa._ClrTime.Stop()
 		aa._ClrTime = nil
 	}
 }
 
-func (aa *F3Serve) Stop() {
+func (aa *Serve) Stop() {
 	if aa.AppRepo.Database != nil {
 		aa.AppRepo.Database.Close()
 	}
-	aa.CleanerStop()
+	aa.CleanerClose()
 }
 
-// F3Serve 索引服务
-func (aa *F3Serve) ServeHTTP(rw http.ResponseWriter, rr *http.Request) {
+//=============================================================================================================================
+//=============================================================================================================================
+//=============================================================================================================================
+
+// Serve 索引服务
+func (aa *Serve) ServeS3(rw http.ResponseWriter, rr *http.Request) {
 	host := rr.Host //  请求的域名
 	apps, err := aa.AppRepo.GetAllByDomain(host)
 	if err != nil {
@@ -232,7 +224,11 @@ func (aa *F3Serve) ServeHTTP(rw http.ResponseWriter, rr *http.Request) {
 	api.Handler.ServeHTTP(rw, rr)
 }
 
-func (aa *F3Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache) *AppCache {
+//=============================================================================================================================
+//=============================================================================================================================
+//=============================================================================================================================
+
+func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache) *AppCache {
 	config := front2.Config{
 		TmplRoot:   av.Version.TPRoot.String,
 		TmplSuffix: front2.C.Front2.TmplSuffix,

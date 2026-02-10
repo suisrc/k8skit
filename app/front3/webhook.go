@@ -9,18 +9,8 @@ import (
 	"github.com/suisrc/zgg/z"
 )
 
-// 提供webhook，对影响进行升级
-
-func (aa *F3Serve) WebHook(zrc *z.Ctx) {
-	switch zrc.Request.URL.Query().Get("method") {
-	case "update.image":
-		aa.updateVersion(zrc)
-	default:
-		zrc.TEXT("no", http.StatusOK)
-	}
-}
-
-func (aa *F3Serve) updateVersion(zrc *z.Ctx) {
+// 更新应用版本
+func (aa *Serve) updateImageVersion(zrc *z.Ctx) {
 	qry := zrc.Request.URL.Query()
 	akk := qry.Get("ak")
 	if akk == "" {

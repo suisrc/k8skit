@@ -279,3 +279,63 @@ func (aa *IngressRepo) DeleteOne(data *IngressDO) error {
 	_, err := aa.Database.Exec("UPDATE "+aa.TableName()+" SET deleted=1 WHERE id=?", data.ID)
 	return err
 }
+
+// ======================================================================================================================================================
+
+type RecordDO struct {
+	ID         int64          `db:"id"`
+	ApiVersion sql.NullString `db:"apiversion"`
+	Kind       sql.NullString `db:"kind"`
+	Namespace  sql.NullString `db:"namespace"`
+	Name       sql.NullString `db:"name"`
+	MetaUid    sql.NullString `db:"metauid"`
+	MetaVer    sql.NullString `db:"metaver"`
+	Template   sql.NullString `db:"template"`
+	Disable    bool           `db:"disable"`
+	Deleted    bool           `db:"deleted"`
+	Updated    sql.NullTime   `db:"updated"`
+	Updater    sql.NullString `db:"updater"`
+	Created    sql.NullTime   `db:"created"`
+	Creater    sql.NullString `db:"creater"`
+	Version    int            `db:"version"`
+}
+
+type RecordRepo struct {
+	Database    *sqlx.DB
+	TablePrefix string
+}
+
+func (aa *RecordRepo) TableName() string {
+	return aa.TablePrefix + "zrecord"
+}
+
+func (aa RecordRepo) SelectCols() string {
+	// template, disable, deleted, updated, updater, created, creater,
+	return "SELECT id, apiversion, kind, namespace, name, metauid, metaver, version FROM " + aa.TableName()
+}
+
+func (aa RecordRepo) InsertCols() string {
+	return "INSERT INTO " + aa.TableName() + " (apiversion, kind, namespace, name, metauid, metaver, template, disable, deleted, updated, updater, created, creater, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+}
+
+func (aa RecordRepo) LstByNamespaceAndNameAndDeleted(ns, name string, delete bool) ([]RecordDO, error) {
+	rst := []RecordDO{}
+	err := aa.Database.Select(&rst, aa.SelectCols()+" WHERE namespace=? AND name=? AND deleted=?", ns, name, delete)
+	return rst, err
+}
+
+func (aa RecordRepo) InsertOne(data *RecordDO) error {
+	rst, err := aa.Database.Exec(aa.InsertCols(), data.ApiVersion, data.Kind, data.Namespace, data.Name, data.MetaUid, data.MetaVer, //
+		data.Template, data.Disable, data.Deleted, data.Updated, data.Updater, data.Created, data.Creater, data.Version)
+	if err == nil {
+		data.ID, _ = rst.LastInsertId()
+	}
+	return err
+}
+
+func (aa RecordRepo) DeleteOne(data *RecordDO) error {
+	// sql := "DELETE FROM " + aa.TableName() + " WHERE id=?"
+	sql := "UPDATE " + aa.TableName() + " SET deleted=1, updated=?, updater=? WHERE id=?"
+	_, err := aa.Database.Exec(sql, data.Updated, data.Updater, data.ID)
+	return err
+}

@@ -1,16 +1,22 @@
 package front3
 
 import (
+	"crypto/tls"
 	"flag"
 	"k8skit/app"
+	"k8skit/app/registry"
 	"k8skit/app/s3cdn"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/zc"
 	"github.com/suisrc/zgg/z/ze/sqlx"
+	"github.com/suisrc/zgg/z/ze/tlsx"
 )
 
 // 多前端代理, 通过镜像动态加载多个站点的前端资源
@@ -32,11 +38,13 @@ type Config struct {
 	ImageMaps    z.HM   `json:"imagemaps"`    // 镜像映射
 
 	// 验证方式？简单一点，confa 提供令牌支持， 但是 role 必须是 front3.* 权限
-	WebHookPath string `json:"hookpath"`   // 钩子路径, 默认为空，不启动钩子
-	MutatePath  string `json:"mutatepath"` // 对于 ingress 的原生补丁， 默认不开启， 需要指定地址
+	WebHookPath string `json:"hookpath"` // 钩子路径, 默认为空，不启动钩子
 	MutateAddr  string `json:"mutateaddr" default:"0.0.0.0:443"`
 	MutateCert  string `json:"mutatecert" default:"mutatecert"` // 钩子证书文件夹
-	LogIngress  bool   `json:"logingress" default:"false"`
+
+	MutatePath string `json:"mutatepath"` // 对于 ingress 的原生补丁， 默认不开启， 需要指定地址
+	LogIngress bool   `json:"logingress" default:"false"`
+	RecordPath string `json:"recordpath"` // 记录全部模版, 默认为空，不启动记录
 }
 
 func init() {
@@ -44,7 +52,7 @@ func init() {
 
 	flag.BoolVar(&C.Front3.Enable, "f3enable", false, "front3 启用")
 	flag.BoolVar(&C.Front3.Debug, "f3debug", false, "front3 启用调试")
-	flag.StringVar(&C.Front3.AddrPort, "f3addrport", "0.0.0.0:8080", "front3 监听端口")
+	flag.StringVar(&C.Front3.AddrPort, "f3addrport", "0.0.0.0:80", "front3 监听端口")
 	flag.StringVar(&C.Front3.DB.Driver, "f3driver", "mysql", "front3 数据库驱动")
 	flag.Int64Var(&C.Front3.CacheTicker, "f3ticker", 86400, "front3 缓存清理间隔, 0 禁用, 默认 1 天")
 	flag.Int64Var(&C.Front3.CacheTimeout, "f3cachetimeout", 2592000, "front3 缓存存储时间, 0 默认 30 天")
@@ -70,28 +78,37 @@ func init() {
 		}
 		// 提供 F3 索引服务
 		tpx := C.Front3.DB.TablePrefix
-		srv := &F3Serve{
+		srv := &Serve{
+			// repo config
+			AppRepo: &AppInfoRepo{Database: dsc, TablePrefix: tpx},
+			VerRepo: &VersionRepo{Database: dsc, TablePrefix: tpx},
+			AuzRepo: &AuthzRepo{Database: dsc, TablePrefix: tpx},
+			IngRepo: &IngressRepo{Database: dsc, TablePrefix: tpx},
+			RecRepo: &RecordRepo{Database: dsc, TablePrefix: tpx},
+			// f3s config
 			CdnConfig: s3cdn.C.S3cdn,
 			RegConfig: app.C.Imagex,
-			AppRepo:   &AppInfoRepo{Database: dsc, TablePrefix: tpx},
-			VerRepo:   &VersionRepo{Database: dsc, TablePrefix: tpx},
-			AuzRepo:   &AuthzRepo{Database: dsc, TablePrefix: tpx},
-			IngRepo:   &IngressRepo{Database: dsc, TablePrefix: tpx},
 			Interval:  C.Front3.CacheTimeout * 60, // 缓存清理间隔， 单位秒
 			AppCache:  make(map[string]*AppCache),
 			// Interval: 30, // 测试用
 		}
 		// 原生钩子
-		if C.Front3.MutatePath != "" {
+		if C.Front3.MutatePath != "" || C.Front3.RecordPath != "" {
 			// mutate 接口必须在 https 上
-			tlc, err := srv.MutateTLS(C.Front3.MutateCert)
+			tlc, err := BuildTlsByDir(C.Front3.MutateCert)
 			if err != nil { // 有可能证书不存在， 推荐使用 fkc-ksidecar-data 证书
 				zgg.ServeStop("[_front3_], init mutate tls config error, " + err.Error())
 				return nil
 			}
-			hdl := http.HandlerFunc(srv.Mutate)
+			hdl := http.HandlerFunc(srv.MutateServe)
 			zgg.Servers["(MUTAT)"] = &http.Server{Addr: C.Front3.MutateAddr, Handler: hdl, TLSConfig: tlc}
-			z.Println("[_front3_]: mutate path =", C.Front3.MutateAddr+C.Front3.MutatePath)
+
+			if C.Front3.MutatePath != "" {
+				z.Println("[_front3_]: mutate path =", C.Front3.MutateAddr+C.Front3.MutatePath)
+			}
+			if C.Front3.RecordPath != "" {
+				z.Println("[_front3_]: record path =", C.Front3.MutateAddr+C.Front3.RecordPath)
+			}
 		}
 		// 外部钩子， 原生钩子和外部钩子分开， 以便于权限控制和配置分流
 		if C.Front3.WebHookPath != "" {
@@ -99,12 +116,88 @@ func init() {
 			z.Println("[_front3_]: webhook path =", C.Front3.WebHookPath)
 		}
 		// 本身服务
-		zgg.Servers["(F3SRV)"] = &http.Server{Addr: C.Front3.AddrPort, Handler: srv}
-		if C.Front3.CacheTicker > 0 {
-			srv.CleanerWork(time.Duration(C.Front3.CacheTicker) * time.Minute)
+		if C.Front3.AddrPort != "none" {
+			if strings.HasSuffix(C.Front3.AddrPort, ":80") && z.C.Server.Port == 80 {
+				z.C.Server.Port = 8080 // 端口存在冲突， 修正主服务端口
+			}
+			zgg.Servers["(F3SRV)"] = &http.Server{Addr: C.Front3.AddrPort, Handler: srv}
+			if C.Front3.CacheTicker > 0 {
+				srv.CleanerStart(time.Duration(C.Front3.CacheTicker) * time.Minute)
+			}
 		}
-
 		return srv.Stop
 	})
 
+}
+
+//=============================================================================================================================
+
+// front3 服务， 提供前端缓存， k8s 原始 ingress 配置， k8s 原生 配置记录
+type Serve struct {
+	// repo config
+	AppRepo *AppInfoRepo
+	VerRepo *VersionRepo
+	AuzRepo *AuthzRepo
+	IngRepo *IngressRepo
+	RecRepo *RecordRepo
+	// f3s config
+	CdnConfig s3cdn.Config         // cdn 配置
+	RegConfig registry.Config      // 镜像仓库配置
+	Interval  int64                // 单位秒, 巡检间隔
+	AppCache  map[string]*AppCache // sync.Map vs map[string]*AppCache & _CacheMu
+	_CacheMu  sync.Mutex           // 缓存操作锁
+	_ClrTime  *time.Ticker         // 定时清理缓存
+	_ClrCout  int64
+}
+
+// 默认 80 端口
+func (aa *Serve) ServeHTTP(rw http.ResponseWriter, rr *http.Request) {
+	if rr.URL.Path == "/healthz" && rr.Method == http.MethodGet {
+		z.Healthz(z.NewCtx(nil, rr, rw, "f3s"))
+	} else {
+		aa.ServeS3(rw, rr)
+	}
+}
+
+// 默认 8080 端口， 提供第三方webhook接口，可对系统进行配置和修改， 附加到主服务上，提供外部外部访问
+func (aa *Serve) WebHook(zrc *z.Ctx) {
+	switch zrc.Request.URL.Query().Get("method") {
+	case "update.image.version":
+		aa.updateImageVersion(zrc)
+	default:
+		zrc.TEXT("not found", http.StatusOK)
+	}
+}
+
+// 默认 443 端口， k8s 原生支持， 通过 MutatingWebhookConfiguration or ValidatingWebhookConfiguration 对 k8s 资源进行修正和监控
+func (aa *Serve) MutateServe(rw http.ResponseWriter, rr *http.Request) {
+	switch rr.URL.Path {
+	case "":
+		writeErrorAdmissionReview(http.StatusBadRequest, "mutate path is empty", rw)
+	case C.Front3.MutatePath:
+		aa.Mutate(rw, rr) // 对 ingress 原生修改， 提供 ServeS3 配置的原生支持
+	case C.Front3.RecordPath:
+		aa.Record(rw, rr) // 可记录 k8s 所有的原生模版信息
+	default:
+		writeErrorAdmissionReview(http.StatusBadRequest, "mutate path is invalid: "+rr.URL.Path, rw)
+	}
+}
+
+//=============================================================================================================================
+
+func BuildTlsByDir(dir string) (*tls.Config, error) {
+	config := tlsx.TLSAutoConfig{}
+	if crtBts, err := os.ReadFile(filepath.Join(dir, "ca.crt")); err != nil {
+		return nil, err
+	} else {
+		config.CaCrtBts = crtBts
+	}
+	if keyBts, err := os.ReadFile(filepath.Join(dir, "ca.key")); err != nil {
+		return nil, err
+	} else {
+		config.CaKeyBts = keyBts
+	}
+	cfg := &tls.Config{}
+	cfg.GetCertificate = (&config).GetCertificate
+	return cfg, nil
 }

@@ -1,44 +1,23 @@
 package front3
 
 import (
-	"crypto/tls"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/suisrc/zgg/z"
-	"github.com/suisrc/zgg/z/ze/tlsx"
 	"go.yaml.in/yaml/v2"
 	admissionv1 "k8s.io/api/admission/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (aa *F3Serve) MutateTLS(dir string) (*tls.Config, error) {
-	config := tlsx.TLSAutoConfig{}
-	if crtBts, err := os.ReadFile(filepath.Join(dir, "ca.crt")); err != nil {
-		return nil, err
-	} else {
-		config.CaCrtBts = crtBts
-	}
-	if keyBts, err := os.ReadFile(filepath.Join(dir, "ca.key")); err != nil {
-		return nil, err
-	} else {
-		config.CaKeyBts = keyBts
-	}
-	cfg := &tls.Config{}
-	cfg.GetCertificate = (&config).GetCertificate
-	return cfg, nil
-}
-
-func (aa *F3Serve) Mutate(rw http.ResponseWriter, rr *http.Request) {
+func (aa *Serve) Mutate(rw http.ResponseWriter, rr *http.Request) {
 	if err := checkPostJson(rr); err != nil {
 		z.Println(err.Error())
 		writeErrorAdmissionReview(http.StatusBadRequest, err.Error(), rw)
@@ -62,6 +41,8 @@ func (aa *F3Serve) Mutate(rw http.ResponseWriter, rr *http.Request) {
 			req.Kind.String(), req.Name, req.Namespace, err)
 		z.Println(message)
 		writeDeniedAdmissionResponse(admReview, message, rw)
+	} else if /*len(patchOperations) == 0*/ patchOperations == nil {
+		writeAllowedAdmissionReview(admReview, nil, rw)
 	} else if patchBytes, err := json.Marshal(patchOperations); err != nil {
 		message := fmt.Sprintf("request for object '%s' with name '%s' in namespace '%s' denied: %v", //
 			req.Kind.String(), req.Name, req.Namespace, err)
@@ -72,7 +53,7 @@ func (aa *F3Serve) Mutate(rw http.ResponseWriter, rr *http.Request) {
 	}
 }
 
-func (aa *F3Serve) mutateProcess(req *admissionv1.AdmissionRequest) ([]PatchOperation, error) {
+func (aa *Serve) mutateProcess(req *admissionv1.AdmissionRequest) ([]PatchOperation, error) {
 	/*
 		frontend/db.fronta: sso@fmes/iam-signin:v1.0.1 如果没有版本，不进行限制
 		frontend/db.fronta.name: 登录系统
@@ -138,7 +119,7 @@ func (aa *F3Serve) mutateProcess(req *admissionv1.AdmissionRequest) ([]PatchOper
 	return patchs, nil
 }
 
-func (aa *F3Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw []byte) { // 记录网关数据
+func (aa *Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw []byte) { // 记录网关数据
 	if !C.Front3.LogIngress {
 		return // 不记录
 	}
@@ -209,7 +190,7 @@ func (aa *F3Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw 
 	}
 }
 
-func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (result *PatchOperation, reserr error) {
+func (aa *Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (result *PatchOperation, reserr error) {
 	// 处理前端应用
 	if old != nil && len(old.GetAnnotations()) > 0 {
 		// 处理旧数据内容，从数据库中删除应用
@@ -409,7 +390,7 @@ func (aa *F3Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (r
 	return
 }
 
-func (aa *F3Serve) mutateFrontPath(ing *netv1.Ingress, svc string) (*PatchOperation, [2]string, error) {
+func (aa *Serve) mutateFrontPath(ing *netv1.Ingress, svc string) (*PatchOperation, [2]string, error) {
 	// 由于后面要处理服务和域名已经路径问题，所以要求 len(rules) == 1 必须成立
 	if len(ing.Spec.Rules) == 0 {
 		return nil, [2]string{}, errors.New("ingress no rules")

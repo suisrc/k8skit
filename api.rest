@@ -41,7 +41,7 @@ Content-Type: application/json
 ### 
 @BASE=http://frontend.default.svc
 ### 
-GET {{BASE}}/front3/webhook?method=update.image&akey=66666666&image=dcr.dev.sims-cn.com/plus/iam-signin:v1.0.153&app=sso
+GET {{BASE}}/front3/webhook?method=update.image.version&akey=66666666&image=dcr.dev.sims-cn.com/plus/iam-signin:v1.0.153&app=sso
 Content-Type: application/json
 
 ### 
@@ -50,7 +50,12 @@ Content-Type: application/json
 GET {{BASE}}/?action=xxx
 Content-Type: application/json
 Host: sso.kfzx.sims-cn.com
+
 ### 
-GET {{BASE}}/123.txt
+GET {{BASE}}/123
 Content-Type: application/json
 Host: account.kfzx.sims-cn.com
+
+### 
+GET {{BASE}}/healthz
+Content-Type: application/json
