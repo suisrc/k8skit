@@ -320,7 +320,7 @@ func (aa RecordRepo) InsertCols() string {
 
 func (aa RecordRepo) LstByKindAndApiVersionAndNamespaceAndNameAndDeleted(kind, apiv, ns, name string, delete bool) ([]RecordDO, error) {
 	rst := []RecordDO{}
-	err := aa.Database.Select(&rst, aa.SelectCols()+" WHERE kind=? AND apiversion=? namespace=? AND name=? AND deleted=?", kind, apiv, ns, name, delete)
+	err := aa.Database.Select(&rst, aa.SelectCols()+" WHERE kind=? AND apiversion=? AND namespace=? AND name=? AND deleted=?", kind, apiv, ns, name, delete)
 	return rst, err
 }
 
