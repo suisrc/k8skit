@@ -179,10 +179,14 @@ func (aa *Serve) AnswerSyncHook(source, method string, zrc *z.Ctx) {
 
 // 删除本地 app 缓存， 通知处理， 这个同步只针对 StatefulSet 场景优化
 func (aa *Serve) NoticeSyncHook(key string, data map[string]any) {
-	go aa.NoticeASyncHook(key, data) // 异步通知
+	go NoticeASyncHook(key, data) // 异步通知
 }
 
-func (aa *Serve) NoticeASyncHook(key string, data map[string]any) {
+var NoticeASyncHook = NoticeASyncHook_ // 便于子系统替换上层方法， 比如使用消息总线方式替换
+
+// 在k8s中，多实例，通过 headless 服务同步配置
+// 通过消息总线可以，这里是为了减少外部依赖配置
+func NoticeASyncHook_(key string, data map[string]any) {
 	if C.Front3.SyncToken == "" {
 		z.Println("[_syncfg_]: sync token is empty")
 		return
