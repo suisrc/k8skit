@@ -135,7 +135,7 @@ func (aa *Serve) DeleteLocalCache(zrc *z.Ctx) {
 
 // ==============================================================================================
 
-func (aa *Serve) AnswerSyncHook(src, key string, zrc *z.Ctx) {
+func (aa *Serve) AnswerSyncHook(source, method string, zrc *z.Ctx) {
 	data := map[string]any{}
 	if C.Front3.SyncToken == "" {
 		z.Println("[_syncfg_]:", "answer sync token is empty") // 未配置同步秘钥
@@ -150,23 +150,26 @@ func (aa *Serve) AnswerSyncHook(src, key string, zrc *z.Ctx) {
 		zrc.TEXT("answer sync token is not equal", http.StatusOK)
 		return
 	}
-	z.Println("[_syncfg_]:", "answer sync config,", src, "-> ", key)
-	switch key {
+	z.Println("[_syncfg_]:", "answer sync config,", source, "-> ", method)
+	switch method {
 	case "delete.cache":
-		if key, _ := data["key"].(string); key == "" {
+		key, _ := data["key"].(string)
+		if key == "" {
 			z.Println("[_syncfg_]: answer sync config, key is empty,", key)
+			zrc.TEXT("ok", http.StatusOK)
 			return
 		}
 		api, _ := aa.CacheApp.LoadAndDelete(key)
 		if api == nil {
 			z.Println("[_syncfg_]: answer sync config, app cache not found,", key)
+			zrc.TEXT("ok", http.StatusOK)
 			return
 		}
 		if api.(*AppCache).Abspath != "" {
 			os.RemoveAll(api.(*AppCache).Abspath)
 		}
 	default:
-		z.Println("[_syncfg_]: answer sync config, method not found,", key)
+		z.Println("[_syncfg_]: answer sync config, method not found,", method)
 	}
 	zrc.TEXT("ok", http.StatusOK)
 }
