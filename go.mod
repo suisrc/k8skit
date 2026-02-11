@@ -6,7 +6,7 @@ require (
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/google/go-containerregistry v0.20.7
 	github.com/minio/minio-go/v7 v7.0.97
-	github.com/suisrc/zgg v0.3.49
+	github.com/suisrc/zgg v0.3.53
 	go.yaml.in/yaml/v2 v2.4.3
 	k8s.io/api v0.35.0
 	k8s.io/apimachinery v0.35.0

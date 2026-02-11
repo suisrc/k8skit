@@ -262,13 +262,16 @@ type ServeS3 struct {
 
 func (aa *ServeS3) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := ""
+	rpath := ""
 	if ext := filepath.Ext(r.URL.Path); ext != "" {
-		path = r.URL.Path
+		path = r.URL.Path // 文件资源
 	} else {
-		rp := r.Header.Get("X-Req-RootPath")
-		if rp != "" {
-			path, _ = aa.Indexs[rp]
+		rpath = r.Header.Get("X-Req-RootPath")
+		if rpath != "" {
+			// 寻找指定索引文件
+			path, _ = aa.Indexs[rpath]
 		} else {
+			// 通过匹配查询索引文件
 			for _, kk := range aa.IndexsKey {
 				if r.URL.Path == kk || zc.HasPrefixFold(r.URL.Path, kk+"/") {
 					path = aa.Indexs[kk] // 匹配到, 使用 v 代替 index
@@ -289,6 +292,10 @@ func (aa *ServeS3) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// z.Println(aa.LogKey+": redirect to:", path, r.URL.Path)
 		if ctype := resp.Header.Get("Content-Type"); strings.HasPrefix(ctype, "application/octet-stream") {
 			resp.Header.Set("Content-Type", "text/html; charset=utf-8")
+		}
+		if rpath != "" {
+			w.Header().Set("X-Request-Rp", rpath) // 通过 CDN 加载的索引文件，存在 /rootpath 未替换的问题
+			// X-Request-Rp 与 X-Req-RootPath 区分, 防止被意外替换, X-Req-RootPath 来自上级路由业务的内容
 		}
 		maps.Copy(w.Header(), resp.Header)
 		w.WriteHeader(resp.StatusCode)
