@@ -26,6 +26,7 @@ import (
 )
 
 type AppCache struct {
+	Key     string
 	AppInfo AppInfoDO    // 应用, 不存在共享情况
 	Version VersionDO    // 版本, 存在共享的情况
 	Handler http.Handler // *front2.IndexApi
@@ -35,32 +36,30 @@ type AppCache struct {
 }
 
 func (aa *Serve) CleanCaches() {
-	z.Println("[_front3_]: clean caches ================", aa._ClrCout)
-	aa._CacheMu.Lock()
-	defer aa._CacheMu.Unlock()
+	z.Println("[_front3_]: clean caches ================", aa._CacheCC)
+	aa._CacheMU.Lock()
+	defer aa._CacheMU.Unlock()
 	now := time.Now().Unix()
 	// 删除超期缓存
 	clsmap := map[string]bool{}
-	for k, v := range aa.AppCache {
-		if now-v.LastMod > aa.Interval {
-			z.Println("[_front3_]: clean cache1 ================", k, v.AppInfo.App.String, v.Version.Ver)
-			delete(aa.AppCache, k)
-			if v.Abspath != "" {
-				clsmap[v.Abspath] = true
+	extmap := map[string]bool{}
+	aa.CacheApp.Range(func(key, value any) bool {
+		api := value.(*AppCache)
+		if now-api.LastMod > aa.Interval {
+			z.Println("[_front3_]: clean cache1 ================", key, api.AppInfo.App.String, api.Version.Ver)
+			aa.CacheApp.Delete(key)
+			if api.Abspath != "" {
+				clsmap[api.Abspath] = true
 			}
+		} else if api.Abspath != "" {
+			extmap[api.Abspath] = true
 		}
-	}
+		return true
+	})
 	// 需要检索路径是否被占用
 	for path := range clsmap {
-		has := false
-		for _, v := range aa.AppCache {
-			if v.Abspath == path {
-				has = true
-				break
-			}
-		}
-		if has {
-			continue
+		if has, _ := extmap[path]; has {
+			continue // 路径对象的缓存，还有应用使用，不能删除
 		}
 		z.Println("[_front3_]: clean cache2 ================", path)
 		os.RemoveAll(path)
@@ -68,13 +67,13 @@ func (aa *Serve) CleanCaches() {
 }
 
 func (aa *Serve) CleanerStart(interval time.Duration) error {
-	if aa._ClrTime != nil {
+	if aa._CacheTT != nil {
 		return errors.New("cleaner is working") // 定时清理运行中
 	}
-	aa._ClrTime = time.NewTicker(interval)
+	aa._CacheTT = time.NewTicker(interval)
 	go func() {
-		for range aa._ClrTime.C {
-			aa._ClrCout += 1
+		for range aa._CacheTT.C {
+			aa._CacheCC += 1
 			go aa.CleanCaches()
 		}
 	}()
@@ -82,9 +81,9 @@ func (aa *Serve) CleanerStart(interval time.Duration) error {
 }
 
 func (aa *Serve) CleanerClose() {
-	if aa._ClrTime != nil {
-		aa._ClrTime.Stop()
-		aa._ClrTime = nil
+	if aa._CacheTT != nil {
+		aa._CacheTT.Stop()
+		aa._CacheTT = nil
 	}
 }
 
@@ -178,43 +177,54 @@ func (aa *Serve) ServeS3(rw http.ResponseWriter, rr *http.Request) {
 		return
 	}
 	key := fmt.Sprintf("%d-%d-%s", app.ID, ver.ID, ver.Ver)
-	api, _ := aa.AppCache[key]
+	var api *AppCache
+	if cac, _ := aa.CacheApp.Load(key); cac != nil {
+		api = cac.(*AppCache)
+	}
+	cls := false
 	if api != nil {
-		// 确认 CDN 和 LOC 模式是否 发生了切换
-		if ver.CdnPush.Bool && ver.CdnRenew.Bool {
-			delete(aa.AppCache, key) // 删除缓存
-			if api.Abspath != "" {
-				os.RemoveAll(api.Abspath) // 清理缓存
-			}
-			api = nil
+		if ver.ReCache.Bool {
+			// 标记强制刷新 LOC
+			z.Println("[_front3_]: LOC forc refresh, delete cache:", key)
+			aa.CacheApp.Delete(key)
+			cls = true
+			// 需要强制刷新本地缓存，如果有多实例的情况
+		} else if ver.CdnPush.Bool && ver.CdnRenew.Bool {
+			// 标记强制刷新 CDN
 			z.Println("[_front3_]: CDN mode rewrite, delete cache:", key)
+			aa.CacheApp.Delete(key)
+			cls = true
 		} else if ver.CdnPush.Bool == api.IsLocal {
-			delete(aa.AppCache, key) // 删除缓存
-			if api.Abspath != "" {
-				os.RemoveAll(api.Abspath) // 清理缓存
-			}
-			api = nil
+			// 确认 CDN 和 LOC 模式是否 发生了切换
 			z.Println("[_front3_]: CDN mode changed, delete cache:", key)
-		} else if api.IsLocal {
-			if _, err := os.Stat(api.Abspath); err != nil {
-				// 缓存文件不存在，有可能被其他应用或者人工删除，重建
-				api = nil
-				z.Println("[_front3_]: LOC mode, cache no found:", key)
-			}
+			aa.CacheApp.Delete(key)
+			cls = true
+		} else if !api.IsLocal {
+			// do nohting, pass
+		} else if _, err := os.Stat(api.Abspath); err != nil {
+			// 缓存文件不存在，有可能被其他应用或者人工删除，重建, 一般同步缓存的时候，会删除该内容
+			z.Println("[_front3_]: LOC mode, cache no found:", key)
+			aa.CacheApp.Delete(key)
+			api = nil // 缓存已经没有了，不需要再次清理了
 		}
 	}
-
-	if api == nil {
-		// 没有缓存，则创建一个
-		aa._CacheMu.Lock()
-		defer aa._CacheMu.Unlock()
-		if api, _ = aa.AppCache[key]; api != nil {
-			// api 已经存在，跳过
-		} else if api = aa.InitApi(rw, rr, &AppCache{AppInfo: *app, Version: *ver}); api != nil {
-			api.LastMod = time.Now().Unix() // 防止被清理
-			aa.AppCache[key] = api
+	if api == nil || cls {
+		// 没有缓存，或者缓存已经被标记需要清理了
+		aa._CacheMU.Lock()
+		defer aa._CacheMU.Unlock()
+		if cac, _ := aa.CacheApp.Load(key); cac != nil {
+			api = cac.(*AppCache) // 缓存已经重新建立，不需要重复建立
 		} else {
-			return // 无法处理， 不能创建 api
+			if api != nil && api.Abspath != "" {
+				os.RemoveAll(api.Abspath) // 清理本地缓存
+			}
+			// 重新建立缓存
+			api = aa.InitApi(rw, rr, &AppCache{Key: key, AppInfo: *app, Version: *ver})
+			if api == nil {
+				return // 无法处理， 不能创建 api, InitApi 中已经返回异常内容
+			}
+			api.LastMod = time.Now().Unix() // 防止被清理
+			aa.CacheApp.Store(key, api)     // 重新建立缓存
 		}
 	}
 	if z.IsDebug() || C.Front3.Debug {
@@ -251,12 +261,27 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache)
 		config.Indexs = indexs
 		config.Routers = routers
 	}
+	// 处理本地缓存目录
+	abspath, err := filepath.Abs(filepath.Join(aa.RegConfig.OutPath, av.Version.Vpp, av.Version.Ver))
+	if err != nil {
+		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
+		http.Error(rw, "application local path error: "+rr.Host+" ["+abspath+"] "+err.Error(), http.StatusInternalServerError)
+		return nil // 本地缓存地址无效
+	}
+	// 强制重置缓存
+	if av.Version.ReCache.Bool {
+		os.RemoveAll(abspath) // 可以忽略错误
+		av.Version.ReCache = sql.NullBool{Bool: false, Valid: true}
+		aa.VerRepo.UpdateCacInfo(&av.Version)
+		defer aa.NoticeSyncHook("delete.cache", z.HA{"key": av.Key}) // 结束后，需要通知所有实例清理缓存
+	}
+	// 确定是否为CDN模式
 	if av.Version.CdnName.String != "" && av.Version.CdnPush.Bool && !av.Version.CdnRenew.Bool {
 		// 直接使用 CDN 模式返回, CDN 存在，且不需要重新更新
 		handler := front2.NewApi(nil, config, fmt.Sprintf("[_front3_]-%d-%d", av.AppInfo.ID, av.Version.ID))
 		av.Handler = handler
 		s3cdn.InitCdnServe(handler, av.Version.CdnName.String, av.Version.CdnPath.String, av.Version.Vpp, av.Version.Ver)
-		return av
+		return av // CDN模式， 直接返回
 	}
 	// 验证镜像文件地址
 	if av.Version.Image.String == "" {
@@ -264,25 +289,11 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache)
 		http.Error(rw, "application image empty: "+rr.Host, http.StatusInternalServerError)
 		return nil // 没有镜像地址
 	}
-	// 处理本地缓存目录
-	outpath := filepath.Join(aa.RegConfig.OutPath, av.Version.Vpp, av.Version.Ver)
-	abspath, err := filepath.Abs(outpath)
-	if err != nil {
-		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-		http.Error(rw, "application local path error: "+rr.Host+" ["+outpath+"] "+err.Error(), http.StatusInternalServerError)
-		return nil // 本地缓存地址无效
-	}
-	if av.Version.ReCache.Bool {
-		// 强制重新缓存
-		os.RemoveAll(abspath)
-		av.Version.ReCache = sql.NullBool{Bool: false, Valid: true}
-		aa.VerRepo.UpdateCacInfo(&av.Version)
-	}
 	// 获取前端文件镜像, 在本地部署前端资源文件 //os.WriteFile(filepath.Join(abspath, "aname"), []byte(time.Now().Format(time.RFC3339)), 0644)
 	if _, err := os.Stat(abspath); err != nil && os.IsNotExist(err) {
 		if err := os.MkdirAll(abspath, 0644); err != nil {
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-			http.Error(rw, "application local path error: "+rr.Host+" ["+outpath+"] "+err.Error(), http.StatusInternalServerError)
+			http.Error(rw, "application local path error: "+rr.Host+" ["+abspath+"] "+err.Error(), http.StatusInternalServerError)
 			return nil // 无法创建缓存文件夹
 		}
 		// 优先使用 cdn 缓存
@@ -305,8 +316,7 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache)
 				completed = true
 			}
 		}
-		if !completed && (strings.HasPrefix(av.Version.Image.String, "http://") ||
-			strings.HasPrefix(av.Version.Image.String, "https://")) {
+		if !completed && (strings.HasPrefix(av.Version.Image.String, "http://") || strings.HasPrefix(av.Version.Image.String, "https://")) {
 			// 使用 http 获取镜像文件
 			var rerr error
 			if resp, err := http.Get(av.Version.Image.String); err != nil {
@@ -372,11 +382,12 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache)
 					z.Println("[_front3_]: upload cdn cache success:", tgzobject)
 					_ = pr.Close()
 				}
+				// s3cli.Close()
 			}
 		}
 	} else if err != nil {
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-		http.Error(rw, "application local path error: "+rr.Host+" ["+outpath+"] "+err.Error(), http.StatusInternalServerError)
+		http.Error(rw, "application local path error: "+rr.Host+" ["+abspath+"] "+err.Error(), http.StatusInternalServerError)
 		return nil // 查询本地缓存发生异常
 	} else {
 		z.Println("[_front3_]: local path, exist:", abspath)

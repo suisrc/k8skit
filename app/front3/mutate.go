@@ -186,6 +186,8 @@ func (aa *Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw []
 		ado.ID = 0
 		ado.Created = sql.NullTime{Time: time.Now(), Valid: true}
 		ado.Creater = sql.NullString{String: z.AppName, Valid: true}
+		// ado.Updated = ado.Created
+		// ado.Updater = ado.Creater
 		aa.IngRepo.InsertOne(ado)
 	}
 }

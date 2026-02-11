@@ -36,6 +36,8 @@ type Config struct {
 	CacheTicker  int64  `json:"cacheticker"`  // 缓存清理间隔， 0 表示不启用, 默认为1天
 	CacheTimeout int64  `json:"cachetimeout"` // 缓存存储时间， 0 默认 30 天
 	ImageMaps    z.HM   `json:"imagemaps"`    // 镜像映射
+	SyncToken    string `json:"synctoken"`    // 同步令牌，用于k8s集群多实例间配置同步
+	SyncServe    string `json:"syncserve"`    // 同步服务地址, 一般是 headless service 的地址, 也可以是 http://HOST:PORT 形式
 
 	// 验证方式？简单一点，confa 提供令牌支持， 但是 role 必须是 front3.* 权限
 	WebHookPath string `json:"hookpath"` // 钩子路径, 默认为空，不启动钩子
@@ -91,7 +93,6 @@ func init() {
 			CdnConfig: s3cdn.C.S3cdn,
 			RegConfig: app.C.Imagex,
 			Interval:  C.Front3.CacheTimeout * 60, // 缓存清理间隔， 单位秒
-			AppCache:  make(map[string]*AppCache),
 			// Interval: 30, // 测试用
 		}
 		// 原生钩子
@@ -102,7 +103,7 @@ func init() {
 				zgg.ServeStop("[_front3_], init mutate tls config error, " + err.Error())
 				return nil
 			}
-			hdl := http.HandlerFunc(srv.MutateServe)
+			hdl := http.HandlerFunc(srv.MutateHook)
 			zgg.Servers["(MUTAT)"] = &http.Server{Addr: C.Front3.MutateAddr, Handler: hdl, TLSConfig: tlc}
 
 			if C.Front3.MutatePath != "" {
@@ -114,7 +115,8 @@ func init() {
 		}
 		// 外部钩子， 原生钩子和外部钩子分开， 以便于权限控制和配置分流
 		if C.Front3.WebHookPath != "" {
-			zgg.AddRouter(C.Front3.WebHookPath, srv.WebHook)
+			z.GET(C.Front3.WebHookPath, srv.WebHook, zgg)
+			z.POST(C.Front3.WebHookPath, srv.WebHook, zgg)
 			z.Println("[_front3_]: webhook path =", C.Front3.WebHookPath)
 		}
 		// 本身服务
@@ -143,13 +145,13 @@ type Serve struct {
 	IngRepo *IngressRepo
 	RecRepo *RecordRepo
 	// f3s config
-	CdnConfig s3cdn.Config         // cdn 配置
-	RegConfig registry.Config      // 镜像仓库配置
-	Interval  int64                // 单位秒, 巡检间隔
-	AppCache  map[string]*AppCache // sync.Map vs map[string]*AppCache & _CacheMu
-	_CacheMu  sync.Mutex           // 缓存操作锁
-	_ClrTime  *time.Ticker         // 定时清理缓存
-	_ClrCout  int64
+	CdnConfig s3cdn.Config    // cdn 配置
+	RegConfig registry.Config // 镜像仓库配置
+	Interval  int64           // 单位秒, 巡检间隔
+	CacheApp  sync.Map        // map[string]*AppCache， 由于存在频繁更改情况，使用sync.Map
+	_CacheMU  sync.Mutex      // 缓存操作锁
+	_CacheTT  *time.Ticker    // 定时清理缓存
+	_CacheCC  int64           // 定时清理计数器
 }
 
 // 默认 80 端口
@@ -163,16 +165,25 @@ func (aa *Serve) ServeHTTP(rw http.ResponseWriter, rr *http.Request) {
 
 // 默认 8080 端口， 提供第三方webhook接口，可对系统进行配置和修改， 附加到主服务上，提供外部外部访问
 func (aa *Serve) WebHook(zrc *z.Ctx) {
-	switch zrc.Request.URL.Query().Get("method") {
-	case "update.image.version":
-		aa.updateImageVersion(zrc)
+	qry := zrc.Request.URL.Query()
+	if src := qry.Get("source"); src != "" && zrc.Request.Method == http.MethodPost {
+		// 节点同步, 推送到 AnswerSyncConfig 方法中完成
+		aa.AnswerSyncHook(src, qry.Get("method"), zrc) // 异步相应
+		return
+	}
+	// 人工操作， 通过 switch 分类处理, 先判断权限
+	switch qry.Get("method") {
+	case "update.image":
+		aa.UpdateImageVersion(zrc)
+	case "delete.cache":
+		aa.DeleteLocalCache(zrc)
 	default:
 		zrc.TEXT("not found", http.StatusOK)
 	}
 }
 
 // 默认 443 端口， k8s 原生支持， 通过 MutatingWebhookConfiguration or ValidatingWebhookConfiguration 对 k8s 资源进行修正和监控
-func (aa *Serve) MutateServe(rw http.ResponseWriter, rr *http.Request) {
+func (aa *Serve) MutateHook(rw http.ResponseWriter, rr *http.Request) {
 	switch rr.URL.Path {
 	case "":
 		z.Println("[_mutate_]: serve endpoint, mutate path is empty")
