@@ -127,8 +127,8 @@ func (aa *Serve) DeleteLocalCache(zrc *z.Ctx) {
 		zrc.TEXT("app cache not found", http.StatusOK)
 		return
 	}
-	if api.(*AppCache).Abspath != "" {
-		os.RemoveAll(api.(*AppCache).Abspath)
+	if abspath := api.(*AppCache).Abspath; abspath != "" {
+		os.RemoveAll(abspath)
 	}
 	zrc.TEXT("ok", http.StatusOK)
 }
@@ -165,8 +165,9 @@ func (aa *Serve) AnswerSyncHook(source, method string, zrc *z.Ctx) {
 			zrc.TEXT("ok", http.StatusOK)
 			return
 		}
-		if api.(*AppCache).Abspath != "" {
-			os.RemoveAll(api.(*AppCache).Abspath)
+		if abspath := api.(*AppCache).Abspath; abspath != "" {
+			os.RemoveAll(abspath)
+			z.Println("[_syncfg_]: answer sync config, clear path, ", abspath)
 		}
 	default:
 		z.Println("[_syncfg_]: answer sync config, method not found,", method)

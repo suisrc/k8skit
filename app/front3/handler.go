@@ -172,6 +172,7 @@ func (aa *Serve) WebHook(zrc *z.Ctx) {
 		return
 	}
 	// 人工操作， 通过 switch 分类处理, 先判断权限
+	z.Println("[_webHook]:", zrc.Request.RequestURI)
 	switch qry.Get("method") {
 	case "update.image":
 		aa.UpdateImageVersion(zrc)
