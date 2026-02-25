@@ -36,11 +36,12 @@ func Init3(ifn InitializFunc) {
 type HelloApi struct {
 	FA any      // 标记不注入，默认
 	FB any      `svckit:"-"`         // 标记不注入，默认
-	CM *z.Zgg   `svckit:"type"`      // 根据类型自动注入
-	SK z.SvcKit `svckit:"type"`      // 根据类型自动注入
-	AH any      `svckit:"api-hello"` // 根据名称自动注入
-	AW any      `svckit:"api-world"` // 根据名称自动注入
-	TK z.TplKit `svckit:"auto"`      // 根据名称自动注入
+	CM z.Engine `svckit:"type"`      // 根据【类型】自动注入
+	SK z.SvcKit `svckit:"type"`      // 根据【类型】自动注入
+	AH any      `svckit:"api-hello"` // 根据【名称】自动注入
+	AW any      `svckit:"api-world"` // 根据【名称】自动注入
+	TK z.TplKit `svckit:"auto"`      // 根据【类型】自动注入
+	tt z.TplKit `svckit:"auto"`      // 私有【属性】不能注入
 }
 
 func (aa *HelloApi) hello(zrc *z.Ctx) {

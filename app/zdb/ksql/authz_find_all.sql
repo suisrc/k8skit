@@ -1,0 +1,1 @@
+SELECT * FROM {::entity.AuthzDO} WHERE deleted = false

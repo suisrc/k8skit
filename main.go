@@ -10,9 +10,12 @@ import (
 	"github.com/suisrc/zgg/z/zc"
 	_ "github.com/suisrc/zgg/z/ze/log/syslog"
 	_ "github.com/suisrc/zgg/z/ze/rdx"
-	// _ "github.com/suisrc/zgg/app/zhe"
-	// _ "k8skit/app/zhe"
+
 	// _ "k8skit/cmd"
+
+	_ "k8skit/app/iam"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 //go:embed vname
@@ -37,5 +40,5 @@ func main() {
 	// kwdog2.Init3(nil) // API反向网关， 通过 Sidecar 模式保护内部服务
 	// proxy2.Init3(nil) // API正向网关， 通过 Sidecar 模式记录外部访问
 
-	z.Execute(_app, _ver, "(https://github.com/suisrc/k8skit)")
+	z.Execute(_app, _ver, "(https://github.com/suisrc/iamkit)")
 }
