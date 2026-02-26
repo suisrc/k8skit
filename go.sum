@@ -46,8 +46,8 @@ github.com/patrickmn/go-cache v2.1.0+incompatible/go.mod h1:3Qf8kWWT7OJRJbdiICTK
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
-github.com/suisrc/zgg v0.3.66 h1:exhtU5IckNgomd18bxg59pUcTlav6+3SCV/A7g0Cfp8=
-github.com/suisrc/zgg v0.3.66/go.mod h1:xH+jv/cn5se2tT8v8LtAxsv5Pj6tR9uOtl4q92Lr/6E=
+github.com/suisrc/zgg v0.3.80 h1:d4ek3rdQjZbB0wMLklkRMML05nrcc+NbxGWQdL+L1RQ=
+github.com/suisrc/zgg v0.3.80/go.mod h1:7V3V3sVwC8L2vSls0KYHY2wUS2SPVTaVNe+tW9bw79g=
 github.com/tidwall/assert v0.1.0 h1:aWcKyRBUAdLoVebxo95N7+YZVTFF/ASTr7BN4sLP6XI=
 github.com/tidwall/assert v0.1.0/go.mod h1:QLYtGyeqse53vuELQheYl9dngGCJQ+mTtlxcktb+Kj8=
 github.com/tidwall/btree v1.4.2 h1:PpkaieETJMUxYNADsjgtNRcERX7mGc/GP2zp/r5FM3g=

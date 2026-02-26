@@ -2,7 +2,6 @@ package iam
 
 import (
 	"crypto/md5"
-	"database/sql"
 	"fmt"
 	"k8skit/app"
 	"k8skit/app/zdb"
@@ -42,15 +41,15 @@ func (s *IamServeApi) Authx(zrc *z.Ctx) {
 		user := &app.User{}
 		user.Nonces = z.GenStr("", 16)
 		user.ExpireAt = time.Now().Unix() + 600 // 有效期10分钟
-		s.CAC.SetX(zrc.Ctx, "user_"+cval, user, 600*time.Second)
+		s.Cache.SetX(zrc.Ctx, "sessions."+cval, user, 600*time.Second)
 		// 要求用户完成登录
 		nonces = user.Nonces
-	} else if user, ok, _ := s.CAC.GetX(zrc.Ctx, "user_"+cookie.Value); !ok {
+	} else if user, ok, _ := s.Cache.GetX(zrc.Ctx, "sessions."+cookie.Value); !ok {
 		// 令牌无效，要求用户重新登录
 		user := &app.User{}
 		user.Nonces = z.GenStr("", 16)
 		user.ExpireAt = time.Now().Unix() + 600 // 有效期10分钟
-		s.CAC.SetX(zrc.Ctx, "user_"+cookie.Value, user, 600*time.Second)
+		s.Cache.SetX(zrc.Ctx, "sessions."+cookie.Value, user, 600*time.Second)
 		// 要求用户完成登录
 		nonces = user.Nonces
 		nerror = "Login timeout, please login again"
@@ -59,7 +58,7 @@ func (s *IamServeApi) Authx(zrc *z.Ctx) {
 		user := &app.User{}
 		user.Nonces = z.GenStr("", 16)
 		user.ExpireAt = time.Now().Unix() + 600 // 有效期10分钟
-		s.CAC.SetX(zrc.Ctx, "user_"+cookie.Value, user, 600*time.Second)
+		s.Cache.SetX(zrc.Ctx, "sessions."+cookie.Value, user, 600*time.Second)
 		// 要求用户完成登录
 		nonces = user.Nonces
 		nerror = "Invalid cache, please login again"
@@ -72,7 +71,7 @@ func (s *IamServeApi) Authx(zrc *z.Ctx) {
 		// 令牌已过期，要求用户重新登录, 防止 nonce 被碰撞
 		user.Nonces = z.GenStr("", 16)
 		user.ExpireAt = time.Now().Unix() + 600 // 有效期10分钟
-		s.CAC.SetX(zrc.Ctx, "user_"+cookie.Value, user, 600*time.Second)
+		s.Cache.SetX(zrc.Ctx, "sessions."+cookie.Value, user, 600*time.Second)
 		// 要求用户完成登录
 		nonces = user.Nonces
 		nerror = "Login timeout, please login again"
@@ -169,7 +168,7 @@ func (s *IamServeApi) Authx(zrc *z.Ctx) {
 					user.IsLogin = true
 					// user.Nonces = ""
 					user.ExpireAt = -1
-					s.CAC.SetX(zrc.Ctx, "user_"+cookie.Value, user, 7200*time.Second)
+					s.Cache.SetX(zrc.Ctx, "sessions."+cookie.Value, user, 7200*time.Second)
 					zrc.Writer.Header().Set("WWW-Authenticate", "Clear")
 					zrc.JSON(&z.Result{Success: true, Data: "reload", ErrShow: 8, Status: 401})
 					zrc.Abort()
@@ -190,9 +189,6 @@ func (s *IamServeApi) Authx(zrc *z.Ctx) {
 
 // 获取登录人信息
 func (s *IamServeApi) FindUser(username string) (*zdb.AuthzDO, error) {
-	return &zdb.AuthzDO{
-		Name:   sql.NullString{String: username, Valid: true},
-		AppKey: sql.NullString{String: username, Valid: true},
-		Secret: sql.NullString{String: "123", Valid: true},
-	}, nil
+	return s.Authz.GetBy(zdb.NewDsc(), s.Authz.Cols(), nil, "appkey=? AND permiss LIKE ? ", username, "fmesui.%")
+	// return &zdb.AuthzDO{Name: sqlx.NewString(username), AppKey: sqlx.NewString(username), Secret: sqlx.NewString("123")}, nil
 }

@@ -1,0 +1,1 @@
+SELECT * FROM {::entity.AuthzDO} WHERE 1=1 {:id AND id = :id} ORDER BY id

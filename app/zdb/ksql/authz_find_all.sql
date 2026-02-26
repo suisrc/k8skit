@@ -1,1 +1,1 @@
-SELECT * FROM {::entity.AuthzDO} WHERE deleted = false
+SELECT * FROM {::entity.AuthzDO} WHERE id = 2 ORDER BY id

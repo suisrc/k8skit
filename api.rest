@@ -1,4 +1,4 @@
-@BASE=http://127.0.0.1:80
+@BASE=http://127.0.0.1:81
 
 ### 
 GET {{BASE}}/healthz
@@ -36,4 +36,12 @@ Content-Type: application/json
 
 ### 
 GET {{BASE}}/?action=xxx
+Content-Type: application/json
+
+### 
+GET {{BASE}}/api/iam/v1/a/odic/test_repo?t=1
+Content-Type: application/json
+
+### 
+GET {{BASE}}/api/iam/v1/a/odic/test_repo?t=3
 Content-Type: application/json

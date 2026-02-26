@@ -6,8 +6,8 @@ import (
 	"database/sql"
 	"embed"
 	"flag"
+	"os"
 	"strings"
-	"time"
 
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/ze/sqlx"
@@ -16,14 +16,8 @@ import (
 var (
 	C = struct {
 		Database sqlx.DatabaseConfig
-		Cache    CacheConfig
 	}{}
 )
-
-type CacheConfig struct {
-	DefaultExpired  int `json:"expired" default:"7200"`
-	CleanupInterval int `json:"interval" default:"7200"`
-}
 
 func init() {
 	z.Config(&C)
@@ -31,8 +25,13 @@ func init() {
 	flag.StringVar(&C.Database.Driver, "dsd", "mysql", "数据库驱动")
 	flag.StringVar(&C.Database.DataSource, "dsn", "", "数据库连接")
 
+	// 激活 ksql 模板
+	sqlx.C.Sqlx.KsqlTbl = true
+
 	z.Register("20-database", func(zgg *z.Zgg) z.Closed {
-		// 数据库链接
+		if sqlx.C.Sqlx.KsqlTbl {
+			sqlx.RegKsqlEvalue("entity", sqlx.KsqlTblExt)
+		}
 		dsc, err := sqlx.ConnectDatabase(&C.Database)
 		if err != nil {
 			zgg.ServeStop(err.Error())
@@ -45,13 +44,14 @@ func init() {
 			z.Println("[database]: connect ok,", dsn)
 		}
 		z.RegKey(zgg.SvcKit, false, "dsc", dsc)
-		// 本地缓存
-		cacde := time.Duration(C.Cache.DefaultExpired) * time.Second
-		cacci := time.Duration(C.Cache.CleanupInterval) * time.Second
-		cache := NewCacheMem(cacde, cacci)
-		z.RegKey(zgg.SvcKit, false, "cache", cache)
-		// 数据库链接
 		NewDsc = func() sqlx.Dsc { return &sqlx.Dsx{Ex: dsc} }
+		if sqlx.C.Sqlx.KsqlDebug {
+			ksgr = sqlx.Ksgr(os.DirFS("app/zdb/ksql"), "")
+		}
+		// 注册仓库 ---------------------------------------------------
+		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepo[AuthzRepo](ksgr))
+
+		// 清理函数 ---------------------------------------------------
 		return func() { dsc.Close(); NewDsc = nil }
 	})
 }
@@ -59,27 +59,9 @@ func init() {
 // 生成数据库链接
 var NewDsc func() sqlx.Dsc
 
-// ===================================================================================
-
 //go:embed ksql/*
-var ksql embed.FS
-
-// ksql cache map
-var kmap = map[string]string{}
-
-// ksql function
-func Ksql[T any](name string, argm map[string]any, size bool) ([]T, int64, error) {
-	str, ok := kmap[name]
-	if !ok {
-		if bts, err := ksql.ReadFile("ksql/" + name + ".sql"); err != nil {
-			return nil, 0, err
-		} else {
-			str = string(bts)
-			kmap[name] = str
-		}
-	}
-	return sqlx.Ksql[T](NewDsc(), str, argm, size)
-}
+var ksfs embed.FS
+var ksgr = sqlx.Ksgr(ksfs, "ksql/") // if sqlx.C.Sqlx.KsqlDebug { ksgr = sqlx.Ksgr(os.DirFS("ksql"), "") }
 
 // ===================================================================================
 
