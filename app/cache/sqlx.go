@@ -8,7 +8,7 @@ import (
 	"github.com/suisrc/zgg/z/ze/sqlx"
 )
 
-// NewCacheMongo 创建基于 sqlx 存储实例, 未完成实现
+// NewCacheMongo 创建基于 标准sql 存储实例, 未完成实现
 
 type CacheSqlxData struct {
 	ID        string         `db:"id"`

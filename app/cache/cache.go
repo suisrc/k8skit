@@ -22,7 +22,7 @@ type Cache interface {
 	DelAll(ctx context.Context, keys ...string) error                       // 删除数据
 }
 
-// CacheX 具有类型的缓存， 一般用于本地存储对象
+// CacheX 具有类型的缓存， 一般用于本地存储对象, 如果使用 reids 慎用，需要考虑跨设备序列化问题
 
 type CacheX interface {
 	Cache
