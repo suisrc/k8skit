@@ -17,6 +17,13 @@ var (
 	C = struct {
 		Database sqlx.DatabaseConfig
 	}{}
+
+	// 生成数据库链接
+	NewDsc func() sqlx.Dsc
+
+	//go:embed ksql/*
+	ksfs embed.FS
+	ksgr = sqlx.Ksgr(ksfs, "ksql/") // if sqlx.C.Sqlx.KsqlDebug { ksgr = sqlx.Ksgr(os.DirFS("ksql"), "") }
 )
 
 func init() {
@@ -55,13 +62,6 @@ func init() {
 		return func() { dsc.Close(); NewDsc = nil }
 	})
 }
-
-// 生成数据库链接
-var NewDsc func() sqlx.Dsc
-
-//go:embed ksql/*
-var ksfs embed.FS
-var ksgr = sqlx.Ksgr(ksfs, "ksql/") // if sqlx.C.Sqlx.KsqlDebug { ksgr = sqlx.Ksgr(os.DirFS("ksql"), "") }
 
 // ===================================================================================
 
