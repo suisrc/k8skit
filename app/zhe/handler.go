@@ -28,7 +28,7 @@ func Init3(ifn InitializFunc) {
 	z.Register("zz-world", func(zgg *z.Zgg) z.Closed {
 		api := zgg.SvcKit.Get("HelloApi").(*HelloApi)
 		z.GET("world", api.world, zgg)
-		z.GET("token", z.TokenAuth(z.Ptr(""), api.token), zgg)
+		z.GET("token", z.TokenAuth(z.Ptr("123"), api.token), zgg)
 		return nil
 	})
 }
@@ -39,8 +39,10 @@ type HelloApi struct {
 	CM *z.Zgg   `svckit:"type"`      // 根据类型自动注入
 	SK z.SvcKit `svckit:"type"`      // 根据类型自动注入
 	AH any      `svckit:"api-hello"` // 根据名称自动注入
-	AW any      `svckit:"api-world"` // 根据名称自动注入
-	TK z.TplKit `svckit:"auto"`      // 根据名称自动注入
+	AW any      `svckit:"server"`    // 根据名称自动注入
+
+	TN                                          InitializFunc `svckit:"auto"`
+	TK11111111111111111111111111111111111111111 z.TplKit      `svckit:"auto"` // 根据名称自动注入
 }
 
 func (aa *HelloApi) hello(zrc *z.Ctx) {
