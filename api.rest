@@ -39,6 +39,10 @@ GET {{BASE}}/?action=xxx
 Content-Type: application/json
 
 ### 
+GET {{BASE}}/api/iam/v1/a/odic/test_repo?t=0
+Content-Type: application/json
+
+### 
 GET {{BASE}}/api/iam/v1/a/odic/test_repo?t=1
 Content-Type: application/json
 

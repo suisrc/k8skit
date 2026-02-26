@@ -18,7 +18,7 @@ var (
 		Database sqlx.DatabaseConfig
 	}{}
 
-	// 生成数据库链接
+	// 生成数据库链接, init 中完成初始化
 	NewDsc func() sqlx.Dsc
 
 	//go:embed ksql/*
@@ -32,21 +32,27 @@ func init() {
 	flag.StringVar(&C.Database.Driver, "dsd", "mysql", "数据库驱动")
 	flag.StringVar(&C.Database.DataSource, "dsn", "", "数据库连接")
 
-	// 激活 ksql 模板
+	// 激活 ksql 模板 --> sqlx.RegKsqlEvalue("entity", sqlx.KsqlTblExt)
 	sqlx.C.Sqlx.KsqlTbl = true
 
 	z.Register("20-database", func(zgg *z.Zgg) z.Closed {
 		if sqlx.C.Sqlx.KsqlTbl {
 			sqlx.RegKsqlEvalue("entity", sqlx.KsqlTblExt)
 		}
+		// 创建数据库 -------------------------------------------------
 		dsc, err := sqlx.ConnectDatabase(&C.Database)
 		if err != nil {
 			zgg.ServeStop(err.Error())
 			return nil
 		} else {
+			// 链接成功， 打印链接信息
 			dsn := C.Database.DataSource
 			if idx := strings.Index(dsn, "@"); idx > 0 {
+				usr := dsn[:idx]
 				dsn = dsn[idx+1:]
+				if idz := strings.Index(usr, ":"); idz > 0 {
+					dsn = usr[:idz] + ":******@" + dsn
+				}
 			}
 			z.Println("[database]: connect ok,", dsn)
 		}
@@ -55,8 +61,14 @@ func init() {
 		if sqlx.C.Sqlx.KsqlDebug {
 			ksgr = sqlx.Ksgr(os.DirFS("app/zdb/ksql"), "")
 		}
-		// 注册仓库 ---------------------------------------------------
+		// 注册数据仓 -------------------------------------------------
 		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepo[AuthzRepo](ksgr))
+		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepo[ConfxRepo](ksgr))
+		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepo[FrontaRepo](ksgr))
+		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepo[FrontvRepo](ksgr))
+		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepo[IngressRepo](ksgr))
+		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepo[ServiceRepo](ksgr))
+		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepo[ZrecordRepo](ksgr))
 
 		// 清理函数 ---------------------------------------------------
 		return func() { dsc.Close(); NewDsc = nil }
@@ -66,7 +78,7 @@ func init() {
 // ===================================================================================
 
 // 基础数据对象
-type BaseDO struct {
+type VBD struct {
 	Disable sql.NullBool   `db:"disable"`
 	Deleted sql.NullBool   `db:"deleted"`
 	Updated sql.NullTime   `db:"updated"`

@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	z.Register("30-iamapi", func(zgg *z.Zgg) z.Closed {
+	z.Register("30-iam", func(zgg *z.Zgg) z.Closed {
 		z.C.Server.ReqXrtd = "2" // 强制使用[ali]模式，保持前端兼容
 		api := z.Inject(zgg.SvcKit, &IamServeApi{})
 		zgg.AddRouter("a/odic/login", z.MergeFunc(api.Authx, api.AodicLogin))
@@ -22,9 +22,16 @@ func init() {
 }
 
 type IamServeApi struct {
-	Dscdb *sqlx.DB       `svckit:"auto"` // type, auto
-	Cache cache.CacheX   `svckit:"auto"`
-	Authz *zdb.AuthzRepo `svckit:"auto"`
+	Dscdb *sqlx.DB     `svckit:"auto"` // type, auto
+	Cache cache.CacheX `svckit:"auto"`
+
+	Authz   *zdb.AuthzRepo   `svckit:"auto"`
+	Confx   *zdb.ConfxRepo   `svckit:"auto"`
+	Fronta  *zdb.FrontaRepo  `svckit:"auto"`
+	Frontv  *zdb.FrontvRepo  `svckit:"auto"`
+	Ingress *zdb.IngressRepo `svckit:"auto"`
+	Service *zdb.ServiceRepo `svckit:"auto"`
+	Zrecord *zdb.ZrecordRepo `svckit:"auto"`
 }
 
 // 返回校验结果
@@ -45,25 +52,4 @@ func (s *IamServeApi) AodicLogout(zrc *z.Ctx) {
 // 返回用户信息
 func (s *IamServeApi) AodicUserInfo(zrc *z.Ctx) {
 	zrc.JSON(&z.Result{Success: true, Data: "ok"})
-}
-
-// 测试数据库链接
-func (s *IamServeApi) TestRepo(zrc *z.Ctx) {
-	var rst []zdb.AuthzDO
-	var err error
-	switch zrc.Request.URL.Query().Get("t") {
-	case "2":
-		rst, err = s.Authz.Test2()
-	case "3":
-		rst, err = s.Authz.Test3()
-	default:
-		rst, err = s.Authz.Test1()
-	}
-	z.Println("[testrepo]:", z.ToStr(rst), err)
-	if err != nil {
-		z.Println("[tstcache]:", z.ToStr(sqlx.KsqlStmCache))
-		zrc.JERR(err, 0)
-	} else {
-		zrc.JSON(&z.Result{Success: true, Data: rst})
-	}
 }

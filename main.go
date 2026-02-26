@@ -37,5 +37,5 @@ func main() {
 	// kwdog2.Init3(nil) // API反向网关， 通过 Sidecar 模式保护内部服务
 	// proxy2.Init3(nil) // API正向网关， 通过 Sidecar 模式记录外部访问
 
-	z.Execute(_app, _ver, "(https://github.com/suisrc/iamkit)")
+	z.Execute(_app, _ver, "(https://github.com/suisrc/fmesui)")
 }
