@@ -46,5 +46,6 @@ __*
 ali_sls.h
 ali_sls.so
 
+web/
 www/
 _out/
