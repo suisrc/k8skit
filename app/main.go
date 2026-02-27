@@ -19,7 +19,7 @@ import (
 )
 
 func main() {
-	zc.CFG_ENV, zc.LogTrackFile = "KIT", false
+	zc.CFG_ENV, zc.C.LogTff = "KIT", false
 	// zc.C.Syslog, zc.C.LogTty = "udp://klog.default.svc:5141", true
 
 	if _app := os.Getenv(zc.CFG_ENV + "_VNAME"); _app != "" {

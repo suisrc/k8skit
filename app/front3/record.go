@@ -99,7 +99,7 @@ func (aa *Serve) recordSave(old, raw map[string]any) { // 记录网关数据
 		} else if name, ok := mateold["name"].(string); !ok {
 			z.Println("[_record_]:", "get old metadata.name is not found.")
 			return
-		} else if ads, err := aa.RecRepo.LstByKindAndApiVersionAndNamespaceAndNameAndDeleted( //
+		} else if ads, err := aa.RecRepo.LstRecordBy( //
 			kind, apiv, namespace, name, false); err != nil && err != sql.ErrNoRows {
 			z.Println("[_record_]:", "get object form database error,", err.Error())
 			return // 数据库异常

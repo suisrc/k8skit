@@ -3,7 +3,7 @@ package front3
 import (
 	"crypto/tls"
 	"flag"
-	"k8skit/app"
+	"k8skit/app/image"
 	"k8skit/app/registry"
 	"k8skit/app/s3cdn"
 	"net/http"
@@ -69,29 +69,23 @@ func init() {
 			z.Println("[_front3_]: front3 is disable", zc.CFG_ENV+"_FRONT3_ENABLE=false")
 			return nil
 		}
-		dsc, err := sqlx.ConnectDatabase(&C.Front3.DB)
+		dsc, err := sqlx.ConnectDB(&C.Front3.DB, z.Println)
 		if err != nil {
 			zgg.ServeStop(err.Error())
 			return nil
-		} else {
-			dsn := C.Front3.DB.DataSource
-			if idx := strings.Index(dsn, "@"); idx > 0 {
-				dsn = dsn[idx+1:]
-			}
-			z.Println("[_front3_]: connect ok,", dsn)
 		}
 		// 提供 F3 索引服务
-		tpx := C.Front3.DB.TablePrefix
+		dsx := sqlx.NewDsc(dsc)
 		srv := &Serve{
 			// repo config
-			AppRepo: &AppInfoRepo{Database: dsc, TablePrefix: tpx},
-			VerRepo: &VersionRepo{Database: dsc, TablePrefix: tpx},
-			AuzRepo: &AuthzRepo{Database: dsc, TablePrefix: tpx},
-			IngRepo: &IngressRepo{Database: dsc, TablePrefix: tpx},
-			RecRepo: &RecordRepo{Database: dsc, TablePrefix: tpx},
+			AppRepo: sqlx.NewRepox[FrontaRepo](dsx, nil),
+			VerRepo: sqlx.NewRepox[FrontvRepo](dsx, nil),
+			AuzRepo: sqlx.NewRepox[AuthzRepo](dsx, nil),
+			IngRepo: sqlx.NewRepox[IngressRepo](dsx, nil),
+			RecRepo: sqlx.NewRepox[RecordRepo](dsx, nil),
 			// f3s config
 			CdnConfig: s3cdn.C.S3cdn,
-			RegConfig: app.C.Imagex,
+			RegConfig: image.C.Imagex,
 			Interval:  C.Front3.CacheTimeout * 60, // 缓存清理间隔， 单位秒
 			// Interval: 30, // 测试用
 		}
@@ -129,7 +123,7 @@ func init() {
 				srv.CleanerStart(time.Duration(C.Front3.CacheTicker) * time.Minute)
 			}
 		}
-		return srv.Stop
+		return func() { srv.Stop(); dsc.Close() }
 	})
 
 }
@@ -139,8 +133,8 @@ func init() {
 // front3 服务， 提供前端缓存， k8s 原始 ingress 配置， k8s 原生 配置记录
 type Serve struct {
 	// repo config
-	AppRepo *AppInfoRepo
-	VerRepo *VersionRepo
+	AppRepo *FrontaRepo
+	VerRepo *FrontvRepo
 	AuzRepo *AuthzRepo
 	IngRepo *IngressRepo
 	RecRepo *RecordRepo

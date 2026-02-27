@@ -27,8 +27,8 @@ import (
 
 type AppCache struct {
 	Key     string
-	AppInfo AppInfoDO    // 应用, 不存在共享情况
-	Version VersionDO    // 版本, 存在共享的情况
+	AppInfo FrontaDO     // 应用, 不存在共享情况
+	Version FrontvDO     // 版本, 存在共享的情况
 	Handler http.Handler // *front2.IndexApi
 	LastMod int64        // 最后访问时间
 	IsLocal bool         // 是本地化
@@ -88,9 +88,6 @@ func (aa *Serve) CleanerClose() {
 }
 
 func (aa *Serve) Stop() {
-	if aa.AppRepo.Database != nil {
-		aa.AppRepo.Database.Close()
-	}
 	aa.CleanerClose()
 }
 
@@ -112,11 +109,11 @@ func (aa *Serve) ServeS3(rw http.ResponseWriter, rr *http.Request) {
 		return
 	}
 	if len(apps) > 1 { // Priority 降序排序
-		slices.SortFunc(apps, func(l, r AppInfoDO) int { return strings.Compare(r.Priority.String, l.Priority.String) })
+		slices.SortFunc(apps, func(l, r FrontaDO) int { return strings.Compare(r.Priority.String, l.Priority.String) })
 	}
 	// 通过 rootdir 确定 path
 	path := rr.URL.Path
-	var app *AppInfoDO
+	var app *FrontaDO
 	for _, vvv := range apps {
 		rootdir := vvv.RootDir.String
 		if rootdir == "" || rootdir == "/" {
