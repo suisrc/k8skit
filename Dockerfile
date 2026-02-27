@@ -13,15 +13,15 @@ FROM build_deps AS build
 
 COPY . .
 
-RUN CGO_ENABLED=0 go build -o k8skit -ldflags '-w -extldflags "-static"' .
+RUN CGO_ENABLED=0 go build -o k8skit -ldflags '-w -extldflags "-static"' ./app
 
 FROM alpine:3.23
 
 RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /opt
-COPY --from=build /opt/k8skit  /opt/k8skit
-COPY --from=build /opt/version /opt/version
-COPY --from=build /opt/vname   /opt/vname
+COPY --from=build /opt/k8skit      /opt/k8skit
+COPY --from=build /opt/app/version /opt/version
+COPY --from=build /opt/app/vname   /opt/vname
 
 ENTRYPOINT ["./k8skit"]

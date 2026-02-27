@@ -14,7 +14,7 @@ tidy:
 	go mod tidy
 
 build:
-	CGO_ENABLED=0 go build -ldflags "-w -s" -o ./_out/$(APP) ./
+	CGO_ENABLED=0 go build -ldflags "-w -s" -o ./_out/$(APP) ./app
 
 # go env -w GOPROXY=https://proxy.golang.com.cn,direct
 proxy:
@@ -26,28 +26,28 @@ helm:
 	helm -n default template deploy/chart > deploy/bundle.yml
 
 main:
-	KIT_KWLOG2_TOKEN=xxxx123456789 go run main.go -local -debug -port 81 -c __zgg.toml
+	KIT_KWLOG2_TOKEN=xxxx123456789 go run app/main.go -local -debug -port 81 -c doc/__zgg.toml
 
 deploy:
-	go run main.go  deploy -print -c __zgg.toml -s3rewrite
+	go run app/main.go  deploy -print -c doc/__zgg.toml -s3rewrite
 
 imagex:
-	go run main.go imagex -c __zgg.toml
+	go run app/main.go imagex -c doc/__zgg.toml
 
 tenv:
-	KIT_KWLOG2_TOKEN=xxxx123456789 go run main.go -debug -print -port 81
+	KIT_KWLOG2_TOKEN=xxxx123456789 go run app/main.go -debug -print -port 81
 
 tgzc:
-	go run main.go tgzc _out/image/www/sso/v1.0.152 _out/image/www/sso/v1.0.152.tgz
+	go run app/main.go tgzc _out/image/www/sso/v1.0.152 _out/image/www/sso/v1.0.152.tgz
 
 tgzx:
-	go run main.go tgzx _out/image/www/sso/v1.0.152.tgz _out/image/www/sso/v1.0.152-copy
+	go run app/main.go tgzx _out/image/www/sso/v1.0.152.tgz _out/image/www/sso/v1.0.152-copy
 
 test:
 	_out/$(APP) -local -debug -port 81
 
 bflow:
-	go mod init ${APP} && go mod tidy && CGO_ENABLED=0 go build -ldflags "-w -s" -o ./_out/$(APP) ./
+	go mod init ${APP} && go mod tidy && CGO_ENABLED=0 go build -ldflags "-w -s" -o ./_out/$(APP) ./app
 
 clean:
 	rm -rf _out/$(APP) && rm go.mod go.sum

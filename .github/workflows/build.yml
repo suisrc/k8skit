@@ -23,18 +23,17 @@ jobs:
       - name: Build image
         run: |
           TAG_NAME=${GITHUB_REF#refs/tags/}
-          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
-          echo ${TAG_NAME##*-} > vname
-          echo ${TAG_NAME%%-*} > version
-          echo "k8skit, appname: `cat vname`, version: `cat version`"
-          sed -i "s|k8skit|`cat vname`|g" Dockerfile
+          echo ${TAG_NAME##*-} > app/vname
+          echo ${TAG_NAME%%-*} > app/version
+          echo "IMAGE_VERSION=$TAG_NAME" >> $GITHUB_ENV
+          echo "k8skit, appname: `cat app/vname`, version: `cat app/version`"
+          sed -i "s|k8skit|`cat app/vname`|g" Dockerfile
           docker build -t image --no-cache .
 
       #-${{ github.job }}
       - name: Push github image
         run: |
           REGISTRY_URL=$GITHUB_REGISTRY
-          IMAGE_VERSION=$TAG_NAME
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login $REGISTRY_URL -u ${{ github.actor }} --password-stdin
 
           IMAGE_ID=$REGISTRY_URL/$IMAGE_NAME
@@ -48,7 +47,6 @@ jobs:
       - name: Push docker image
         run: |
           REGISTRY_URL=$DOCKER_REGISTRY
-          IMAGE_VERSION=$TAG_NAME
           echo "${{ secrets.DOCKER_TOKEN }}" | docker login $REGISTRY_URL -u ${{ secrets.DOCKER_USER }} --password-stdin
 
           IMAGE_ID=$REGISTRY_URL/$IMAGE_NAME
