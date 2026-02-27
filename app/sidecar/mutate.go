@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"k8skit/app/k8sc"
 	"net/http"
-	"strings"
 
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/ze/sqlx"
@@ -49,27 +48,16 @@ func init() {
 	flag.StringVar(&C.Sidecar.DB.TablePrefix, "sidecarTablePrefix", "", "sqlx table prefix")
 
 	z.Register("99-app.sidecar", func(zgg *z.Zgg) z.Closed {
-		dsc, err := sqlx.ConnectDatabase(&C.Sidecar.DB)
+		dsc, err := sqlx.ConnectDB(&C.Sidecar.DB, z.Println)
 		if err != nil {
 			zgg.ServeStop(err.Error())
 			return nil
-		} else {
-			// 链接成功， 打印链接信息
-			dsn := C.Sidecar.DB.DataSource
-			if idx := strings.Index(dsn, "@"); idx > 0 {
-				usr := dsn[:idx]
-				dsn = dsn[idx+1:]
-				if idz := strings.Index(usr, ":"); idz > 0 {
-					dsn = usr[:idz] + ":******@" + dsn
-				}
-			}
-			z.Println("[database]: connect ok,", dsn)
 		}
 		// 注册服务
 		api := z.RegSvc(zgg.SvcKit, &MutateApi{Patcher: &Patcher{
 			Config:    C.Sidecar.Config,
 			K8sClient: zgg.SvcKit.Get("k8sclient").(kubernetes.Interface),
-			ConfRepo:  NewConfRepo(dsc),
+			ConfRepo:  sqlx.NewRepox[ConfRepo](sqlx.NewDsc(dsc), nil),
 		}})
 		// router
 		zgg.AddRouter(http.MethodPost+" mutate", api.mutate)

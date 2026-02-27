@@ -33,15 +33,8 @@ func (aa ConfDO) TableName() string {
 	return C.Sidecar.DB.TablePrefix + "confx"
 }
 
-func NewConfRepo(db *sqlx.DB) *ConfRepo {
-	repo := sqlx.NewRepo[ConfRepo](nil)
-	repo.Dsc = sqlx.NewDsc(db)
-	return repo
-}
-
 type ConfRepo struct {
 	sqlx.Repo[ConfDO]
-	Dsc sqlx.Dsc
 }
 
 // 获取一个配置
