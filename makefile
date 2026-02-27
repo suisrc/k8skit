@@ -14,7 +14,7 @@ tidy:
 	go mod tidy
 
 build:
-	CGO_ENABLED=0 go build -ldflags "-w -s" -o ./_out/$(APP) ./
+	CGO_ENABLED=0 go build -ldflags "-w -s" -o ./_out/$(APP) ./app
 
 # go env -w GOPROXY=https://proxy.golang.com.cn,direct
 proxy:
@@ -26,26 +26,26 @@ helm:
 	helm -n default template deploy/chart > deploy/bundle.yml
 
 main:
-	go run main.go -debug -local -port 81 -dual \
+	go run app/main.go -debug -local -port 81 -dual \
 	--sidecarDatasource "cfg:i3SbJ6snkQeZXt@tcp(mysql.base.svc:3306)/cfg?charset=utf8&parseTime=True&loc=Asia%2FShanghai" \
 	--sidecarServerHost http://vscode.default.svc:81
 
 
 mcfg:
-	go run main.go -debug -local -port 81 -dual -c __zgg.toml
-# 	go run main.go -c zgg.toml
+	go run app/main.go -debug -local -port 81 -dual -c doc/__zgg.toml
+# 	go run app/main.go -c zgg.toml
 # 	--secretName fkc-ksidecar-data \
 # 	--injectAnnotation ksidecar/configmap \
 # 	--injectDefaultKey value.yml
 
 tenv:
-	KIT_KWLOG2_TOKEN=xxxx123456789 go run main.go -debug -print -port 81
+	KIT_KWLOG2_TOKEN=xxxx123456789 go run app/main.go -debug -print -port 81
 
 test:
 	_out/$(APP) -local -debug -port 81
 
 bflow:
-	go mod init ${APP} && go mod tidy && CGO_ENABLED=0 go build -ldflags "-w -s" -o ./_out/$(APP) ./
+	go mod init ${APP} && go mod tidy && CGO_ENABLED=0 go build -ldflags "-w -s" -o ./_out/$(APP) ./app
 
 clean:
 	rm -rf _out/$(APP) && rm go.mod go.sum

@@ -3,7 +3,7 @@ package fakessl
 import (
 	"encoding/json"
 	"fmt"
-	"k8skit/app"
+	"k8skit/app/k8sc"
 	"strings"
 
 	"github.com/suisrc/zgg/z"
@@ -49,7 +49,7 @@ func (aa *FakeSslApi) caInit(zrc *z.Ctx) {
 			return
 		}
 		// 使用应用令牌， 进行验证，成功后，新建一个 INFO
-		if co.Token != app.Token {
+		if co.Token != k8sc.Token {
 			message := fmt.Sprintf("init api, secret [%s] token error: no equal!", ikey)
 			z.Println(message)
 			zrc.JERR(&z.Result{ErrCode: "app-info-token", Message: message}, 500)

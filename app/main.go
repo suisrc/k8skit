@@ -2,10 +2,9 @@ package main
 
 import (
 	_ "embed"
-	_ "k8skit/app"
 	_ "k8skit/app/fakessl"
 	_ "k8skit/app/sidecar"
-	_ "k8skit/app/tls"
+	_ "k8skit/app/tlsc"
 	_ "k8skit/cmd"
 	"strings"
 
@@ -32,6 +31,6 @@ var ver_ []byte
 func main() {
 	_app := strings.TrimSpace(string(app_))
 	_ver := strings.TrimSpace(string(ver_))
-	zc.CFG_ENV, zc.LogTrackFile = "KIT", false
+	zc.CFG_ENV, zc.C.LogTff = "KIT", false
 	z.Execute(_app, _ver, "(https://github.com/suisrc/k8skit)")
 }

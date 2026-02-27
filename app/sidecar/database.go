@@ -5,7 +5,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"fmt"
-	"k8skit/app"
+	"k8skit/app/k8sc"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -93,7 +93,7 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 	// pathces
 	patches := []PatchOperation{}
 	// env 环境变量是必须检索
-	if datas := patcher.ConfxRepository.GetConfigs(envName, appName, version, "env"); len(datas) != 0 {
+	if datas := patcher.ConfRepo.GetConfigs(envName, appName, version, "env"); len(datas) != 0 {
 		for index, data := range datas {
 			first := index == 0 && len(item.Env) == 0
 			env := corev1.EnvVar{Name: data.Code.String, Value: data.Data.String}
@@ -104,7 +104,7 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 	// 配置文件是可选配置
 	if kind != "" && kind != "env" {
 		// configuration file
-		if datas := patcher.ConfxRepository.GetConfigs(envName, appName, version, kind); len(datas) > 0 {
+		if datas := patcher.ConfRepo.GetConfigs(envName, appName, version, kind); len(datas) > 0 {
 			bpath, _ := annotations[patcher.Config.ByDBFolder]
 			if bpath == "" {
 				bpath = "/" // 默认配置文件夹
@@ -125,7 +125,7 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 			}
 			{
 				// 计算签名
-				hstr := app.Token + rpath
+				hstr := k8sc.Token + rpath
 				hash := sha1.New()
 				hash.Write([]byte(hstr))
 				sign := fmt.Sprintf("%x", hash.Sum(nil))
@@ -170,7 +170,7 @@ func (api *MutateApi) archive(zrc *z.Ctx) {
 			return
 		}
 		// 计算签名
-		hstr := app.Token + rpath
+		hstr := k8sc.Token + rpath
 		hash := sha1.New()
 		hash.Write([]byte(hstr))
 		sig1 := fmt.Sprintf("%x", hash.Sum(nil))
@@ -180,7 +180,7 @@ func (api *MutateApi) archive(zrc *z.Ctx) {
 		}
 	}
 	// 配置列表
-	datas := []ConfxDO{}
+	datas := []ConfDO{}
 	if ids, ok := zrc.Request.URL.Query()["id"]; !ok {
 		zrc.TEXT("# forbidden, id is empty", http.StatusUnauthorized)
 		return
@@ -191,7 +191,7 @@ func (api *MutateApi) archive(zrc *z.Ctx) {
 				zrc.TEXT("# forbidden, id is invalid", http.StatusUnauthorized)
 				return
 			}
-			data := api.Patcher.ConfxRepository.GetConfig1(id)
+			data := api.Patcher.ConfRepo.GetConfig1(id)
 			if data == nil {
 				zrc.TEXT("# forbidden, id is not found: "+id_, http.StatusUnauthorized)
 				return

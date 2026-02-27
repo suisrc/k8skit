@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"k8skit/app"
+	"k8skit/app/k8sc"
 	"net/http"
+	"strings"
 
 	"github.com/suisrc/zgg/z"
+	"github.com/suisrc/zgg/z/ze/sqlx"
 	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
@@ -17,7 +19,7 @@ var (
 	C = struct {
 		Sidecar struct {
 			Config
-			DB app.DatabaseConfig `json:"database"`
+			DB sqlx.DatabaseConfig `json:"database"`
 		}
 	}{}
 )
@@ -42,20 +44,32 @@ func init() {
 	flag.StringVar(&C.Sidecar.ServerHost, "sidecarServerHost", "http://ksidecar.default.svc", "injector server host")
 	flag.StringVar(&C.Sidecar.InitcImage, "sidecarInitcImage", "suisrc/k8skit:1.3.15-wgetar", "init container archive image")
 
-	flag.StringVar(&C.Sidecar.DB.DN, "sidecarDriver", "mysql", "sqlx driver name")
-	flag.StringVar(&C.Sidecar.DB.DS, "sidecarDatasource", "", "sqlx data source name")
+	flag.StringVar(&C.Sidecar.DB.Driver, "sidecarDriver", "mysql", "sqlx driver name")
+	flag.StringVar(&C.Sidecar.DB.DataSource, "sidecarDatasource", "", "sqlx data source name")
 	flag.StringVar(&C.Sidecar.DB.TablePrefix, "sidecarTablePrefix", "", "sqlx table prefix")
 
 	z.Register("99-app.sidecar", func(zgg *z.Zgg) z.Closed {
-		dsc, err := app.ConnectDatabase(&C.Sidecar.DB)
+		dsc, err := sqlx.ConnectDatabase(&C.Sidecar.DB)
 		if err != nil {
-			z.Println("[_sidecar]:", err.Error())
+			zgg.ServeStop(err.Error())
+			return nil
+		} else {
+			// 链接成功， 打印链接信息
+			dsn := C.Sidecar.DB.DataSource
+			if idx := strings.Index(dsn, "@"); idx > 0 {
+				usr := dsn[:idx]
+				dsn = dsn[idx+1:]
+				if idz := strings.Index(usr, ":"); idz > 0 {
+					dsn = usr[:idz] + ":******@" + dsn
+				}
+			}
+			z.Println("[database]: connect ok,", dsn)
 		}
 		// 注册服务
 		api := z.RegSvc(zgg.SvcKit, &MutateApi{Patcher: &Patcher{
-			Config:          C.Sidecar.Config,
-			K8sClient:       zgg.SvcKit.Get("k8sclient").(kubernetes.Interface),
-			ConfxRepository: &ConfxRepo{Database: dsc, TablePrefix: C.Sidecar.DB.TablePrefix},
+			Config:    C.Sidecar.Config,
+			K8sClient: zgg.SvcKit.Get("k8sclient").(kubernetes.Interface),
+			ConfRepo:  NewConfRepo(dsc),
 		}})
 		// router
 		zgg.AddRouter(http.MethodPost+" mutate", api.mutate)
@@ -70,9 +84,10 @@ func init() {
 
 // Patcher Sidecar Injector patcher
 type Patcher struct {
-	Config                   Config
-	K8sClient                kubernetes.Interface
-	ConfxRepository          *ConfxRepo
+	Config    Config
+	K8sClient kubernetes.Interface
+	ConfRepo  *ConfRepo
+
 	AllowAnnotationOverrides bool
 	AllowLabelOverrides      bool
 }
@@ -84,7 +99,7 @@ type MutateApi struct {
 }
 
 func (aa *MutateApi) mutate(zrc *z.Ctx) {
-	if err := app.PostJson(zrc.Request); err != nil {
+	if err := k8sc.PostJson(zrc.Request); err != nil {
 		klog.Error(err.Error())
 		writeErrorAdmissionReview(http.StatusBadRequest, err.Error(), zrc.Writer)
 		return

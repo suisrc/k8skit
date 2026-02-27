@@ -1,4 +1,4 @@
-package tls
+package tlsc
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"k8skit/app"
+	"k8skit/app/k8sc"
 	"strings"
 
 	"github.com/suisrc/zgg/z"
@@ -88,7 +88,7 @@ func InitRegister(zgg *z.Zgg) z.Closed {
 		zgg.ServeStop(message) // 初始化失败，直接退出
 		return nil
 	} else {
-		app.Token = string(token) // 设置令牌
+		k8sc.Token = string(token) // 设置令牌
 	}
 
 	config := tlsx.TLSAutoConfig{}
