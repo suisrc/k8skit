@@ -25,7 +25,7 @@ var ver_ []byte
 func main() {
 	_app := strings.TrimSpace(string(app_))
 	_ver := strings.TrimSpace(string(ver_))
-	zc.CFG_ENV, zc.LogTrackFile = "KIT", false
+	zc.CFG_ENV, zc.C.LogTff = "KIT", false
 	// zc.C.Syslog, zc.C.LogTty = "udp://klog.default.svc:5141", true
 	// z.HttpServeDef = false // 标记是否启动默认 HTTP 服务， z.RegisterDefaultHttpServe
 
