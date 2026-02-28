@@ -1,9 +1,9 @@
 package iam
 
 import (
-	"k8skit/app"
 	"k8skit/app/cache"
 	"k8skit/app/zdb"
+	"k8skit/usr"
 
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/ze/sqlx"
@@ -41,8 +41,8 @@ func (s *IamServeApi) AodicLogin(zrc *z.Ctx) {
 
 // 返回校验结果
 func (s *IamServeApi) AodicLogout(zrc *z.Ctx) {
-	user := zrc.Caches["user"].(*app.User)
-	user.UserInfo = app.UserInfo{} // 清空之前的信息
+	user := zrc.Caches["user"].(*usr.User)
+	user.UserInfo = usr.UserInfo{} // 清空之前的信息
 	user.IsLogin = false
 
 	referer := zrc.Request.Referer() // z.HA{"delay": 1000, "location": referer}

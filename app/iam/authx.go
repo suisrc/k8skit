@@ -3,7 +3,6 @@ package iam
 import (
 	"crypto/md5"
 	"fmt"
-	"k8skit/app"
 	"k8skit/app/zdb"
 	"net/http"
 	"strings"
@@ -38,7 +37,7 @@ func (s *IamServeApi) Authx(zrc *z.Ctx) {
 			SameSite: http.SameSiteStrictMode, // 防止 CSRF 攻击
 			// MaxAge: -1: 会话 Cookie，浏览器关闭时自动删除, 0: 立即过期
 		})
-		user := &app.User{}
+		user := &usr.User{}
 		user.Nonces = z.GenStr("", 16)
 		user.ExpireAt = time.Now().Unix() + 600 // 有效期10分钟
 		s.Cache.SetX(zrc.Ctx, "sessions."+cval, user, 600*time.Second)
