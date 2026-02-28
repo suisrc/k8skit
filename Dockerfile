@@ -13,7 +13,7 @@ FROM build_deps AS build
 
 COPY . .
 
-RUN CGO_ENABLED=0 go build -o k8skit -ldflags '-w -extldflags "-static"' .
+RUN CGO_ENABLED=0 go build -o k8skit -ldflags '-w -extldflags "-static"' ./app
 
 FROM alpine:3.23
 

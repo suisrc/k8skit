@@ -20,11 +20,8 @@ node_modules
 dist
 _out
 *.log
+web
 www
-www2
 tmpl
 __zgg.toml
 __debug_*
-
-
-web
