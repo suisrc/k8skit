@@ -1,4 +1,4 @@
-package app
+package usr
 
 type UserInfo struct {
 	Name     string `json:"name"` // 不为空为已经登录

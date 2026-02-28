@@ -2,8 +2,8 @@ package iam
 
 import (
 	"k8skit/app/cache"
+	"k8skit/app/usr"
 	"k8skit/app/zdb"
-	"k8skit/usr"
 
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/ze/sqlx"

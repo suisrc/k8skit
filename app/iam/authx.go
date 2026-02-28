@@ -3,6 +3,7 @@ package iam
 import (
 	"crypto/md5"
 	"fmt"
+	"k8skit/app/usr"
 	"k8skit/app/zdb"
 	"net/http"
 	"strings"
@@ -45,16 +46,16 @@ func (s *IamServeApi) Authx(zrc *z.Ctx) {
 		nonces = user.Nonces
 	} else if user, ok, _ := s.Cache.GetX(zrc.Ctx, "sessions."+cookie.Value); !ok {
 		// 令牌无效，要求用户重新登录
-		user := &app.User{}
+		user := &usr.User{}
 		user.Nonces = z.GenStr("", 16)
 		user.ExpireAt = time.Now().Unix() + 600 // 有效期10分钟
 		s.Cache.SetX(zrc.Ctx, "sessions."+cookie.Value, user, 600*time.Second)
 		// 要求用户完成登录
 		nonces = user.Nonces
 		nerror = "Login timeout, please login again"
-	} else if user, ok := user.(*app.User); !ok {
+	} else if user, ok := user.(*usr.User); !ok {
 		// 系统内部异常， 用户状态不对，重建用户信息
-		user := &app.User{}
+		user := &usr.User{}
 		user.Nonces = z.GenStr("", 16)
 		user.ExpireAt = time.Now().Unix() + 600 // 有效期10分钟
 		s.Cache.SetX(zrc.Ctx, "sessions."+cookie.Value, user, 600*time.Second)

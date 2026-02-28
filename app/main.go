@@ -4,9 +4,6 @@ import (
 	_ "embed"
 	"strings"
 
-	_ "k8skit/app/zhe"
-	_ "k8skit/cmd"
-
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/zc"
 	_ "github.com/suisrc/zgg/z/ze/log/syslog"
@@ -14,8 +11,10 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	// _ "k8skit/cmd"
+	// _ "k8skit/app/zhe"
 
 	_ "k8skit/app/iam"
+	_ "k8skit/cmd"
 )
 
 //go:embed vname
