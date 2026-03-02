@@ -13,10 +13,10 @@ func init() {
 	z.Register("30-iam", func(zgg *z.Zgg) z.Closed {
 		z.C.Server.ReqXrtd = "2" // 强制使用[ali]模式，保持前端兼容
 		api := z.Inject(zgg.SvcKit, &IamServeApi{})
-		zgg.AddRouter("a/odic/login", z.MergeFunc(api.Authx, api.AodicLogin))
-		zgg.AddRouter("a/odic/logout", z.MergeFunc(api.Authx, api.AodicLogout))
-		zgg.AddRouter("a/odic/user_info", z.MergeFunc(api.Authx, api.AodicLogin))
-		zgg.AddRouter("a/odic/test_repo", api.TestRepo)
+		zgg.AddRouter("iam/v1/a/odic/login", z.MergeFunc(api.Authx, api.AodicLogin))
+		zgg.AddRouter("iam/v1/a/odic/logout", z.MergeFunc(api.Authx, api.AodicLogout))
+		zgg.AddRouter("iam/v1/a/odic/user_info", z.MergeFunc(api.Authx, api.AodicLogin))
+		zgg.AddRouter("iam/v1/a/odic/test_repo", api.TestRepo)
 		return nil
 	})
 }
@@ -31,7 +31,7 @@ type IamServeApi struct {
 	Frontv  *zdb.FrontvRepo  `svckit:"auto"`
 	Ingress *zdb.IngressRepo `svckit:"auto"`
 	Service *zdb.ServiceRepo `svckit:"auto"`
-	Zrecord *zdb.ZrecordRepo `svckit:"auto"`
+	Record  *zdb.RecordRepo  `svckit:"auto"`
 }
 
 // 返回校验结果

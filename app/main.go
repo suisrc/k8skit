@@ -9,12 +9,10 @@ import (
 	_ "github.com/suisrc/zgg/z/ze/log/syslog"
 	_ "github.com/suisrc/zgg/z/ze/rdx"
 
-	_ "github.com/go-sql-driver/mysql"
-	// _ "k8skit/cmd"
 	// _ "k8skit/app/zhe"
-
-	_ "k8skit/app/iam"
-	_ "k8skit/cmd"
+	// _ "k8skit/cmd"
+	// _ "k8skit/app/iam"
+	_ "k8skit/app/k8s"
 )
 
 //go:embed vname

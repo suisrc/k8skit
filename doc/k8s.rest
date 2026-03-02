@@ -1,0 +1,26 @@
+@BASE=http://127.0.0.1:81
+
+### 
+GET {{BASE}}/healthz
+Content-Type: application/json
+X-Request-Rt: 2
+
+### 
+GET {{BASE}}/api/k8s/v1/nss?sig=k123456
+Content-Type: application/json
+
+### 
+GET {{BASE}}/api/k8s/v1/apps?ns=rs-iam&sig=k123456&yaml=1
+Content-Type: application/json
+
+### 
+GET {{BASE}}/api/k8s/v1/ings?ns=rs-iam&sig=k123456&yaml=1
+Content-Type: application/json
+
+### 
+GET {{BASE}}/api/k8s/v1/app?ns=rs-iam&app=end-iam-cas&kind=Deployment&sig=k123456&yaml=1
+Content-Type: application/json
+
+### 
+GET {{BASE}}/api/k8s/v1/app?ns=rs-iam&app=end-iam-cas&kind=Deployment&sig=k123456
+Content-Type: application/json

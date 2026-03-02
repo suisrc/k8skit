@@ -7,8 +7,8 @@ import (
 	"embed"
 	"flag"
 	"os"
-	"strings"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/ze/sqlx"
 )
@@ -16,6 +16,7 @@ import (
 var (
 	C = struct {
 		Database sqlx.DatabaseConfig
+		DBAction DbActionConfig
 	}{}
 
 	// 生成数据库链接, init 中完成初始化
@@ -25,6 +26,12 @@ var (
 	ksfs embed.FS
 	ksgr = sqlx.Ksgr(ksfs, "ksql/") // if sqlx.C.Sqlx.KsqlDebug { ksgr = sqlx.Ksgr(os.DirFS("ksql"), "") }
 )
+
+type DbActionConfig struct {
+	System string `json:"system"`
+	Enable bool   `json:"enable"`
+	TpRoot string `json:"tproot"`
+}
 
 func init() {
 	z.Config(&C)
@@ -40,35 +47,26 @@ func init() {
 			sqlx.RegKsqlEvalue("entity", sqlx.KsqlTblExt)
 		}
 		// 创建数据库 -------------------------------------------------
-		dsc, err := sqlx.ConnectDatabase(&C.Database)
+		dsc, err := sqlx.ConnectDB(&C.Database, z.Println)
 		if err != nil {
 			zgg.ServeStop(err.Error())
 			return nil
-		} else {
-			// 链接成功， 打印链接信息
-			dsn := C.Database.DataSource
-			if idx := strings.Index(dsn, "@"); idx > 0 {
-				usr := dsn[:idx]
-				dsn = dsn[idx+1:]
-				if idz := strings.Index(usr, ":"); idz > 0 {
-					dsn = usr[:idz] + ":******@" + dsn
-				}
-			}
-			z.Println("[database]: connect ok,", dsn)
 		}
 		z.RegKey(zgg.SvcKit, false, "dsc", dsc)
 		NewDsc = func() sqlx.Dsc { return &sqlx.Dsx{Ex: dsc} }
 		if sqlx.C.Sqlx.KsqlDebug {
 			ksgr = sqlx.Ksgr(os.DirFS("app/zdb/ksql"), "")
 		}
+		dsx := &sqlx.Dsx{Ex: dsc}
+		act := sqlx.NewRepox[ActionRepo](dsx, ksgr) // 提供基于 db 的 ksql 操作
 		// 注册数据仓 -------------------------------------------------
-		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepo[AuthzRepo](ksgr))
-		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepo[ConfxRepo](ksgr))
-		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepo[FrontaRepo](ksgr))
-		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepo[FrontvRepo](ksgr))
-		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepo[IngressRepo](ksgr))
-		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepo[ServiceRepo](ksgr))
-		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepo[ZrecordRepo](ksgr))
+		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepox[AuthzRepo](dsx, act.Ksgr))
+		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepox[ConfxRepo](dsx, act.Ksgr))
+		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepox[FrontaRepo](dsx, act.Ksgr))
+		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepox[FrontvRepo](dsx, act.Ksgr))
+		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepox[IngressRepo](dsx, act.Ksgr))
+		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepox[ServiceRepo](dsx, act.Ksgr))
+		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepox[RecordRepo](dsx, act.Ksgr))
 
 		// 清理函数 ---------------------------------------------------
 		return func() { dsc.Close(); NewDsc = nil }

@@ -64,7 +64,7 @@ func (s *IamServeApi) TestAllDB(zrc *z.Ctx) {
 	} else {
 		rst = append(rst, zdb)
 	}
-	if zdb, err := s.Zrecord.Get(dsc, 1); err != nil {
+	if zdb, err := s.Record.Get(dsc, 1); err != nil {
 		rst = append(rst, "[zrecord error]: "+err.Error())
 	} else {
 		rst = append(rst, zdb)

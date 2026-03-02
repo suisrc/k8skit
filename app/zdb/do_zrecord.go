@@ -7,7 +7,7 @@ import (
 )
 
 // data object zrecord
-type ZrecordDO struct {
+type RecordDO struct {
 	ID        int64          `db:"id"`
 	ApiVer    sql.NullString `db:"apiversion"`
 	Kind      sql.NullString `db:"kind"`
@@ -20,12 +20,12 @@ type ZrecordDO struct {
 	VBD
 }
 
-func (ZrecordDO) TableName() string {
+func (RecordDO) TableName() string {
 	return C.Database.TablePrefix + "zrecord"
 	// return sqlx.GetTableByEnv("zrecord", "zrecord")
 }
 
-// zrecord repository
-type ZrecordRepo struct {
-	sqlx.Repo[ZrecordDO]
+// record repository
+type RecordRepo struct {
+	sqlx.Repo[RecordDO]
 }
