@@ -255,29 +255,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 	} else if err := json.Unmarshal(bts, &raw); err != nil {
 		return []any{}
 	}
-
-	delete(raw, "status") // 删除状态字段
-	if mate, ok := raw["metadata"].(map[string]any); ok {
-		if anno, ok := mate["annotations"].(map[string]any); ok {
-			delete(anno, "kubectl.kubernetes.io/last-applied-configuration")
-			delete(anno, "deployment.kubernetes.io/revision")
-			delete(anno, "statefulset.kubernetes.io/revision")
-			delete(anno, "daemonset.kubernetes.io/revision")
-		}
-		// 删除扩展信息
-		delete(mate, "uid")
-		delete(mate, "resourceVersion")
-		delete(mate, "generation")
-		delete(mate, "creationTimestamp")
-		delete(mate, "managedFields")
-	}
-	if spec, ok := raw["spec"].(map[string]any); ok {
-		delete(spec, "clusterIP")
-		delete(spec, "clusterIPs")
-		delete(spec, "internalTrafficPolicy")
-		delete(spec, "ipFamilies")
-		delete(spec, "ipFamilyPolicy")
-	}
+	api.ClearExInfo(raw)
 	namespace := raw["metadata"].(map[string]any)["namespace"].(string)
 	ado := map[string]any{}
 	ado["kind"] = raw["kind"]
@@ -303,29 +281,11 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 				}
 				svc.Kind = "Service"
 				svc.APIVersion = "v1"
-				srv := map[string]any{}
+				vma := map[string]any{}
 				bts, _ := json.Marshal(svc)
-				json.Unmarshal(bts, &srv)
-				delete(srv, "status") // 删除状态字段
-				if mate, ok := srv["metadata"].(map[string]any); ok {
-					if anno, ok := mate["annotations"].(map[string]any); ok {
-						delete(anno, "kubectl.kubernetes.io/last-applied-configuration")
-					}
-					// 删除扩展信息
-					delete(mate, "uid")
-					delete(mate, "resourceVersion")
-					delete(mate, "generation")
-					delete(mate, "creationTimestamp")
-					delete(mate, "managedFields")
-				}
-				if spec, ok := srv["spec"].(map[string]any); ok {
-					delete(spec, "clusterIP")
-					delete(spec, "clusterIPs")
-					delete(spec, "internalTrafficPolicy")
-					delete(spec, "ipFamilies")
-					delete(spec, "ipFamilyPolicy")
-				}
-				bts, _ = yaml.Marshal([]any{srv})
+				json.Unmarshal(bts, &vma)
+				api.ClearExInfo(vma)
+				bts, _ = yaml.Marshal([]any{vma})
 				txt = fmt.Sprintf("%s\n---\n", string(bts)) + txt
 				//
 				ado["service"] = svc.Name
@@ -352,25 +312,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					vma := map[string]any{}
 					bts, _ := json.Marshal(cm)
 					json.Unmarshal(bts, &vma)
-					delete(vma, "status") // 删除状态字段
-					if mate, ok := vma["metadata"].(map[string]any); ok {
-						if anno, ok := mate["annotations"].(map[string]any); ok {
-							delete(anno, "kubectl.kubernetes.io/last-applied-configuration")
-						}
-						// 删除扩展信息
-						delete(mate, "uid")
-						delete(mate, "resourceVersion")
-						delete(mate, "generation")
-						delete(mate, "creationTimestamp")
-						delete(mate, "managedFields")
-					}
-					if spec, ok := vma["spec"].(map[string]any); ok {
-						delete(spec, "clusterIP")
-						delete(spec, "clusterIPs")
-						delete(spec, "internalTrafficPolicy")
-						delete(spec, "ipFamilies")
-						delete(spec, "ipFamilyPolicy")
-					}
+					api.ClearExInfo(vma)
 					bts, _ = yaml.Marshal([]any{vma})
 					txt = fmt.Sprintf("%s\n---\n", string(bts)) + txt
 					//
@@ -391,25 +333,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					vma := map[string]any{}
 					bts, _ := json.Marshal(cm)
 					json.Unmarshal(bts, &vma)
-					delete(vma, "status") // 删除状态字段
-					if mate, ok := vma["metadata"].(map[string]any); ok {
-						if anno, ok := mate["annotations"].(map[string]any); ok {
-							delete(anno, "kubectl.kubernetes.io/last-applied-configuration")
-						}
-						// 删除扩展信息
-						delete(mate, "uid")
-						delete(mate, "resourceVersion")
-						delete(mate, "generation")
-						delete(mate, "creationTimestamp")
-						delete(mate, "managedFields")
-					}
-					if spec, ok := vma["spec"].(map[string]any); ok {
-						delete(spec, "clusterIP")
-						delete(spec, "clusterIPs")
-						delete(spec, "internalTrafficPolicy")
-						delete(spec, "ipFamilies")
-						delete(spec, "ipFamilyPolicy")
-					}
+					api.ClearExInfo(vma)
 					bts, _ = yaml.Marshal([]any{vma})
 					txt = fmt.Sprintf("%s\n---\n", string(bts)) + txt
 					//
@@ -427,4 +351,26 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 	// -----------------------------------------------------------------------
 	ado["yaml"] = txt
 	return ado
+}
+
+func (api *K8sApi) ClearExInfo(raw map[string]any) {
+	delete(raw, "status") // 删除状态字段
+	if mate, ok := raw["metadata"].(map[string]any); ok {
+		if anno, ok := mate["annotations"].(map[string]any); ok {
+			delete(anno, "kubectl.kubernetes.io/last-applied-configuration")
+		}
+		// 删除扩展信息
+		delete(mate, "uid")
+		delete(mate, "resourceVersion")
+		delete(mate, "generation")
+		delete(mate, "creationTimestamp")
+		delete(mate, "managedFields")
+	}
+	if spec, ok := raw["spec"].(map[string]any); ok {
+		delete(spec, "clusterIP")
+		delete(spec, "clusterIPs")
+		delete(spec, "internalTrafficPolicy")
+		delete(spec, "ipFamilies")
+		delete(spec, "ipFamilyPolicy")
+	}
 }
