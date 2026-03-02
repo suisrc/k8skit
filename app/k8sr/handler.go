@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/suisrc/zgg/z"
 	"go.yaml.in/yaml/v2"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -17,10 +19,10 @@ import (
 
 func InitServe(zgg *z.Zgg) z.Closed {
 	api := z.Inject(zgg.SvcKit, &K8sApi{})
-	z.GET("k8s/v1/nss", api.nss, zgg)
-	z.GET("k8s/v1/apps", api.apps, zgg)
-	z.GET("k8s/v1/app", api.app, zgg)
-	z.GET("k8s/v1/ings", api.ings, zgg)
+	z.GET("k8s/sync/v1/nss", api.nss, zgg)
+	z.GET("k8s/sync/v1/apps", api.apps, zgg)
+	z.GET("k8s/sync/v1/app", api.app, zgg)
+	z.GET("k8s/sync/v1/ings", api.ings, zgg)
 	return nil
 
 }
@@ -54,6 +56,24 @@ func (api *K8sApi) apps(zrc *z.Ctx) {
 	}
 	qry := zrc.Request.URL.Query()
 	ns := zrc.Request.URL.Query().Get("ns")
+	pageNo := 1
+	if val := qry.Get("pageNo"); val == "" {
+	} else if val, err := strconv.Atoi(val); err != nil {
+	} else {
+		pageNo = val
+	}
+	if pageNo < 1 {
+		pageNo = 1
+	}
+	pageSize := 10
+	if val := qry.Get("pageSize"); val == "" {
+	} else if val, err := strconv.Atoi(val); err != nil {
+	} else {
+		pageSize = val
+	}
+	pageFirst := (pageNo - 1) * pageSize // 获取指定页的记录
+	pageCount := pageSize
+	//
 	if ns != "" {
 		if idx := slices.Index(C.K8sSync.ExcNs, ns); idx >= 0 {
 			zrc.JERR(fmt.Errorf("namespace excluded"), 403)
@@ -61,16 +81,25 @@ func (api *K8sApi) apps(zrc *z.Ctx) {
 		}
 		// 获取指定命名空间下的应用列表
 		cli := api.K8sClient
-		apps, err := cli.AppsV1().Deployments(ns).List(zrc.Ctx, metav1.ListOptions{})
+		apps, err := cli.AppsV1().Deployments(ns).List(zrc.Ctx, metav1.ListOptions{
+			// FieldSelector: "metadata.name,metadata.namespace",
+		})
 		if err != nil {
 			zrc.JERR(err, 500)
 			return
 		}
-		infos := make([]any, len(apps.Items))
+		infos := []any{}
 		for i, app := range apps.Items {
+			if pageFirst > i {
+				continue
+			}
+			if i-pageFirst >= pageCount {
+				break
+			}
+			// app, _ := cli.AppsV1().Deployments(app.Namespace).Get(zrc.Ctx, app.Name, metav1.GetOptions{})
 			app.Kind = "Deployment"
 			app.APIVersion = "apps/v1"
-			infos[i] = api.toAnyMap(zrc, app)
+			infos = append(infos, api.toAnyMap(zrc, app))
 		}
 		if qry.Get("yaml") == "1" {
 			str := &strings.Builder{}
@@ -91,16 +120,28 @@ func (api *K8sApi) apps(zrc *z.Ctx) {
 		return
 	}
 	infos := []any{}
+	i := -1
 	for _, ns := range nss.Items {
 		if idx := slices.Index(C.K8sSync.ExcNs, ns.Name); idx >= 0 {
 			continue // 排除
 		}
-		apps, err := cli.AppsV1().Deployments(ns.Name).List(zrc.Ctx, metav1.ListOptions{})
+		apps, err := cli.AppsV1().Deployments(ns.Name).List(zrc.Ctx, metav1.ListOptions{
+			// FieldSelector: "metadata.name,metadata.namespace",
+		})
 		if err != nil {
 			zrc.JERR(err, 500)
 			return
 		}
+		// z.Println(z.ToStr(apps.Items))
 		for _, app := range apps.Items {
+			i++
+			if pageFirst > i {
+				continue
+			}
+			if i-pageFirst >= pageCount {
+				break
+			}
+			// app, _ := cli.AppsV1().Deployments(app.Namespace).Get(zrc.Ctx, app.Name, metav1.GetOptions{})
 			app.Kind = "Deployment"
 			app.APIVersion = "apps/v1"
 			infos = append(infos, api.toAnyMap(zrc, app))
@@ -184,6 +225,24 @@ func (api *K8sApi) ings(zrc *z.Ctx) {
 	}
 	qry := zrc.Request.URL.Query()
 	ns := zrc.Request.URL.Query().Get("ns")
+	pageNo := 1
+	if val := qry.Get("pageNo"); val == "" {
+	} else if val, err := strconv.Atoi(val); err != nil {
+	} else {
+		pageNo = val
+	}
+	if pageNo < 1 {
+		pageNo = 1
+	}
+	pageSize := 10
+	if val := qry.Get("pageSize"); val == "" {
+	} else if val, err := strconv.Atoi(val); err != nil {
+	} else {
+		pageSize = val
+	}
+	pageFirst := (pageNo - 1) * pageSize // 获取指定页的记录
+	pageCount := pageSize
+	//
 	if ns != "" {
 		if idx := slices.Index(C.K8sSync.ExcNs, ns); idx >= 0 {
 			zrc.JERR(fmt.Errorf("namespace excluded"), 403)
@@ -196,11 +255,17 @@ func (api *K8sApi) ings(zrc *z.Ctx) {
 			zrc.JERR(err, 500)
 			return
 		}
-		infos := make([]any, len(ings.Items))
+		infos := []any{}
 		for i, item := range ings.Items {
+			if pageFirst > i {
+				continue
+			}
+			if i-pageFirst >= pageCount {
+				break
+			}
 			item.Kind = "Ingress"
 			item.APIVersion = "networking.k8s.io/v1"
-			infos[i] = api.toAnyMap(zrc, item)
+			infos = append(infos, api.toAnyMap(zrc, item))
 		}
 		if qry.Get("yaml") == "1" {
 			str := &strings.Builder{}
@@ -221,6 +286,7 @@ func (api *K8sApi) ings(zrc *z.Ctx) {
 		return
 	}
 	infos := []any{}
+	i := -1
 	for _, ns := range nss.Items {
 		if idx := slices.Index(C.K8sSync.ExcNs, ns.Name); idx >= 0 {
 			continue // 排除
@@ -230,6 +296,12 @@ func (api *K8sApi) ings(zrc *z.Ctx) {
 			zrc.JERR(err, 500)
 		}
 		for _, item := range ings.Items {
+			if pageFirst > i {
+				continue
+			}
+			if i-pageFirst >= pageCount {
+				break
+			}
 			item.Kind = "Ingress"
 			item.APIVersion = "networking.k8s.io/v1"
 			infos = append(infos, api.toAnyMap(zrc, item))
@@ -273,24 +345,30 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 	}
 	if label != nil {
 		ado["label"] = label
-		svcs, err := api.K8sClient.CoreV1().Services(namespace).List(zrc.Ctx, metav1.ListOptions{})
-		if err == nil {
-			for _, svc := range svcs.Items {
-				if svc.Spec.Selector["app"] != label {
-					continue
-				}
-				svc.Kind = "Service"
-				svc.APIVersion = "v1"
-				vma := map[string]any{}
-				bts, _ := json.Marshal(svc)
-				json.Unmarshal(bts, &vma)
-				api.ClearExInfo(vma)
-				bts, _ = yaml.Marshal([]any{vma})
-				txt = fmt.Sprintf("%s\n---\n", string(bts)) + txt
-				//
-				ado["service"] = svc.Name
-				break
+		svcs, ok := zrc.Caches["k8s-services-cache"].(*v1.ServiceList)
+		if !ok {
+			var err error
+			svcs, err = api.K8sClient.CoreV1().Services(namespace).List(zrc.Ctx, metav1.ListOptions{})
+			if err != nil {
+				svcs = &v1.ServiceList{}
 			}
+			zrc.Caches["k8s-services-cache"] = svcs
+		}
+		for _, svc := range svcs.Items {
+			if svc.Spec.Selector["app"] != label {
+				continue
+			}
+			svc.Kind = "Service"
+			svc.APIVersion = "v1"
+			vma := map[string]any{}
+			bts, _ := json.Marshal(svc)
+			json.Unmarshal(bts, &vma)
+			api.ClearExInfo(vma)
+			bts, _ = yaml.Marshal([]any{vma})
+			txt = fmt.Sprintf("%s\n---\n", string(bts)) + txt
+			//
+			ado["service"] = svc.Name
+			break
 		}
 		containers := raw["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["containers"].([]any)
 		for _, ctn := range containers {
@@ -357,7 +435,17 @@ func (api *K8sApi) ClearExInfo(raw map[string]any) {
 	delete(raw, "status") // 删除状态字段
 	if mate, ok := raw["metadata"].(map[string]any); ok {
 		if anno, ok := mate["annotations"].(map[string]any); ok {
-			delete(anno, "kubectl.kubernetes.io/last-applied-configuration")
+			for k := range anno {
+				if strings.HasPrefix(k, "kubectl.kubernetes.io/") {
+					delete(anno, k)
+				} else if strings.HasPrefix(k, "deployment.kubernetes.io/") {
+					delete(anno, k)
+				} else if strings.HasPrefix(k, "field.cattle.io/") {
+					delete(anno, k)
+				} else if strings.HasPrefix(k, "kubernetes.io/") {
+					delete(anno, k)
+				}
+			}
 		}
 		// 删除扩展信息
 		delete(mate, "uid")
@@ -372,5 +460,17 @@ func (api *K8sApi) ClearExInfo(raw map[string]any) {
 		delete(spec, "internalTrafficPolicy")
 		delete(spec, "ipFamilies")
 		delete(spec, "ipFamilyPolicy")
+
+		if temp, ok := spec["template"].(map[string]any); ok {
+			if meta, ok := temp["metadata"].(map[string]any); ok {
+				if anno, ok := meta["annotations"].(map[string]any); ok {
+					for k := range anno {
+						if strings.HasPrefix(k, "kubectl.kubernetes.io/") {
+							delete(anno, k)
+						}
+					}
+				}
+			}
+		}
 	}
 }

@@ -1,0 +1,74 @@
+# 部署内容
+# kubectl apply -f k8s.yaml
+# 
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
+  name: ksagent
+  namespace: default
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: ksagent.xxx.zzz
+      http:
+        paths:
+          - backend:
+              service:
+                name: ksagent
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ksagent
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 80
+  selector:
+    app: ksagent
+  # clusterIP: None
+
+---
+# 防止文件读写竞争， 推荐使用 StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet # Deployment or StatefulSet
+metadata:
+  name: ksagent
+  namespace: default
+spec:
+  serviceName: ksagent
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ksagent
+  template:
+    metadata:
+      labels:
+        app: ksagent
+    spec:
+      # nodeSelector: { type: master }
+      # nodeName: dev-master # 必须指定节点， 单实例部署
+      serviceAccountName: xx # 需要一个管理员权限账号
+      containers:
+        - image: ghcr.io/suisrc/k8skit:0.4.0-ksagent
+          name: app
+          # args: ["-print", "-port", "81"]
+          env:
+            - {name: TZ, value: Asia/Shanghai }
+            - {name: KIT_K8SSYNC_TOKEN, value: kdcs83vs78ddksd82nd }
+            - {name: KIT_K8SSYNC_DEBUG, value: 'true' }
+            - {name: KIT_SERVER_API, value: 'api' }
+            - {name: KIT_PRINT, value: 'true' }
+            - {name: KIT_DEBUG, value: 'true' }
+
