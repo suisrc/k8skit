@@ -54,7 +54,7 @@ func sync() {
 	fmt.Println("sync k8s ... -----------------")
 	pageNo, pageSize := 1, 10
 
-	infos := []map[string]any{}
+	// infos := []map[string]any{}
 	for {
 		uri := fmt.Sprintf("/api/k8s/sync/v1/apps?rand=%s&time=%d&pageNo=%d&pageSize=%d&", //
 			z.GenStr("", 6), time.Now().Unix(), pageNo, pageSize)
@@ -80,12 +80,13 @@ func sync() {
 			break
 		} else {
 			for _, item := range data {
-				if info, ok := item.(map[string]any); !ok {
+				info, ok := item.(map[string]any)
+				if !ok {
 					fmt.Println("sync, item error: ", item)
 					return
-				} else {
-					infos = append(infos, info)
 				}
+				// infos = append(infos, info)
+				z.Println(z.ToStr(info))
 			}
 		}
 		pageNo++
@@ -94,6 +95,7 @@ func sync() {
 		}
 	}
 
-	z.Println("sync, total: ", len(infos))
+	// z.Println("sync, total: ", len(infos))
+	z.Println("sync, finally")
 
 }

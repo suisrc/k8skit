@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -101,15 +102,7 @@ func (api *K8sApi) apps(zrc *z.Ctx) {
 			app.APIVersion = "apps/v1"
 			infos = append(infos, api.toAnyMap(zrc, app))
 		}
-		if qry.Get("yaml") == "1" {
-			str := &strings.Builder{}
-			for _, item := range infos {
-				fmt.Fprintf(str, "\n---\n%s", item.(map[string]any)["yaml"])
-			}
-			zrc.TEXT(str.String(), 200)
-			return
-		}
-		zrc.JSON(&z.Result{Success: true, Data: infos})
+		api.ResultArray(zrc, qry, infos)
 		return
 	}
 	// 获取所有命名空间下的应用列表， 排除禁止同步的命名空间
@@ -147,15 +140,7 @@ func (api *K8sApi) apps(zrc *z.Ctx) {
 			infos = append(infos, api.toAnyMap(zrc, app))
 		}
 	}
-	if qry.Get("yaml") == "1" {
-		str := &strings.Builder{}
-		for _, item := range infos {
-			fmt.Fprintf(str, "\n---\n%s", item.(map[string]any)["yaml"])
-		}
-		zrc.TEXT(str.String(), 200)
-		return
-	}
-	zrc.JSON(&z.Result{Success: true, Data: infos})
+	api.ResultArray(zrc, qry, infos)
 }
 
 func (api *K8sApi) app(zrc *z.Ctx) {
@@ -181,11 +166,7 @@ func (api *K8sApi) app(zrc *z.Ctx) {
 		app.Kind = "Deployment"
 		app.APIVersion = "apps/v1"
 		item := api.toAnyMap(zrc, *app)
-		if qry.Get("yaml") == "1" {
-			zrc.TEXT((item.(map[string]any))["yaml"].(string), 200)
-			return
-		}
-		zrc.JSON(&z.Result{Success: true, Data: item})
+		api.ResultOne(zrc, qry, item)
 	case "StatefulSet":
 		app, err := cli.AppsV1().StatefulSets(ns).Get(zrc.Ctx, app, metav1.GetOptions{})
 		if err != nil {
@@ -195,11 +176,7 @@ func (api *K8sApi) app(zrc *z.Ctx) {
 		app.Kind = "StatefulSet"
 		app.APIVersion = "apps/v1"
 		item := api.toAnyMap(zrc, *app)
-		if qry.Get("yaml") == "1" {
-			zrc.TEXT((item.(map[string]any))["yaml"].(string), 200)
-			return
-		}
-		zrc.JSON(&z.Result{Success: true, Data: item})
+		api.ResultOne(zrc, qry, item)
 	case "DaemonSet":
 		app, err := cli.AppsV1().DaemonSets(ns).Get(zrc.Ctx, app, metav1.GetOptions{})
 		if err != nil {
@@ -209,11 +186,7 @@ func (api *K8sApi) app(zrc *z.Ctx) {
 		app.Kind = "DaemonSet"
 		app.APIVersion = "apps/v1"
 		item := api.toAnyMap(zrc, *app)
-		if qry.Get("yaml") == "1" {
-			zrc.TEXT((item.(map[string]any))["yaml"].(string), 200)
-			return
-		}
-		zrc.JSON(&z.Result{Success: true, Data: item})
+		api.ResultOne(zrc, qry, item)
 	default:
 		zrc.JERR(fmt.Errorf("invalid kind"), 400)
 	}
@@ -267,15 +240,7 @@ func (api *K8sApi) ings(zrc *z.Ctx) {
 			item.APIVersion = "networking.k8s.io/v1"
 			infos = append(infos, api.toAnyMap(zrc, item))
 		}
-		if qry.Get("yaml") == "1" {
-			str := &strings.Builder{}
-			for _, item := range infos {
-				fmt.Fprintf(str, "\n---\n%s", item.(map[string]any)["yaml"])
-			}
-			zrc.TEXT(str.String(), 200)
-			return
-		}
-		zrc.JSON(&z.Result{Success: true, Data: infos})
+		api.ResultArray(zrc, qry, infos)
 		return
 	}
 	// 获取所有命名空间下的应用列表， 排除禁止同步的命名空间
@@ -307,25 +272,7 @@ func (api *K8sApi) ings(zrc *z.Ctx) {
 			infos = append(infos, api.toAnyMap(zrc, item))
 		}
 	}
-	if qry.Get("yaml") == "1" {
-		str := &strings.Builder{}
-		for _, item := range infos {
-			fmt.Fprintf(str, "\n---\n%s", item.(map[string]any)["yaml"])
-		}
-		zrc.TEXT(str.String(), 200)
-		return
-	}
-	if qry.Get("json") == "1" {
-		arr := []any{}
-		for _, i1 := range infos {
-			for _, i2 := range i1.(map[string]any)["json"].([]any) {
-				arr = append(arr, i2)
-			}
-		}
-		zrc.JSON(&z.Result{Success: true, Data: arr, Total: z.Ptr(len(arr))})
-		return
-	}
-	zrc.JSON(&z.Result{Success: true, Data: infos})
+	api.ResultArray(zrc, qry, infos)
 }
 
 // =================================================================================================
@@ -499,6 +446,37 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 	ado["yaml"] = yamlTxt
 	ado["json"] = jsonArr
 	return ado
+}
+
+func (api *K8sApi) ResultOne(zrc *z.Ctx, qry url.Values, rst any) {
+	if qry.Get("yaml") == "1" {
+		zrc.TEXT((rst.(map[string]any))["yaml"].(string), 200)
+	} else if qry.Get("json") == "1" {
+		arr := rst.(map[string]any)["json"].([]any)
+		zrc.JSON(&z.Result{Success: true, Data: arr, Total: z.Ptr(len(arr))})
+	} else {
+		zrc.JSON(&z.Result{Success: true, Data: rst})
+	}
+}
+
+func (api *K8sApi) ResultArray(zrc *z.Ctx, qry url.Values, rst []any) {
+	if qry.Get("yaml") == "1" {
+		str := &strings.Builder{}
+		for _, item := range rst {
+			fmt.Fprintf(str, "\n---\n%s", item.(map[string]any)["yaml"])
+		}
+		zrc.TEXT(str.String(), 200)
+	} else if qry.Get("json") == "1" {
+		arr := []any{}
+		for _, i1 := range rst {
+			for _, i2 := range i1.(map[string]any)["json"].([]any) {
+				arr = append(arr, i2)
+			}
+		}
+		zrc.JSON(&z.Result{Success: true, Data: arr, Total: z.Ptr(len(arr))})
+	} else {
+		zrc.JSON(&z.Result{Success: true, Data: rst})
+	}
 }
 
 func (api *K8sApi) ClearExInfo(raw map[string]any) {
