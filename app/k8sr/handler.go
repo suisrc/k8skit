@@ -345,7 +345,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 	ado["name"] = raw["metadata"].(map[string]any)["name"]
 	bts, _ := yaml.Marshal([]any{raw})
 	yamlTxt := string(bts)
-	jsonArr := []any{}
+	jsonArr := []any{raw}
 	// -----------------------------------------------------------------------
 	var label any // ["selector"].(map[string]any)["matchLabels"].(map[string]any)["app"]
 	if vmap, _ := raw["spec"].(map[string]any); vmap == nil {

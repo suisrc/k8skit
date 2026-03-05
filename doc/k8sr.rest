@@ -31,11 +31,11 @@ GET {{BASE}}/api/k8s/sync/v1/ings?ns=rs-iam&sig={{TOKEN}}&yaml=1
 Content-Type: application/json
 
 ### 
-GET {{BASE}}/api/k8s/sync/v1/app?ns=dev-fmes&app=authx-cms-app&kind=Deployment&sig={{TOKEN}}&yaml=1
+GET {{BASE}}/api/k8s/sync/v1/app?ns=dev-fmes&app=end-iam-kin-app&kind=Deployment&sig={{TOKEN}}&yaml=1
 Content-Type: application/json
 
 ### 
-GET {{BASE}}/api/k8s/sync/v1/app?ns=dev-fmes&app=authx-cms-app&kind=Deployment&sig={{TOKEN}}&json=1
+GET {{BASE}}/api/k8s/sync/v1/app?ns=dev-fmes&app=end-iam-kin-app&kind=Deployment&sig={{TOKEN}}&json=1
 Content-Type: application/json
 
 ### 
