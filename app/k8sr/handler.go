@@ -463,10 +463,10 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					bts, _ = yaml.Marshal([]any{vma})
 					yamlTxt = fmt.Sprintf("%s\n---\n", string(bts)) + yamlTxt
 					//
-					venv, _ := ado["configmap"].(map[string]string)
+					venv, _ := ado["configmap_volume"].(map[string]string)
 					if venv == nil {
 						venv = map[string]string{}
-						ado["configmap"] = venv
+						ado["configmap_volume"] = venv
 					}
 					maps.Copy(venv, cm.Data)
 				} else if ref, _ := vol["secret"].(map[string]any); ref != nil {
@@ -485,11 +485,12 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					bts, _ = yaml.Marshal([]any{vma})
 					yamlTxt = fmt.Sprintf("%s\n---\n", string(bts)) + yamlTxt
 					//
-					venv, _ := ado["secret"].(map[string]string)
+					venv, _ := ado["secret_volume"].(map[string]string)
 					if venv == nil {
 						venv = map[string]string{}
-						ado["secret"] = venv
+						ado["secret_volume"] = venv
 					}
+					maps.Copy(venv, cm.StringData)
 				}
 			}
 		}
