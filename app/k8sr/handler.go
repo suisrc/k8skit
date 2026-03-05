@@ -371,6 +371,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 			break
 		}
 		containers := raw["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["containers"].([]any)
+		// configmap & secret
 		for _, ctn := range containers {
 			ctn, _ := ctn.(map[string]any)
 			if ctn["name"] == "sidecar" {
@@ -423,7 +424,53 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					maps.Copy(venv, cm.StringData)
 				}
 			}
-
+			// volumes
+			volumes := raw["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["volumes"].([]any)
+			for _, vol := range volumes {
+				vol := vol.(map[string]any)
+				if ref, _ := vol["configMap"].(map[string]any); ref != nil {
+					name := ref["name"].(string)
+					cm, err := api.K8sClient.CoreV1().ConfigMaps(namespace).Get(zrc.Ctx, name, metav1.GetOptions{})
+					if err != nil {
+						continue
+					}
+					cm.Kind = "ConfigMap"
+					cm.APIVersion = "v1"
+					vma := map[string]any{}
+					bts, _ := json.Marshal(cm)
+					json.Unmarshal(bts, &vma)
+					api.ClearExInfo(vma)
+					bts, _ = yaml.Marshal([]any{vma})
+					txt = fmt.Sprintf("%s\n---\n", string(bts)) + txt
+					//
+					venv, _ := ado["configmap"].(map[string]string)
+					if venv == nil {
+						venv = map[string]string{}
+						ado["configmap"] = venv
+					}
+					maps.Copy(venv, cm.Data)
+				} else if ref := vol["secret"].(map[string]any); ref != nil {
+					name := ref["name"].(string)
+					cm, err := api.K8sClient.CoreV1().Secrets(namespace).Get(zrc.Ctx, name, metav1.GetOptions{})
+					if err != nil {
+						continue
+					}
+					cm.Kind = "Secret"
+					cm.APIVersion = "v1"
+					vma := map[string]any{}
+					bts, _ := json.Marshal(cm)
+					json.Unmarshal(bts, &vma)
+					api.ClearExInfo(vma)
+					bts, _ = yaml.Marshal([]any{vma})
+					txt = fmt.Sprintf("%s\n---\n", string(bts)) + txt
+					//
+					venv, _ := ado["secret"].(map[string]string)
+					if venv == nil {
+						venv = map[string]string{}
+						ado["secret"] = venv
+					}
+				}
+			}
 		}
 	}
 	// -----------------------------------------------------------------------
@@ -436,13 +483,15 @@ func (api *K8sApi) ClearExInfo(raw map[string]any) {
 	if mate, ok := raw["metadata"].(map[string]any); ok {
 		if anno, ok := mate["annotations"].(map[string]any); ok {
 			for k := range anno {
-				if strings.HasPrefix(k, "kubectl.kubernetes.io/") {
+				if strings.HasPrefix(k, "deployment.kubernetes.io/") {
 					delete(anno, k)
-				} else if strings.HasPrefix(k, "deployment.kubernetes.io/") {
+				} else if strings.HasPrefix(k, "kubectl.kubernetes.io/") {
+					delete(anno, k)
+				} else if strings.HasPrefix(k, "kubernetes.io/") {
 					delete(anno, k)
 				} else if strings.HasPrefix(k, "field.cattle.io/") {
 					delete(anno, k)
-				} else if strings.HasPrefix(k, "kubernetes.io/") {
+				} else if strings.HasPrefix(k, "cattle.io/") {
 					delete(anno, k)
 				}
 			}
@@ -460,12 +509,17 @@ func (api *K8sApi) ClearExInfo(raw map[string]any) {
 		delete(spec, "internalTrafficPolicy")
 		delete(spec, "ipFamilies")
 		delete(spec, "ipFamilyPolicy")
-
 		if temp, ok := spec["template"].(map[string]any); ok {
 			if meta, ok := temp["metadata"].(map[string]any); ok {
 				if anno, ok := meta["annotations"].(map[string]any); ok {
 					for k := range anno {
 						if strings.HasPrefix(k, "kubectl.kubernetes.io/") {
+							delete(anno, k)
+						} else if strings.HasPrefix(k, "kubernetes.io/") {
+							delete(anno, k)
+						} else if strings.HasPrefix(k, "field.cattle.io/") {
+							delete(anno, k)
+						} else if strings.HasPrefix(k, "cattle.io/") {
 							delete(anno, k)
 						}
 					}
