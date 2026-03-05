@@ -414,7 +414,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 						ado["configmap"] = venv
 					}
 					maps.Copy(venv, cm.Data)
-				} else if ref := env["secretRef"].(map[string]any); ref != nil {
+				} else if ref, _ := env["secretRef"].(map[string]any); ref != nil {
 					name := ref["name"].(string)
 					cm, err := api.K8sClient.CoreV1().Secrets(namespace).Get(zrc.Ctx, name, metav1.GetOptions{})
 					if err != nil {
@@ -469,7 +469,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 						ado["configmap"] = venv
 					}
 					maps.Copy(venv, cm.Data)
-				} else if ref := vol["secret"].(map[string]any); ref != nil {
+				} else if ref, _ := vol["secret"].(map[string]any); ref != nil {
 					name := ref["name"].(string)
 					cm, err := api.K8sClient.CoreV1().Secrets(namespace).Get(zrc.Ctx, name, metav1.GetOptions{})
 					if err != nil {
