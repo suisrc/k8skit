@@ -315,6 +315,16 @@ func (api *K8sApi) ings(zrc *z.Ctx) {
 		zrc.TEXT(str.String(), 200)
 		return
 	}
+	if qry.Get("json") == "1" {
+		arr := []any{}
+		for _, i1 := range infos {
+			for _, i2 := range i1.(map[string]any)["json"].([]any) {
+				arr = append(arr, i2)
+			}
+		}
+		zrc.JSON(&z.Result{Success: true, Data: arr, Total: z.Ptr(len(arr))})
+		return
+	}
 	zrc.JSON(&z.Result{Success: true, Data: infos})
 }
 
@@ -334,7 +344,8 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 	ado["namespace"] = namespace
 	ado["name"] = raw["metadata"].(map[string]any)["name"]
 	bts, _ := yaml.Marshal([]any{raw})
-	txt := string(bts)
+	yamlTxt := string(bts)
+	jsonArr := []any{}
 	// -----------------------------------------------------------------------
 	var label any // ["selector"].(map[string]any)["matchLabels"].(map[string]any)["app"]
 	if vmap, _ := raw["spec"].(map[string]any); vmap == nil {
@@ -364,8 +375,9 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 			bts, _ := json.Marshal(svc)
 			json.Unmarshal(bts, &vma)
 			api.ClearExInfo(vma)
+			jsonArr = append(jsonArr, vma)
 			bts, _ = yaml.Marshal([]any{vma})
-			txt = fmt.Sprintf("%s\n---\n", string(bts)) + txt
+			yamlTxt = fmt.Sprintf("%s\n---\n", string(bts)) + yamlTxt
 			//
 			ado["service"] = svc.Name
 			break
@@ -392,8 +404,9 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					bts, _ := json.Marshal(cm)
 					json.Unmarshal(bts, &vma)
 					api.ClearExInfo(vma)
+					jsonArr = append(jsonArr, vma)
 					bts, _ = yaml.Marshal([]any{vma})
-					txt = fmt.Sprintf("%s\n---\n", string(bts)) + txt
+					yamlTxt = fmt.Sprintf("%s\n---\n", string(bts)) + yamlTxt
 					//
 					venv, _ := ado["configmap"].(map[string]string)
 					if venv == nil {
@@ -413,8 +426,9 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					bts, _ := json.Marshal(cm)
 					json.Unmarshal(bts, &vma)
 					api.ClearExInfo(vma)
+					jsonArr = append(jsonArr, vma)
 					bts, _ = yaml.Marshal([]any{vma})
-					txt = fmt.Sprintf("%s\n---\n", string(bts)) + txt
+					yamlTxt = fmt.Sprintf("%s\n---\n", string(bts)) + yamlTxt
 					//
 					venv, _ := ado["secret"].(map[string]string)
 					if venv == nil {
@@ -440,8 +454,14 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					bts, _ := json.Marshal(cm)
 					json.Unmarshal(bts, &vma)
 					api.ClearExInfo(vma)
+					// if data, ok := vma["data"].(map[string]any); ok {
+					// 	for kk, vv := range data {
+					// 		data[kk] = LiteralString(vv.(string))
+					// 	}
+					// }
+					jsonArr = append(jsonArr, vma)
 					bts, _ = yaml.Marshal([]any{vma})
-					txt = fmt.Sprintf("%s\n---\n", string(bts)) + txt
+					yamlTxt = fmt.Sprintf("%s\n---\n", string(bts)) + yamlTxt
 					//
 					venv, _ := ado["configmap"].(map[string]string)
 					if venv == nil {
@@ -461,8 +481,9 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					bts, _ := json.Marshal(cm)
 					json.Unmarshal(bts, &vma)
 					api.ClearExInfo(vma)
+					jsonArr = append(jsonArr, vma)
 					bts, _ = yaml.Marshal([]any{vma})
-					txt = fmt.Sprintf("%s\n---\n", string(bts)) + txt
+					yamlTxt = fmt.Sprintf("%s\n---\n", string(bts)) + yamlTxt
 					//
 					venv, _ := ado["secret"].(map[string]string)
 					if venv == nil {
@@ -474,7 +495,8 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 		}
 	}
 	// -----------------------------------------------------------------------
-	ado["yaml"] = txt
+	ado["yaml"] = yamlTxt
+	ado["json"] = jsonArr
 	return ado
 }
 
