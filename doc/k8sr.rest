@@ -35,6 +35,10 @@ GET {{BASE}}/api/k8s/sync/v1/app?ns=dev-fmes&app=authx-cms-app&kind=Deployment&s
 Content-Type: application/json
 
 ### 
+GET {{BASE}}/api/k8s/sync/v1/app?ns=dev-fmes&app=authx-cms-app&kind=Deployment&sig={{TOKEN}}&json=1
+Content-Type: application/json
+
+### 
 GET {{BASE}}/api/k8s/sync/v1/app?ns=dev-fmes&app=authx-cms-app&kind=Deployment&sig={{TOKEN}}
 Content-Type: application/json
 

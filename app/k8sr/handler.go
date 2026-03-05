@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/suisrc/zgg/z"
-	"go.yaml.in/yaml/v2"
+	"go.yaml.in/yaml/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -439,7 +439,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 				}
 			}
 			// volumes
-			volumes := raw["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["volumes"].([]any)
+			volumes, _ := raw["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["volumes"].([]any)
 			for _, vol := range volumes {
 				vol := vol.(map[string]any)
 				if ref, _ := vol["configMap"].(map[string]any); ref != nil {

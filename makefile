@@ -28,6 +28,9 @@ helm:
 main:
 	KIT_KWLOG2_TOKEN=xxxx123456789 go run app/main.go -local -debug -port 81 -c doc/__zgg.toml
 
+sync:
+	KIT_KWLOG2_TOKEN=xxxx123456789 go run app/main.go sync
+
 tenv:
 	KIT_KWLOG2_TOKEN=xxxx123456789 go run app/main.go -debug -print -port 81
 

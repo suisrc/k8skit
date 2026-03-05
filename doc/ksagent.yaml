@@ -61,7 +61,7 @@ spec:
       # nodeName: dev-master # 必须指定节点， 单实例部署
       serviceAccountName: xx # 需要一个管理员权限账号
       containers:
-        - image: ghcr.io/suisrc/k8skit:0.4.0-ksagent
+        - image: ghcr.io/suisrc/k8skit:0.4.3-ksagent
           name: app
           # args: ["-print", "-port", "81"]
           env:
