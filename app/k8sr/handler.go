@@ -302,7 +302,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 	} else if vmap, _ := vmap["matchLabels"].(map[string]any); vmap == nil {
 	} else {
 		label, _ = vmap[labelkey]
-		if label == "" {
+		if label == nil {
 			// 尝试二次获取
 			labelkey = "app.kubernetes.io/name"
 			label, _ = vmap[labelkey]
