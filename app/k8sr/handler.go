@@ -291,7 +291,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 	ado["kind"] = raw["kind"]
 	ado["namespace"] = namespace
 	ado["name"] = raw["metadata"].(map[string]any)["name"]
-	bts, _ := yaml.Marshal([]any{raw})
+	bts, _ := yaml.Marshal(raw)
 	yamlTxt := string(bts)
 	jsonArr := []any{raw}
 	// -----------------------------------------------------------------------
@@ -330,7 +330,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 			json.Unmarshal(bts, &vma)
 			api.ClearExInfo(vma)
 			jsonArr = append(jsonArr, vma)
-			bts, _ = yaml.Marshal([]any{vma})
+			bts, _ = yaml.Marshal(vma)
 			yamlTxt = fmt.Sprintf("%s\n---\n", string(bts)) + yamlTxt
 			//
 			ado["service"] = svc.Name
@@ -363,7 +363,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					json.Unmarshal(bts, &vma)
 					api.ClearExInfo(vma)
 					jsonArr = append(jsonArr, vma)
-					bts, _ = yaml.Marshal([]any{vma})
+					bts, _ = yaml.Marshal(vma)
 					yamlTxt = fmt.Sprintf("%s\n---\n", string(bts)) + yamlTxt
 					//
 					venv, _ := ado["configmap"].(map[string]string)
@@ -388,7 +388,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					json.Unmarshal(bts, &vma)
 					api.ClearExInfo(vma)
 					jsonArr = append(jsonArr, vma)
-					bts, _ = yaml.Marshal([]any{vma})
+					bts, _ = yaml.Marshal(vma)
 					yamlTxt = fmt.Sprintf("%s\n---\n", string(bts)) + yamlTxt
 					//
 					venv, _ := ado["secret"].(map[string]string)
@@ -425,7 +425,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					// 	}
 					// }
 					jsonArr = append(jsonArr, vma)
-					bts, _ = yaml.Marshal([]any{vma})
+					bts, _ = yaml.Marshal(vma)
 					yamlTxt = fmt.Sprintf("%s\n---\n", string(bts)) + yamlTxt
 					//
 					venv, _ := ado["configmap_volume"].(map[string]string)
@@ -450,7 +450,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					json.Unmarshal(bts, &vma)
 					api.ClearExInfo(vma)
 					jsonArr = append(jsonArr, vma)
-					bts, _ = yaml.Marshal([]any{vma})
+					bts, _ = yaml.Marshal(vma)
 					yamlTxt = fmt.Sprintf("%s\n---\n", string(bts)) + yamlTxt
 					//
 					venv, _ := ado["secret_volume"].(map[string]string)
