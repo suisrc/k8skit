@@ -40,6 +40,10 @@ func init() {
 	sqlx.C.Sqlx.KsqlTbl = true
 
 	z.Register("20-database", func(zgg *z.Zgg) z.Closed {
+		if C.Database.Driver == "disable" {
+			z.Println("[database]: disabled, skip")
+			return nil // 禁用数据库
+		}
 		if sqlx.C.Sqlx.KsqlTbl {
 			sqlx.RegKsqlEvalue("entity", sqlx.KsqlTblExt)
 		}
