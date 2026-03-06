@@ -81,27 +81,11 @@ func (api *K8sApi) apps(zrc *z.Ctx) {
 			zrc.JERR(fmt.Errorf("namespace excluded"), 403)
 			return
 		}
-		// 获取指定命名空间下的应用列表
-		cli := api.K8sClient
-		apps, err := cli.AppsV1().Deployments(ns).List(zrc.Ctx, metav1.ListOptions{
-			// FieldSelector: "metadata.name,metadata.namespace",
-		})
-		if err != nil {
-			zrc.JERR(err, 500)
-			return
-		}
 		infos := []any{}
-		for i, app := range apps.Items {
-			if pageFirst > i {
-				continue
-			}
-			if i-pageFirst >= pageCount {
-				break
-			}
-			// app, _ := cli.AppsV1().Deployments(app.Namespace).Get(zrc.Ctx, app.Name, metav1.GetOptions{})
-			app.Kind = "Deployment"
-			app.APIVersion = "apps/v1"
-			infos = append(infos, api.toAnyMap(zrc, app))
+		api.apps_(zrc, ns, -1, pageFirst, pageCount, &infos)
+		// 获取指定命名空间下的应用列表
+		if zrc.IsAbort() {
+			return
 		}
 		api.ResultArray(zrc, qry, infos)
 		return
@@ -119,29 +103,77 @@ func (api *K8sApi) apps(zrc *z.Ctx) {
 		if idx := slices.Index(C.K8sSync.ExcNs, ns.Name); idx >= 0 {
 			continue // 排除
 		}
-		apps, err := cli.AppsV1().Deployments(ns.Name).List(zrc.Ctx, metav1.ListOptions{
-			// FieldSelector: "metadata.name,metadata.namespace",
-		})
-		if err != nil {
-			zrc.JERR(err, 500)
-			return
-		}
-		// z.Println(z.ToStr(apps.Items))
-		for _, app := range apps.Items {
-			i++
-			if pageFirst > i {
-				continue
-			}
-			if i-pageFirst >= pageCount {
-				break
-			}
-			// app, _ := cli.AppsV1().Deployments(app.Namespace).Get(zrc.Ctx, app.Name, metav1.GetOptions{})
-			app.Kind = "Deployment"
-			app.APIVersion = "apps/v1"
-			infos = append(infos, api.toAnyMap(zrc, app))
+		i = api.apps_(zrc, ns.Name, i, pageFirst, pageCount, &infos)
+		if i < 0 {
+			break
 		}
 	}
+	if zrc.IsAbort() {
+		return
+	}
 	api.ResultArray(zrc, qry, infos)
+}
+
+func (api *K8sApi) apps_(zrc *z.Ctx, ns string, oidx, pfst, psiz int, infos *[]any) int {
+	cli := api.K8sClient
+	{
+		apps, err := cli.AppsV1().Deployments(ns).List(zrc.Ctx, metav1.ListOptions{})
+		if err != nil {
+			zrc.JERR(err, 500)
+			return -2
+		}
+		for _, app := range apps.Items {
+			oidx++
+			if pfst > oidx {
+				continue
+			}
+			if oidx-pfst >= psiz {
+				return -3
+			}
+			app.Kind = "Deployment"
+			app.APIVersion = "apps/v1"
+			*infos = append(*infos, api.toAnyMap(zrc, app))
+		}
+	}
+	if oidx-pfst < psiz {
+		apps, err := cli.AppsV1().StatefulSets(ns).List(zrc.Ctx, metav1.ListOptions{})
+		if err != nil {
+			zrc.JERR(err, 500)
+			return -2
+		}
+		for _, app := range apps.Items {
+			oidx++
+			if pfst > oidx {
+				continue
+			}
+			if oidx-pfst >= psiz {
+				return -3
+			}
+			app.Kind = "StatefulSet"
+			app.APIVersion = "apps/v1"
+			*infos = append(*infos, api.toAnyMap(zrc, app))
+		}
+	}
+	if oidx-pfst < psiz {
+		apps, err := cli.AppsV1().DaemonSets(ns).List(zrc.Ctx, metav1.ListOptions{})
+		if err != nil {
+			zrc.JERR(err, 500)
+			return -2
+		}
+		for _, app := range apps.Items {
+			oidx++
+			if pfst > oidx {
+				continue
+			}
+			if oidx-pfst >= psiz {
+				return -3
+			}
+			app.Kind = "DaemonSet"
+			app.APIVersion = "apps/v1"
+			*infos = append(*infos, api.toAnyMap(zrc, app))
+		}
+	}
+	return oidx
 }
 
 func (api *K8sApi) app(zrc *z.Ctx) {
@@ -360,6 +392,9 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					}
 					cm.Kind = "ConfigMap"
 					cm.APIVersion = "v1"
+					for k, v := range cm.Data {
+						ado[k] = strings.TrimSpace(v)
+					}
 					vma := map[string]any{}
 					bts, _ := json.Marshal(cm)
 					json.Unmarshal(bts, &vma)
@@ -417,15 +452,13 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					}
 					cm.Kind = "ConfigMap"
 					cm.APIVersion = "v1"
+					for k, v := range cm.Data {
+						ado[k] = strings.TrimSpace(v)
+					}
 					vma := map[string]any{}
 					bts, _ := json.Marshal(cm)
 					json.Unmarshal(bts, &vma)
 					api.ClearExInfo(vma)
-					// if data, ok := vma["data"].(map[string]any); ok {
-					// 	for kk, vv := range data {
-					// 		data[kk] = LiteralString(vv.(string))
-					// 	}
-					// }
 					jsonArr = append(jsonArr, vma)
 					bts, _ = yaml.Marshal(vma)
 					yamlTxt = fmt.Sprintf("%s\n---\n", string(bts)) + yamlTxt

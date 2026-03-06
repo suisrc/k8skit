@@ -142,7 +142,7 @@ func sync_(zck8sRepo *zdb.Zck8sRepo, key string) error {
 				ck8s.Version = sqlx.NewInt64(C.CmdSync.Version)
 
 				zck8sRepo.Insert(nil, &ck8s)
-				z.Println("sync, insert ing: ", ck8s.Name.String)
+				z.Printf("sync, insert %s: %s", key, ck8s.Name.String)
 			}
 		}
 		pageNo++
