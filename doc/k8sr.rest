@@ -1,9 +1,8 @@
 @BASE=http://127.0.0.1:81
 @TOKEN=k123456
 
-@BASE=https://ksagent.dev.sims-cn.com
-@TOKEN=kdcs83vs78ddksd82nd
-
+# @BASE=https://ksagent.dev.sims-cn.com
+# @TOKEN=kdcs83vs78ddksd82nd
 
 ### 
 GET {{BASE}}/healthz
@@ -19,7 +18,7 @@ GET {{BASE}}/api/k8s/sync/v1/apps?sig={{TOKEN}}&yaml=1&pageNo=2&pageSize=3
 Content-Type: application/json
 
 ### 
-GET {{BASE}}/api/k8s/sync/v1/apps?sig={{TOKEN}}&pageNo=24&pageSize=10
+GET {{BASE}}/api/k8s/sync/v1/apps?ns=mng-fund&sig={{TOKEN}}&pageNo=1&pageSize=10&yaml=1
 Content-Type: application/json
 
 ### 
@@ -31,7 +30,7 @@ GET {{BASE}}/api/k8s/sync/v1/apps?ns=dev-fmes&sig={{TOKEN}}&json=1
 Content-Type: application/json
 
 ### 
-GET {{BASE}}/api/k8s/sync/v1/ings?ns=rs-iam&sig={{TOKEN}}&yaml=1
+GET {{BASE}}/api/k8s/sync/v1/ings?ns=rs-iam&sig={{TOKEN}}
 Content-Type: application/json
 
 ### 
@@ -59,5 +58,5 @@ GET {{BASE}}/api/k8s/sync/v1/app?ns=rs-iam&app=end-iam-cas&kind=Deployment&sig={
 Content-Type: application/json
 
 ### 
-GET {{BASE}}/api/k8s/sync/v1/ings?ns=dev-fmes&sig={{TOKEN}}&json=1
+GET {{BASE}}/api/k8s/sync/v1/ings?sig={{TOKEN}}&yaml=1
 Content-Type: application/json

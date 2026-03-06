@@ -64,42 +64,50 @@ func sync() {
 	zck8sRepo := sqlx.NewRepox[zdb.Zck8sRepo](dsx, nil)
 	// zconfRepo := sqlx.NewRepox[zdb.ZconfRepo](dsx, nil)
 	// 删除原有数据
-	zck8sRepo.DeleteBy(nil, fmt.Sprintf("version=%d", C.CmdSync.Version))
+	// zck8sRepo.DeleteBy(nil, fmt.Sprintf("version=%d", C.CmdSync.Version))
 	// zconfRepo.DeleteBy(nil, fmt.Sprintf("version=%d", C.CmdSync.Version))
 	// ----------------------------------------------------------
-	fmt.Println("sync k8s ... -----------------")
-	pageNo, pageSize := 1, 10
+	// if err := sync_(zck8sRepo, "apps"); err != nil {
+	// 	z.Println(err.Error())
+	// 	return
+	// }
+	if err := sync_(zck8sRepo, "ings"); err != nil {
+		z.Println(err.Error())
+		return
+	}
+	z.Println("sync, finally")
 
-	// infos := []map[string]any{}
+}
+
+func sync_(zck8sRepo *zdb.Zck8sRepo, key string) error {
+	fmt.Printf("sync k8s %s ... -----------------", key)
+	pageNo, pageSize := 1, 10
 	for {
-		uri := fmt.Sprintf("/api/k8s/sync/v1/apps?rand=%s&time=%d&pageNo=%d&pageSize=%d&", //
-			z.GenStr("", 6), time.Now().Unix(), pageNo, pageSize)
+		uri := fmt.Sprintf("/api/k8s/sync/v1/%s?rand=%s&time=%d&pageNo=%d&pageSize=%d&", //
+			key, z.GenStr("", 6), time.Now().Unix(), pageNo, pageSize)
 		// md5 签名
 		hx5 := md5.Sum([]byte(uri + "#" + C.CmdSync.Token))
 		uri = C.CmdSync.ApiUrl + uri + "sig=" + z.HexStr(hx5[:])
 		z.Println("request: ", uri)
 		req, err := http.Get(uri)
 		if err != nil {
-			fmt.Println("sync, request error: ", err.Error())
-			return
+			return fmt.Errorf("sync, request error: %s", err.Error())
 		}
 		rst := map[string]any{}
 		if err := json.NewDecoder(req.Body).Decode(&rst); err != nil {
-			fmt.Println("sync, marshal error: ", err.Error())
-			return
+
+			return fmt.Errorf("sync, marshal error: %s", err.Error())
 		}
 		req.Body.Close()
 		if data, ok := rst["data"].([]any); !ok {
-			fmt.Println("sync, data error: ", rst)
-			return
+			return fmt.Errorf("sync, data error: %s", zc.ToStr(rst))
 		} else if len(data) == 0 {
 			break // 已经没有数据了
 		} else {
 			for _, item := range data {
 				info, ok := item.(map[string]any)
 				if !ok {
-					fmt.Println("sync, item error: ", item)
-					return
+					return fmt.Errorf("sync, item error: %s", zc.ToStr(item))
 				}
 				ck8s := zdb.Zck8sDO{}
 				if val, ok := info["json"]; ok {
@@ -126,8 +134,7 @@ func sync() {
 				}
 				bts, err := json.MarshalIndent(info, "", "  ")
 				if err != nil {
-					fmt.Println("sync, json marshal error: ", err.Error())
-					return
+					return fmt.Errorf("sync, json marshal error: %s", err.Error())
 				}
 				ck8s.Data = sqlx.NewString(string(bts))
 				ck8s.Created = sqlx.NewTime(time.Now())
@@ -135,7 +142,7 @@ func sync() {
 				ck8s.Version = sqlx.NewInt64(C.CmdSync.Version)
 
 				zck8sRepo.Insert(nil, &ck8s)
-				z.Println("sync, insert: ", ck8s.Name.String)
+				z.Println("sync, insert ing: ", ck8s.Name.String)
 			}
 		}
 		pageNo++
@@ -143,8 +150,5 @@ func sync() {
 		// 	break // 测试
 		// }
 	}
-
-	// z.Println("sync, total: ", len(infos))
-	z.Println("sync, finally")
-
+	return nil
 }

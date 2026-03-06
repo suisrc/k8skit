@@ -260,8 +260,10 @@ func (api *K8sApi) ings(zrc *z.Ctx) {
 		ings, err := cli.NetworkingV1().Ingresses(ns.Name).List(zrc.Ctx, metav1.ListOptions{})
 		if err != nil {
 			zrc.JERR(err, 500)
+			return
 		}
 		for _, item := range ings.Items {
+			i++
 			if pageFirst > i {
 				continue
 			}

@@ -1,20 +1,20 @@
 # 部署内容
 # kubectl apply -f k8s.yaml
 # 
-
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
     kubernetes.io/ingress.class: nginx
-    nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    # nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
   name: ksagent
   namespace: default
 spec:
-  ingressClassName: nginx
+  # ingressClassName: nginx
   rules:
-    - host: ksagent.xxx.zzz
+    - host: ksagent.xxx
       http:
         paths:
           - backend:
@@ -24,6 +24,10 @@ spec:
                   name: http
             path: /
             pathType: Prefix
+  tls:
+    - hosts:
+        - ksagent.xxx
+      secretName: tls-ksagent.xxx
 
 ---
 apiVersion: v1
@@ -40,9 +44,10 @@ spec:
   # clusterIP: None
 
 ---
+# Deployment or StatefulSet
 # 防止文件读写竞争， 推荐使用 StatefulSet
 apiVersion: apps/v1
-kind: StatefulSet # Deployment or StatefulSet
+kind: StatefulSet
 metadata:
   name: ksagent
   namespace: default
@@ -59,16 +64,36 @@ spec:
     spec:
       # nodeSelector: { type: master }
       # nodeName: dev-master # 必须指定节点， 单实例部署
-      serviceAccountName: xx # 需要一个管理员权限账号
+      serviceAccountName: ksadmin # 需要一个管理员权限账号
       containers:
-        - image: ghcr.io/suisrc/k8skit:0.4.3-ksagent
-          name: app
+        - name: app
+          # image: ghcr.io/suisrc/k8skit:0.4.13-ksagent
+          image: ghcr.nju.edu.cn/suisrc/k8skit:0.4.13-syncagent
           # args: ["-print", "-port", "81"]
           env:
             - {name: TZ, value: Asia/Shanghai }
-            - {name: KIT_K8SSYNC_TOKEN, value: kdcs83vs78ddksd82nd }
+            - {name: KIT_K8SSYNC_TOKEN, value: xx }
             - {name: KIT_K8SSYNC_DEBUG, value: 'true' }
             - {name: KIT_SERVER_API, value: 'api' }
-            - {name: KIT_PRINT, value: 'true' }
             - {name: KIT_DEBUG, value: 'true' }
+            - {name: KIT_K8SSYNC_EXCNS_0, value: kube-system }
+            - {name: KIT_K8SSYNC_EXCNS_01, value: kube-public }
+            - {name: KIT_K8SSYNC_EXCNS_02, value: kube-node-lease }
+            - {name: KIT_K8SSYNC_EXCNS_03, value: kube-ksidecar }
+            - {name: KIT_K8SSYNC_EXCNS_04, value: kube-logs }
+            - {name: KIT_K8SSYNC_EXCNS_05, value: kube-reloader }
+            - {name: KIT_K8SSYNC_EXCNS_06, value: kube-rsync }
+            - {name: KIT_K8SSYNC_EXCNS_07, value: ingress-nginx }
+            - {name: KIT_K8SSYNC_EXCNS_08, value: metallb-system }
+            - {name: KIT_K8SSYNC_EXCNS_09, value: cert-manager }
+            - {name: KIT_K8SSYNC_EXCNS_10, value: base }
+            - {name: KIT_K8SSYNC_EXCNS_11, value: default }
+            - {name: KIT_K8SSYNC_EXCNS_12, value: devops }
+            - {name: KIT_K8SSYNC_EXCNS_13, value: kuboard }
+            - {name: KIT_K8SSYNC_EXCNS_14, value: nats-dev }
+            - {name: KIT_K8SSYNC_EXCNS_15, value: nats-uat }
+            - {name: KIT_K8SSYNC_EXCNS_16, value: argocd }
+            - {name: KIT_K8SSYNC_EXCNS_17, value: arms-prom }
+            - {name: KIT_K8SSYNC_EXCNS_18, value: nats }
+            - {name: KIT_K8SSYNC_EXCNS_19, value: csdr }
 

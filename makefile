@@ -26,7 +26,7 @@ helm:
 	helm -n default template deploy/chart > deploy/bundle.yml
 
 main:
-	KIT_KWLOG2_TOKEN=xxxx123456789 go run app/main.go -local -debug -port 81 -dsd=disable -c doc/__zgg.toml
+	KIT_KWLOG2_TOKEN=xxxx123456789 go run app/main.go -local -debug -port 81 -c doc/__zgg.toml
 
 sync:
 	KIT_KWLOG2_TOKEN=xxxx123456789 go run app/main.go sync -print -c doc/__zgg.toml
