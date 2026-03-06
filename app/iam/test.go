@@ -32,39 +32,38 @@ func (s *IamServeApi) TestRepo(zrc *z.Ctx) {
 }
 
 func (s *IamServeApi) TestAllDB(zrc *z.Ctx) {
-	dsc := zdb.NewDsc()
 	rst := []any{}
-	if zdb, err := s.Authz.Get(dsc, 1); err != nil {
+	if zdb, err := s.Authz.Get(nil, 1); err != nil {
 		rst = append(rst, "[authz error]: "+err.Error())
 	} else {
 		rst = append(rst, zdb)
 	}
-	if zdb, err := s.Confx.Get(dsc, 1); err != nil {
+	if zdb, err := s.Confx.Get(nil, 1); err != nil {
 		rst = append(rst, "[confx error]: "+err.Error())
 	} else {
 		rst = append(rst, zdb)
 	}
-	if zdb, err := s.Fronta.Get(dsc, 1); err != nil {
+	if zdb, err := s.Fronta.Get(nil, 1); err != nil {
 		rst = append(rst, "[fronta error]: "+err.Error())
 	} else {
 		rst = append(rst, zdb)
 	}
-	if zdb, err := s.Frontv.Get(dsc, 1); err != nil {
+	if zdb, err := s.Frontv.Get(nil, 1); err != nil {
 		rst = append(rst, "[frontv error]: "+err.Error())
 	} else {
 		rst = append(rst, zdb)
 	}
-	if zdb, err := s.Ingress.Get(dsc, 1); err != nil {
+	if zdb, err := s.Ingress.Get(nil, 1); err != nil {
 		rst = append(rst, "[ingress error]: "+err.Error())
 	} else {
 		rst = append(rst, zdb)
 	}
-	if zdb, err := s.Service.Get(dsc, 1); err != nil {
+	if zdb, err := s.Service.Get(nil, 1); err != nil {
 		rst = append(rst, "[service error]: "+err.Error())
 	} else {
 		rst = append(rst, zdb)
 	}
-	if zdb, err := s.Record.Get(dsc, 1); err != nil {
+	if zdb, err := s.Record.Get(nil, 1); err != nil {
 		rst = append(rst, "[zrecord error]: "+err.Error())
 	} else {
 		rst = append(rst, zdb)

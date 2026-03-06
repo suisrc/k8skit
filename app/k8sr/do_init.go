@@ -33,10 +33,20 @@ func init() {
 		"kube-system",     //
 		"kube-public",     //
 		"kube-node-lease", //
+		"kube-ksidecar",   //
+		"kube-logs",       //
+		"kube-reloader",   //
+		"kube-rsync",      //
 		"ingress-nginx",   //
+		"metallb-system",  //
 		"cert-manager",    //
 		"base",            //
 		"default",         //
+		"devops",          //
+		"kafka",           //
+		"kuboard",         //
+		"nats-dev",        //
+		"nats-uat",        //
 	}), "ksexcns", "k8s sync ignore namespace")
 
 	z.Register("61-k8s.api", InitServe)

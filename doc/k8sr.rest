@@ -1,8 +1,8 @@
 @BASE=http://127.0.0.1:81
 @TOKEN=k123456
 
-# @BASE=https://ksagent.dev.sims-cn.com
-# @TOKEN=kdcs83vs78ddksd82nd
+@BASE=https://ksagent.dev.sims-cn.com
+@TOKEN=kdcs83vs78ddksd82nd
 
 
 ### 
@@ -19,7 +19,7 @@ GET {{BASE}}/api/k8s/sync/v1/apps?sig={{TOKEN}}&yaml=1&pageNo=2&pageSize=3
 Content-Type: application/json
 
 ### 
-GET {{BASE}}/api/k8s/sync/v1/apps?sig={{TOKEN}}&pageNo=20&pageSize=3
+GET {{BASE}}/api/k8s/sync/v1/apps?sig={{TOKEN}}&pageNo=24&pageSize=10
 Content-Type: application/json
 
 ### 
@@ -35,7 +35,7 @@ GET {{BASE}}/api/k8s/sync/v1/ings?ns=rs-iam&sig={{TOKEN}}&yaml=1
 Content-Type: application/json
 
 ### 
-GET {{BASE}}/api/k8s/sync/v1/app?ns=dev-fmes&app=end-iam-kin-app&kind=Deployment&sig={{TOKEN}}&yaml=1
+GET {{BASE}}/api/k8s/sync/v1/app?ns=dev-fmes&app=xxljob-app&kind=Deployment&sig={{TOKEN}}&yaml=1
 Content-Type: application/json
 
 ### 
@@ -43,7 +43,7 @@ GET {{BASE}}/api/k8s/sync/v1/app?ns=dev-fmes&app=end-iam-kin-app&kind=Deployment
 Content-Type: application/json
 
 ### 
-GET {{BASE}}/api/k8s/sync/v1/app?ns=dev-fmes&app=authx-cms-app&kind=Deployment&sig={{TOKEN}}
+GET {{BASE}}/api/k8s/sync/v1/app?ns=dev-fmes&app=xxljob-app&kind=Deployment&sig={{TOKEN}}
 Content-Type: application/json
 
 ### 

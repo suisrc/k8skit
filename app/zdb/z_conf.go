@@ -7,7 +7,7 @@ import (
 )
 
 // data object for confx
-type ConfzDO struct {
+type ZconfDO struct {
 	ID   int64          `db:"id"`
 	Tag  sql.NullString `db:"tag"`
 	Name sql.NullString `db:"name"`
@@ -22,12 +22,12 @@ type ConfzDO struct {
 	VBD
 }
 
-func (ConfzDO) TableName() string {
-	return C.Database.TablePrefix + "confz"
+func (ZconfDO) TableName() string {
+	return C.Database.TablePrefix + "zconf"
 	// return sqlx.GetTableByEnv("confx", "confx")
 }
 
 // confx repository
-type ConfzRepo struct {
-	sqlx.Repo[ConfzDO]
+type ZconfRepo struct {
+	sqlx.Repo[ZconfDO]
 }

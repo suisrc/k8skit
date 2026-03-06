@@ -189,6 +189,6 @@ func (s *IamServeApi) Authx(zrc *z.Ctx) {
 
 // 获取登录人信息
 func (s *IamServeApi) FindUser(username string) (*zdb.AuthzDO, error) {
-	return s.Authz.GetBy(zdb.NewDsc(), s.Authz.Cols(), nil, "appkey=? AND permiss LIKE ? ", username, "fmesui.%")
+	return s.Authz.GetBy(nil, s.Authz.Cols(), nil, "appkey=? AND permiss LIKE ? ", username, "fmesui.%")
 	// return &zdb.AuthzDO{Name: sqlx.NewString(username), AppKey: sqlx.NewString(username), Secret: sqlx.NewString("123")}, nil
 }

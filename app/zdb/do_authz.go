@@ -38,19 +38,19 @@ type AuthzRepo struct {
 
 func (r *AuthzRepo) Test1() ([]AuthzDO, error) {
 	// 指定 ksql 文件
-	rst, _, err := sqlx.Ksgs[AuthzDO](NewDsc(), r.Kgr, "authz_find_all", nil, nil)
+	rst, _, err := sqlx.Ksgs[AuthzDO](r.Dsc, r.Kgr, "authz_find_all", nil, nil)
 	return rst, err
 }
 
 func (r *AuthzRepo) Test2() ([]AuthzDO, error) {
 	// 通过 [结构体]_[方法名] 获取 ksql 文件
-	rst, _, err := r.KsqlMap(NewDsc(), map[string]any{"id": 13}, nil)
+	rst, _, err := r.KsqlMap(r.Dsc, map[string]any{"id": 13}, nil)
 	return rst, err
 }
 
 func (r *AuthzRepo) Test3() ([]AuthzDO, error) {
 	// 指定不存在的 ksql 文件
-	rst, _, err := r.KsqlMap(NewDsc(), map[string]any{"id": 14}, nil)
+	rst, _, err := r.KsqlMap(r.Dsc, map[string]any{"id": 14}, nil)
 	return rst, err
 }
 

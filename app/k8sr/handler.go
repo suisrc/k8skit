@@ -10,8 +10,9 @@ import (
 	"strings"
 
 	"github.com/suisrc/zgg/z"
+	"github.com/suisrc/zgg/z/zc"
 	"go.yaml.in/yaml/v3"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -295,25 +296,31 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 	jsonArr := []any{raw}
 	// -----------------------------------------------------------------------
 	var label any // ["selector"].(map[string]any)["matchLabels"].(map[string]any)["app"]
+	labelkey := "app"
 	if vmap, _ := raw["spec"].(map[string]any); vmap == nil {
 	} else if vmap, _ := vmap["selector"].(map[string]any); vmap == nil {
 	} else if vmap, _ := vmap["matchLabels"].(map[string]any); vmap == nil {
 	} else {
-		label, _ = vmap["app"]
+		label, _ = vmap[labelkey]
+		if label == "" {
+			// 尝试二次获取
+			labelkey = "app.kubernetes.io/name"
+			label, _ = vmap[labelkey]
+		}
 	}
 	if label != nil {
 		ado["label"] = label
-		svcs, ok := zrc.Caches["k8s-services-cache"].(*v1.ServiceList)
+		svcs, ok := zrc.Caches["k8s-services-cache"].(*corev1.ServiceList)
 		if !ok {
 			var err error
 			svcs, err = api.K8sClient.CoreV1().Services(namespace).List(zrc.Ctx, metav1.ListOptions{})
 			if err != nil {
-				svcs = &v1.ServiceList{}
+				svcs = &corev1.ServiceList{}
 			}
 			zrc.Caches["k8s-services-cache"] = svcs
 		}
 		for _, svc := range svcs.Items {
-			if svc.Spec.Selector["app"] != label {
+			if svc.Spec.Selector[labelkey] != label {
 				continue
 			}
 			svc.Kind = "Service"
@@ -329,7 +336,8 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 			ado["service"] = svc.Name
 			break
 		}
-		containers := raw["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["containers"].([]any)
+		// containers := raw["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["containers"].([]any)
+		containers, _ := zc.MapKey(raw, "spec.template.spec.containers").([]any)
 		// configmap & secret
 		for _, ctn := range containers {
 			ctn, _ := ctn.(map[string]any)
@@ -340,7 +348,10 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 			for _, env := range envs {
 				env := env.(map[string]any)
 				if ref, _ := env["configMapRef"].(map[string]any); ref != nil {
-					name := ref["name"].(string)
+					name, _ := ref["name"].(string)
+					if name == "" {
+						continue
+					}
 					cm, err := api.K8sClient.CoreV1().ConfigMaps(namespace).Get(zrc.Ctx, name, metav1.GetOptions{})
 					if err != nil {
 						continue
@@ -362,7 +373,10 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					}
 					maps.Copy(venv, cm.Data)
 				} else if ref, _ := env["secretRef"].(map[string]any); ref != nil {
-					name := ref["name"].(string)
+					name, _ := ref["name"].(string)
+					if name == "" {
+						continue
+					}
 					cm, err := api.K8sClient.CoreV1().Secrets(namespace).Get(zrc.Ctx, name, metav1.GetOptions{})
 					if err != nil {
 						continue
@@ -386,11 +400,15 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 				}
 			}
 			// volumes
-			volumes, _ := raw["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["volumes"].([]any)
+			// volumes, _ := raw["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["volumes"].([]any)
+			volumes, _ := zc.MapKey(raw, "spec.template.spec.volumes").([]any)
 			for _, vol := range volumes {
 				vol := vol.(map[string]any)
 				if ref, _ := vol["configMap"].(map[string]any); ref != nil {
 					name := ref["name"].(string)
+					if name == "" {
+						continue
+					}
 					cm, err := api.K8sClient.CoreV1().ConfigMaps(namespace).Get(zrc.Ctx, name, metav1.GetOptions{})
 					if err != nil {
 						continue
@@ -417,7 +435,10 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					}
 					maps.Copy(venv, cm.Data)
 				} else if ref, _ := vol["secret"].(map[string]any); ref != nil {
-					name := ref["name"].(string)
+					name, _ := ref["name"].(string)
+					if name == "" {
+						continue
+					}
 					cm, err := api.K8sClient.CoreV1().Secrets(namespace).Get(zrc.Ctx, name, metav1.GetOptions{})
 					if err != nil {
 						continue

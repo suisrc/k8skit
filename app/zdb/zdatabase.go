@@ -19,9 +19,6 @@ var (
 		DBAction DbActionConfig
 	}{}
 
-	// 生成数据库链接, init 中完成初始化
-	NewDsc func() sqlx.Dsc
-
 	//go:embed ksql/*
 	ksfs embed.FS
 	ksgr = sqlx.Ksgr(ksfs, "ksql/") // if sqlx.C.Sqlx.KsqlDebug { ksgr = sqlx.Ksgr(os.DirFS("ksql"), "") }
@@ -53,7 +50,6 @@ func init() {
 			return nil
 		}
 		z.RegKey(zgg.SvcKit, false, "dsc", dsc)
-		NewDsc = func() sqlx.Dsc { return &sqlx.Dsx{Ex: dsc} }
 		if sqlx.C.Sqlx.KsqlDebug {
 			ksgr = sqlx.Ksgr(os.DirFS("app/zdb/ksql"), "")
 		}
@@ -69,7 +65,7 @@ func init() {
 		z.RegKey(zgg.SvcKit, false, "", sqlx.NewRepox[RecordRepo](dsx, act.Ksgr))
 
 		// 清理函数 ---------------------------------------------------
-		return func() { dsc.Close(); NewDsc = nil }
+		return func() { dsc.Close() }
 	})
 }
 
