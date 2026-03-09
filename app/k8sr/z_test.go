@@ -1,14 +1,16 @@
 package k8s_test
 
 import (
+	k8s "k8skit/app/k8sr"
 	"os"
 	"strings"
 	"testing"
 
-	"go.yaml.in/yaml/v3"
+	"gopkg.in/yaml.v3"
 )
 
 // go test -v app/k8sr/z_test.go -run Test_yaml
+
 type LiteralString string
 
 func (s LiteralString) MarshalYAML() (any, error) {
@@ -21,7 +23,7 @@ func (s LiteralString) MarshalYAML() (any, error) {
 			Kind:  yaml.ScalarNode,
 			Tag:   "!!str",
 			Value: str,
-			Style: yaml.DoubleQuotedStyle,
+			Style: yaml.LiteralStyle,
 		}, nil
 	}
 	// 单行字符串使用普通样式
@@ -41,10 +43,13 @@ func Test_yaml(t *testing.T) {
 	} else if data, ok := data.(map[string]any); !ok {
 	} else {
 		for k, v := range data {
-			data[k] = LiteralString(v.(string))
+			v := v.(string)
+			// data[k] = LiteralString(v)
+			if strings.ContainsRune(v, '\n') {
+				data[k] = k8s.FormatYamlString(v)
+			}
 		}
 	}
-
 	bts, _ = yaml.Marshal(tmp)
 	os.WriteFile("../../_out/_temp1.yaml", bts, 0644)
 	// t.Log(tmp)

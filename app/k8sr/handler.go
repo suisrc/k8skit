@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/zc"
@@ -393,7 +394,10 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					cm.Kind = "ConfigMap"
 					cm.APIVersion = "v1"
 					for k, v := range cm.Data {
-						ado[k] = strings.TrimSpace(v)
+						// cm.Data[k] = strings.TrimSpace(v)
+						if strings.ContainsRune(v, '\n') {
+							cm.Data[k] = FormatYamlString(v)
+						}
 					}
 					vma := map[string]any{}
 					bts, _ := json.Marshal(cm)
@@ -453,7 +457,10 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					cm.Kind = "ConfigMap"
 					cm.APIVersion = "v1"
 					for k, v := range cm.Data {
-						ado[k] = strings.TrimSpace(v)
+						// cm.Data[k] = strings.TrimSpace(v)
+						if strings.ContainsRune(v, '\n') {
+							cm.Data[k] = FormatYamlString(v)
+						}
 					}
 					vma := map[string]any{}
 					bts, _ := json.Marshal(cm)
@@ -584,4 +591,13 @@ func (api *K8sApi) ClearExInfo(raw map[string]any) {
 			}
 		}
 	}
+}
+
+func FormatYamlString(str string) string {
+	sbr := strings.Builder{}
+	for line := range strings.SplitSeq(str, "\n") {
+		sbr.WriteString(strings.TrimRightFunc(line, unicode.IsSpace))
+		sbr.WriteRune('\n')
+	}
+	return strings.TrimRightFunc(sbr.String(), unicode.IsSpace)
 }

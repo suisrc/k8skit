@@ -1,6 +1,7 @@
 @BASE=http://127.0.0.1:81
 @TOKEN=k123456
-
+@BASE=https://ksagent.dev.sims-cn.com
+@TOKEN=kdcs83vs78ddksd82nd
 
 ### 
 GET {{BASE}}/healthz

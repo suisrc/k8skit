@@ -64,13 +64,13 @@ func sync() {
 	zck8sRepo := sqlx.NewRepox[zdb.Zck8sRepo](dsx, nil)
 	// zconfRepo := sqlx.NewRepox[zdb.ZconfRepo](dsx, nil)
 	// 删除原有数据
-	// zck8sRepo.DeleteBy(nil, fmt.Sprintf("version=%d", C.CmdSync.Version))
+	zck8sRepo.DeleteBy(nil, fmt.Sprintf("version=%d", C.CmdSync.Version))
 	// zconfRepo.DeleteBy(nil, fmt.Sprintf("version=%d", C.CmdSync.Version))
 	// ----------------------------------------------------------
-	// if err := sync_(zck8sRepo, "apps"); err != nil {
-	// 	z.Println(err.Error())
-	// 	return
-	// }
+	if err := sync_(zck8sRepo, "apps"); err != nil {
+		z.Println(err.Error())
+		return
+	}
 	if err := sync_(zck8sRepo, "ings"); err != nil {
 		z.Println(err.Error())
 		return
