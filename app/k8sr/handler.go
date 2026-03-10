@@ -338,7 +338,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 	} else {
 		label, _ = vmap[labelkey]
 		if label == nil {
-			// 尝试二次获取
+			// 尝试二次获取， 如果还是失败就放弃
 			labelkey = "app.kubernetes.io/name"
 			label, _ = vmap[labelkey]
 		}
@@ -367,9 +367,9 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 			jsonArr = append(jsonArr, vma)
 			bts, _ = yaml.Marshal(vma)
 			yamlTxt = fmt.Sprintf("%s\n---\n", string(bts)) + yamlTxt
-			//
+			// 这里可能会存在多个 service 情况， 由于覆盖情况， ado["service"] 只取最后一个
 			ado["service"] = svc.Name
-			break
+			// break
 		}
 		// containers := raw["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["containers"].([]any)
 		containers, _ := zc.MapKey(raw, "spec.template.spec.containers").([]any)
