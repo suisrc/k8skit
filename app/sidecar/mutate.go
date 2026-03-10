@@ -62,6 +62,7 @@ func init() {
 		// router
 		zgg.AddRouter(http.MethodPost+" mutate", api.mutate)
 		zgg.AddRouter(http.MethodGet+" archive", api.archive)
+		zgg.AddRouter(http.MethodPost+"statefulset", api.statefulset)
 		// z.POST("mutate", api.mutate, zgg) // 注册接口
 		if dsc != nil {
 			return func() { dsc.Close() }
@@ -103,7 +104,7 @@ func (aa *MutateApi) mutate(zrc *z.Ctx) {
 	// z.Println("AdmissionReview: ", string(bts))
 	req := admReview.Request
 
-	z.Printf("AdmissionReview for Kind=%v, Namespace=%v Name=%v UID=%v patchOperation=%v UserInfo=%v", //
+	z.Printf("AR for mutate Kind=%v, Namespace=%v Name=%v UID=%v patchOperation=%v UserInfo=%v", //
 		req.Kind, req.Namespace, req.Name, req.UID, req.Operation, req.UserInfo)
 	if patchOperations, err := aa.process(zrc, req); err != nil {
 		message := fmt.Sprintf("request for object '%s' with name '%s' in namespace '%s' denied: %v", //
