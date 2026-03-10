@@ -57,6 +57,12 @@ func (patcher *Patcher) PatchPodCreate(ctx context.Context, namespace string, po
 		pod.Labels = map[string]string{}
 	}
 	var patches []PatchOperation
+	if len(patcher.Config.ImagesMaps) > 0 {
+		// replace InitContainers & Containers images
+		if rps := patcher.ReplaceContainersImage(&pod); len(rps) > 0 {
+			patches = append(patches, rps...)
+		}
+	}
 	if configmapSidecarNames := patcher.ConfigmapSidecarNames(namespace, pod); configmapSidecarNames != nil {
 		// add configmap sidecar
 		for _, configmapSidecarName := range configmapSidecarNames {
@@ -76,6 +82,7 @@ func (patcher *Patcher) PatchPodCreate(ctx context.Context, namespace string, po
 			}
 		}
 	}
+	// inject config by database
 	patches = append(patches, patcher.InjectConfigByDatabase(ctx, namespace, &pod)...)
 	// z.Debugf("sidecar patches being applied for %v/%v: patches: %v", namespace, podName, patches)
 	return patches, nil

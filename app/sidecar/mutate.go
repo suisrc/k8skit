@@ -31,6 +31,7 @@ type Config struct {
 	ByDBAppEnv string `json:"byDbAppEnv"`
 	ServerHost string `json:"serverHost"`
 	InitcImage string `json:"initcImage"`
+	ImagesMaps z.HM   `json:"imagesMaps"`
 }
 
 func init() {

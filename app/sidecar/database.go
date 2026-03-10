@@ -220,3 +220,30 @@ func (api *MutateApi) archive(zrc *z.Ctx) {
 		zw.Write([]byte(data.Data.String))
 	}
 }
+
+//=========================================================================================================================
+
+func (patcher *Patcher) ReplaceContainersImage(pod *corev1.Pod) []PatchOperation {
+	patches := []PatchOperation{}
+	// initContainers image replace
+	for index, container := range pod.Spec.InitContainers {
+		for kk, vv := range patcher.Config.ImagesMaps {
+			if strings.HasPrefix(container.Image, kk) {
+				image := vv + container.Image[len(kk):]
+				pod.Spec.InitContainers[index].Image = image
+				patches = append(patches, PatchOperation{Op: "replace", Path: "/spec/initContainers/" + strconv.Itoa(index) + "/image", Value: image})
+			}
+		}
+	}
+	// containers image replace
+	for index, container := range pod.Spec.Containers {
+		for kk, vv := range patcher.Config.ImagesMaps {
+			if strings.HasPrefix(container.Image, kk) {
+				image := vv + container.Image[len(kk):]
+				pod.Spec.Containers[index].Image = image
+				patches = append(patches, PatchOperation{Op: "replace", Path: "/spec/containers/" + strconv.Itoa(index) + "/image", Value: image})
+			}
+		}
+	}
+	return patches
+}
