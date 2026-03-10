@@ -14,7 +14,16 @@ POST {{BASE}}/statefulset
 Content-Type: application/json
 
 {
-
+    "kind": "AdmissionReview",
+    "apiVersion": "admission.k8s.io/v1",
+    "request": {
+        "uid": "fa8356af-657e-46f5-9a65-bb2c03a035a3",
+        "kind": {
+            "group": "",
+            "version": "v1",
+            "kind": "Pod"
+        }
+    }
 }
 
 ### 
