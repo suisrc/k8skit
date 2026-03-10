@@ -62,7 +62,7 @@ func init() {
 		// router
 		zgg.AddRouter(http.MethodPost+" mutate", api.mutate)
 		zgg.AddRouter(http.MethodGet+" archive", api.archive)
-		zgg.AddRouter(http.MethodPost+"statefulset", api.statefulset)
+		zgg.AddRouter(http.MethodPost+" statefulset", api.statefulset)
 		// z.POST("mutate", api.mutate, zgg) // 注册接口
 		if dsc != nil {
 			return func() { dsc.Close() }

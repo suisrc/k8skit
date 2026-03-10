@@ -1,4 +1,5 @@
 @BASE=http://127.0.0.1:81
+@BASE=http://ksidecar.default.svc
 
 ### 
 GET {{BASE}}/healthz
@@ -6,6 +7,15 @@ Content-Type: application/json
 
 ### http://127.0.0.1:81/gitrepo?rand=ad6cffc5071d&time=1768818052&id=51&sign=8a03f63c7e1e7e8ab64bef7ef799c79e20906834
 POST {{BASE}}/gitrepo?rand=ad6cffc5071d&time=1768818052&id=51&sign=8a03f63c7e1e7e8ab64bef7ef799c79e20906834
+
+
+### 
+POST {{BASE}}/statefulset 
+Content-Type: application/json
+
+{
+
+}
 
 ### 
 POST {{BASE}}/mutate
