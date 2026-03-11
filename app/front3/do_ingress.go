@@ -36,7 +36,7 @@ type IngressRepo struct {
 }
 
 func (aa *IngressRepo) GetBySpaceAndName(space, name string) (*IngressDO, error) {
-	return aa.GetBy(aa.Dsc, aa.Cols(), nil, "ns=? AND name=? AND deleted=0 LIMIT 1 ORDER BY id DESC", space, name)
+	return aa.GetBy(aa.Dsc, aa.Cols(), nil, "ns=? AND name=? AND deleted=0 ORDER BY id DESC LIMIT 1", space, name)
 }
 
 func (aa *IngressRepo) GetBySpaceAndNames(space, name string) ([]IngressDO, error) {
