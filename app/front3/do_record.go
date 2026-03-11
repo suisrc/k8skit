@@ -25,7 +25,7 @@ type RecordDO struct {
 }
 
 func (aa RecordDO) TableName() string {
-	return C.Front3.DB.TablePrefix + "record"
+	return C.Front3.DB.TablePrefix + "zrecord"
 }
 
 // --------------------------------------------
