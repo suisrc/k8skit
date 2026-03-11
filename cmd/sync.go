@@ -26,10 +26,11 @@ var (
 )
 
 type SyncConfig struct {
-	ApiUrl  string
-	Token   string
-	Version int64
-	User    string
+	ApiUrl   string
+	Token    string
+	Version  int64
+	User     string
+	Database sqlx.DatabaseConfig
 }
 
 func init() {
@@ -39,6 +40,8 @@ func init() {
 	flag.StringVar(&C.CmdSync.Token, "synctkn", "", "k8s sync token")
 	flag.Int64Var(&C.CmdSync.Version, "syncver", 1, "k8s sync version")
 	flag.StringVar(&C.CmdSync.User, "syncusr", "syncuser", "k8s sync user")
+	flag.StringVar(&C.CmdSync.Database.Driver, "syncdsd", "mysql", "数据库驱动")
+	flag.StringVar(&C.CmdSync.Database.DataSource, "syncdsn", "", "数据库连接")
 }
 
 func sync() {
@@ -55,7 +58,7 @@ func sync() {
 	// 	fmt.Println("create k8s client error: ", err.Error()) // 初始化失败，直接退出
 	// 	return
 	// }
-	dsc, err := sqlx.ConnectDB(&zdb.C.Database, z.Println)
+	dsc, err := sqlx.ConnectDB(&C.CmdSync.Database, z.Println)
 	if err != nil {
 		fmt.Println("sync, connect db error: ", err.Error())
 		return
