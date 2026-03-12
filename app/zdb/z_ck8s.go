@@ -12,6 +12,7 @@ type Zck8sDO struct {
 	Label     sql.NullString `db:"label"`
 	Kind      sql.NullString `db:"kind"`
 	Namespace sql.NullString `db:"namespace"`
+	Ns2       sql.NullString `db:"ns2"`
 	Name      sql.NullString `db:"name"`
 	Data      sql.NullString `db:"data"`  // 原始请求数据
 	Yaml      sql.NullString `db:"yaml"`  // 原始模版数据

@@ -31,6 +31,9 @@ main:
 sync:
 	KIT_KWLOG2_TOKEN=xxxx123456789 go run app/main.go sync -c doc/__zgg.toml
 
+fsvc:
+	KIT_KWLOG2_TOKEN=xxxx123456789 go run app/main.go fsvc -c doc/__zgg.toml
+
 tenv:
 	KIT_KWLOG2_TOKEN=xxxx123456789 go run app/main.go -debug -print -port 81
 

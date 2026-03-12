@@ -1,7 +1,7 @@
 package k8s_test
 
 import (
-	k8s "k8skit/app/k8sr"
+	"k8skit/app/k8sc"
 	"os"
 	"strings"
 	"testing"
@@ -46,7 +46,7 @@ func Test_yaml(t *testing.T) {
 			v := v.(string)
 			// data[k] = LiteralString(v)
 			if strings.ContainsRune(v, '\n') {
-				data[k] = k8s.FormatYamlString(v)
+				data[k] = k8sc.FormatYamlString(v)
 			}
 		}
 	}

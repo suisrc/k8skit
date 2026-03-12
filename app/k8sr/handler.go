@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/suisrc/zgg/z"
 	"github.com/suisrc/zgg/z/zc"
@@ -17,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"k8skit/app/k8sc"
 	_ "k8skit/app/k8sc"
 )
 
@@ -330,32 +330,25 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 	yamlTxt := string(bts)
 	jsonArr := []any{raw}
 	// -----------------------------------------------------------------------
-	var label any // ["selector"].(map[string]any)["matchLabels"].(map[string]any)["app"]
 	labelkey := "app"
-	if vmap, _ := raw["spec"].(map[string]any); vmap == nil {
-	} else if vmap, _ := vmap["selector"].(map[string]any); vmap == nil {
-	} else if vmap, _ := vmap["matchLabels"].(map[string]any); vmap == nil {
-	} else {
-		label, _ = vmap[labelkey]
-		if label == nil {
-			// 尝试二次获取， 如果还是失败就放弃
-			labelkey = "app.kubernetes.io/name"
-			label, _ = vmap[labelkey]
-		}
+	labelval := zc.MapDef(raw, "spec.selector.matchLabels.app", "")
+	if labelval == "" {
+		labelkey = "app.kubernetes.io/name"
+		labelval = zc.MapDef(raw, "spec.selector.matchLabels.[app.kubernetes.io/name]", "")
 	}
-	if label != nil {
-		ado["label"] = label
-		svcs, ok := zrc.Caches["k8s-services-cache"].(*corev1.ServiceList)
+	if labelval != "" {
+		ado["label"] = labelval
+		svcs, ok := zrc.Caches["k8s-services-cache-"+namespace].(*corev1.ServiceList)
 		if !ok {
 			var err error
 			svcs, err = api.K8sClient.CoreV1().Services(namespace).List(zrc.Ctx, metav1.ListOptions{})
 			if err != nil {
 				svcs = &corev1.ServiceList{}
 			}
-			zrc.Caches["k8s-services-cache"] = svcs
+			zrc.Caches["k8s-services-cache-"+namespace] = svcs
 		}
 		for _, svc := range svcs.Items {
-			if svc.Spec.Selector[labelkey] != label {
+			if svc.Spec.Selector[labelkey] != labelval {
 				continue
 			}
 			svc.Kind = "Service"
@@ -396,7 +389,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					for k, v := range cm.Data {
 						// cm.Data[k] = strings.TrimSpace(v)
 						if strings.ContainsRune(v, '\n') {
-							cm.Data[k] = FormatYamlString(v)
+							cm.Data[k] = k8sc.FormatYamlString(v)
 						}
 					}
 					vma := map[string]any{}
@@ -459,7 +452,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					for k, v := range cm.Data {
 						// cm.Data[k] = strings.TrimSpace(v)
 						if strings.ContainsRune(v, '\n') {
-							cm.Data[k] = FormatYamlString(v)
+							cm.Data[k] = k8sc.FormatYamlString(v)
 						}
 					}
 					vma := map[string]any{}
@@ -591,13 +584,4 @@ func (api *K8sApi) ClearExInfo(raw map[string]any) {
 			}
 		}
 	}
-}
-
-func FormatYamlString(str string) string {
-	sbr := strings.Builder{}
-	for line := range strings.SplitSeq(str, "\n") {
-		sbr.WriteString(strings.TrimRightFunc(line, unicode.IsSpace))
-		sbr.WriteRune('\n')
-	}
-	return strings.TrimRightFunc(sbr.String(), unicode.IsSpace)
 }

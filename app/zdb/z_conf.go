@@ -23,7 +23,7 @@ type ZconfDO struct {
 }
 
 func (ZconfDO) TableName() string {
-	return C.Database.TablePrefix + "zconf"
+	return C.Database.TablePrefix + "confx"
 	// return sqlx.GetTableByEnv("confx", "confx")
 }
 

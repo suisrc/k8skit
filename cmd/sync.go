@@ -19,12 +19,6 @@ import (
 
 // go run main.go sync
 
-var (
-	C = struct {
-		CmdSync SyncConfig
-	}{}
-)
-
 type SyncConfig struct {
 	ApiUrl   string
 	Token    string
@@ -35,7 +29,6 @@ type SyncConfig struct {
 
 func init() {
 	z.CMD["sync"] = sync
-	z.Config(&C)
 	flag.StringVar(&C.CmdSync.ApiUrl, "syncapi", "", "k8s sync api url")
 	flag.StringVar(&C.CmdSync.Token, "synctkn", "", "k8s sync token")
 	flag.Int64Var(&C.CmdSync.Version, "syncver", 1, "k8s sync version")
@@ -45,25 +38,10 @@ func init() {
 }
 
 func sync() {
-	z.Initializ()
-	// parse command line arguments
-	var cfs string
-	flag.StringVar(&cfs, "c", "", "config file path")
-	flag.Parse()
-	// parse config file
-	zc.LoadConfig(cfs)
-	// ----------------------------------------------------------
-	// cli, err := k8sc.CreateClient(z.C.Server.Local)
-	// if err != nil {
-	// 	fmt.Println("create k8s client error: ", err.Error()) // 初始化失败，直接退出
-	// 	return
-	// }
-	dsc, err := sqlx.ConnectDB(&C.CmdSync.Database, z.Println)
-	if err != nil {
-		fmt.Println("sync, connect db error: ", err.Error())
+	dsx, _ := InitConfig(false)
+	if dsx == nil {
 		return
 	}
-	dsx := &sqlx.Dsx{Ex: dsc}
 	zck8sRepo := sqlx.NewRepox[zdb.Zck8sRepo](dsx, nil)
 	// zconfRepo := sqlx.NewRepox[zdb.ZconfRepo](dsx, nil)
 	// 删除原有数据
