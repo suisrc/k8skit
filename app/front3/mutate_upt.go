@@ -111,15 +111,21 @@ func (aa *Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (res
 	if img == "" {
 		// 通过 "frontend/db.frontv.image" 获取镜像
 		img = ing.GetAnnotations()["frontend/db.frontv.image"]
-		if img != "" && ver == "" {
+		if img != "" {
 			if strings.HasPrefix(img, "git+") && //
 				strings.HasPrefix(img, "https://") && //
 				strings.HasPrefix(img, "http://") {
-				if idx := strings.IndexByte(img, '#'); idx > 0 {
-					ver = img[idx+1:]
+				if idx := strings.IndexByte(img, '#'); idx > 0 && ver == "" {
+					ver = img[idx+1:] // 截取版本
+				} else if idx < 0 && ver != "" {
+					img += "#" + ver // 添加版本
 				}
-			} else if idx := strings.IndexByte(img, ':'); idx > 0 {
-				ver = img[idx+1:]
+			} else {
+				if idx := strings.IndexByte(img, ':'); idx > 0 && ver == "" {
+					ver = img[idx+1:] // 截取版本
+				} else if idx < 0 && ver != "" {
+					img += ":" + ver // 添加版本
+				}
 			}
 		}
 	}
