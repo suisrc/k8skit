@@ -289,14 +289,21 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache)
 		return nil // 没有镜像地址
 	}
 	// 获取前端文件镜像, 在本地部署前端资源文件 //os.WriteFile(filepath.Join(abspath, "aname"), []byte(time.Now().Format(time.RFC3339)), 0644)
-	if _, err := os.Stat(abspath); err != nil && os.IsNotExist(err) {
-		if err := os.MkdirAll(abspath, 0644); err != nil {
-			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-			http.Error(rw, "application local path error: "+rr.Host+" ["+abspath+"] "+err.Error(), http.StatusInternalServerError)
-			return nil // 无法创建缓存文件夹
-		}
-		// 优先使用 cdn 缓存
+	if _, err := os.Stat(abspath); err == nil {
+		// 缓存文件存在
+		z.Println("[_front3_]: local path, exist:", abspath)
+	} else if !os.IsNotExist(err) {
+		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
+		http.Error(rw, "application local path error: "+rr.Host+" ["+abspath+"] "+err.Error(), http.StatusInternalServerError)
+		return nil // 查询本地缓存发生异常
+	} else if err := os.MkdirAll(abspath, 0644); err != nil {
+		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
+		http.Error(rw, "application local path error: "+rr.Host+" ["+abspath+"] "+err.Error(), http.StatusInternalServerError)
+		return nil // 无法创建缓存文件夹
+	} else {
+		// 获取缓存文件
 		completed := false
+		// 优先使用 cdn 缓存
 		tgzobject := filepath.Join(aa.CdnConfig.RootDir, av.Version.Vpp, av.Version.Ver) + ".tgz"
 		var s3cli *minio.Client = nil
 		if av.Version.CdnCache.Bool && av.Version.CdnRenew.Bool {
@@ -304,6 +311,9 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache)
 			s3cli, _ = s3cdn.GetClient(context.Background(), &aa.CdnConfig)
 		} else if av.Version.CdnCache.Bool {
 			// 优先尝试使用 cdn 缓存
+			if z.IsDebug() || C.Front3.Debug {
+				z.Println("[_front3_]: CDN mode cache:", tgzobject)
+			}
 			if s3cli, err = s3cdn.GetClient(context.Background(), &aa.CdnConfig); err != nil {
 				z.Println("[_front3_]: used cdn cache error:", tgzobject, err.Error())
 			} else if obj, err := s3cli.GetObject(context.TODO(), aa.CdnConfig.Bucket, tgzobject, minio.GetObjectOptions{}); err != nil {
@@ -313,32 +323,32 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache)
 			} else {
 				z.Println("[_front3_]: used cdn cache success:", tgzobject)
 				completed = true
+				s3cli = nil // 使用 cdn 缓存， 因此不需要更新 cdn
 			}
 		}
-		if !completed && (strings.HasPrefix(av.Version.Image.String, "http://") || strings.HasPrefix(av.Version.Image.String, "https://")) {
+		// 使用 git+http 方式获取前端资源文件
+		if !completed && (strings.HasPrefix(av.Version.Image.String, "git+") || // 使用 git 获取镜像文件
+			strings.HasPrefix(av.Version.Image.String, "https://") || // 使用 http 获取镜像文件
+			strings.HasPrefix(av.Version.Image.String, "http://")) {
 			// 使用 http 获取镜像文件
-			var rerr error
-			if resp, err := http.Get(av.Version.Image.String); err != nil {
-				z.Println("[_front3_]: download by http error:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String, err.Error())
-				rerr = err
-			} else if err := registry.ExtractTgzByReader(abspath, av.Version.ImagePath.String, resp.Body); err != nil {
-				z.Println("[_front3_]: download by http error:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String, err.Error())
-				rerr = err
-				_ = resp.Body.Close()
-			} else {
-				z.Println("[_front3_]: download by http success:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String)
-				_ = resp.Body.Close()
-				completed = true
+			if z.IsDebug() || C.Front3.Debug {
+				z.Println("[_front3_]: download by http:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String)
 			}
-			if rerr != nil {
+			if rerr := registry.ExtractTgzByHttp(abspath, av.Version.ImagePath.String, av.Version.Image.String); rerr != nil {
+				z.Println("[_front3_]: download by http error:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String, rerr.Error())
 				rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 				http.Error(rw, "application download package error: "+rr.Host+", "+rerr.Error(), http.StatusInternalServerError)
 				os.RemoveAll(abspath) // 删除本地缓存文件夹
 				return nil            // 无法下载镜像文件
 			}
+			completed = true
 		}
+		// 其他， 使用 registry 获取镜像文件， 获取前端资源文件
 		if !completed {
 			// 使用 registry 获取镜像文件
+			if z.IsDebug() || C.Front3.Debug {
+				z.Println("[_front3_]: download by registry:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String)
+			}
 			cfg := registry.Config{
 				Username: aa.RegConfig.Username,
 				Password: aa.RegConfig.Password,
@@ -364,33 +374,29 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache)
 				os.RemoveAll(abspath) // 删除本地缓存文件夹
 				return nil            // 无法提出镜像文件
 			}
-			if s3cli != nil {
-				// S3终端已经被打开, 上传缓存文件
-				pr, pw := io.Pipe()
-				go func() {
-					if err := registry.CreateTgzByWriter(abspath, pw); err != nil {
-						_ = pw.CloseWithError(err)
-						return
-					}
-					_ = pw.Close()
-				}()
-				if _, err := s3cli.PutObject(context.TODO(), aa.CdnConfig.Bucket, tgzobject, pr, -1, minio.PutObjectOptions{}); err != nil {
-					z.Println("[_front3_]: error, upload cdn cache error:", tgzobject, err.Error())
-					_ = pr.CloseWithError(err)
-				} else {
-					z.Println("[_front3_]: upload cdn cache success:", tgzobject)
-					_ = pr.Close()
-				}
-				// s3cli.Close()
-			}
 		}
-	} else if err != nil {
-		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-		http.Error(rw, "application local path error: "+rr.Host+" ["+abspath+"] "+err.Error(), http.StatusInternalServerError)
-		return nil // 查询本地缓存发生异常
-	} else {
-		z.Println("[_front3_]: local path, exist:", abspath)
+		// 上传缓存文件
+		if s3cli != nil {
+			// S3终端已经被打开, 上传缓存文件
+			pr, pw := io.Pipe()
+			go func() {
+				if err := registry.CreateTgzByWriter(abspath, pw); err != nil {
+					_ = pw.CloseWithError(err)
+					return
+				}
+				_ = pw.Close()
+			}()
+			if _, err := s3cli.PutObject(context.TODO(), aa.CdnConfig.Bucket, tgzobject, pr, -1, minio.PutObjectOptions{}); err != nil {
+				z.Println("[_front3_]: error, upload cdn cache error:", tgzobject, err.Error())
+				_ = pr.CloseWithError(err)
+			} else {
+				z.Println("[_front3_]: upload cdn cache success:", tgzobject)
+				_ = pr.Close()
+			}
+			// s3cli.Close()
+		}
 	}
+	// 本地部署前端访问的静态资源
 	av.Abspath = abspath
 	handler := front2.NewApi(os.DirFS(abspath), config, fmt.Sprintf("[_front3_]-%d-%d", av.AppInfo.ID, av.Version.ID))
 	av.Handler = handler

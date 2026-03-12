@@ -43,6 +43,9 @@ tgzc:
 tgzx:
 	go run app/main.go tgzx _out/image/www/sso/v1.0.152.tgz _out/image/www/sso/v1.0.152-copy
 
+tgzw:
+	go run app/main.go tgzw git+https://0582ab9d7d00af011d676da456446afdb1915982@git3rd.res.sims-cn.com/fmes/projectdsm#v1.0.2 _out/image/projectdsm/v1.0.2 tar
+
 test:
 	_out/$(APP) -local -debug -port 81
 

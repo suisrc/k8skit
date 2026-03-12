@@ -59,3 +59,7 @@ Host: account.kfzx.sims-cn.com
 ### 
 GET {{BASE}}/healthz
 Content-Type: application/json
+
+### 
+GET https://git3rd.res.sims-cn.com/fmes/projectdsm/archive/v1.0.2.tar.gz
+Authorization: token 0582ab9d7d00af011d676da456446afdb1915982

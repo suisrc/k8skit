@@ -16,6 +16,7 @@ func init() {
 	z.CMD["imagex"] = ExpImageX
 	z.CMD["tgzc"] = CreateTgzFile  // 压缩文件
 	z.CMD["tgzx"] = ExtractTgzFile // 解压文件
+	z.CMD["tgzw"] = ExtractTgzResp // 解压文件
 }
 
 func ExeDeploy() {

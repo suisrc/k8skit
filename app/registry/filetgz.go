@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -148,4 +150,49 @@ func SafeJoin(outDir, entryName string) (string, error) {
 		return "", os.ErrPermission
 	}
 	return targetPath, nil
+}
+
+// 获取 HTTP 响应
+func HttpGetWithAuth(rawURL string) (io.ReadCloser, error) {
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, err
+	}
+	// 提取用户基本信息
+	user := parsedURL.User
+	parsedURL.User = nil    // 删除用户信息
+	parsedURL.Fragment = "" // 删除片段信息
+	// 构建 HTTP 请求
+	req, err := http.NewRequest("GET", parsedURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	// 设置 HTTP 认证
+	if username := user.Username(); username != "" {
+		if password, exist := user.Password(); exist {
+			req.SetBasicAuth(username, password)
+		} else {
+			// req.Header.Set("Authorization", "token "+username)
+			req.SetBasicAuth("oauth2", username)
+		}
+	}
+	// 发送 HTTP 请求
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Body, nil
+}
+
+// 通过网络获取 tgz 文件并解压
+func ExtractTgzByHttp(outDir, preDir, rawURL string) error {
+	if strings.HasPrefix(rawURL, "git+") {
+		return ExtractTgzByGit(outDir, preDir, rawURL[4:])
+	}
+	body, err := HttpGetWithAuth(rawURL)
+	if err != nil {
+		return err
+	}
+	defer body.Close()
+	return ExtractTgzByReader(outDir, preDir, body)
 }
