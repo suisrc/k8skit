@@ -389,7 +389,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					for k, v := range cm.Data {
 						// cm.Data[k] = strings.TrimSpace(v)
 						if strings.ContainsRune(v, '\n') {
-							cm.Data[k] = k8sc.FormatYamlString(v)
+							cm.Data[k] = k8sc.TrimYamlString(v)
 						}
 					}
 					vma := map[string]any{}
@@ -452,7 +452,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 					for k, v := range cm.Data {
 						// cm.Data[k] = strings.TrimSpace(v)
 						if strings.ContainsRune(v, '\n') {
-							cm.Data[k] = k8sc.FormatYamlString(v)
+							cm.Data[k] = k8sc.TrimYamlString(v)
 						}
 					}
 					vma := map[string]any{}

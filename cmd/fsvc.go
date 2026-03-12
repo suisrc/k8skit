@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"k8skit/app/k8sc"
 	"k8skit/app/zdb"
 	"strings"
 	"time"
@@ -45,7 +46,7 @@ func (aa *FixSvcCmd) fixsvc() {
 	// aa.conf.DeleteBy(nil, fmt.Sprintf("version=%d", C.CmdSync.Version))
 	// ----------------------------------------------------------
 	// 对 yaml 文件进行格式化处理
-	aa.fixsvc0() // 调试专用
+	aa.fixsvc_() // 调试专用
 	//
 	z.Println("fixsvc, finally")
 }
@@ -99,7 +100,11 @@ func (aa *FixSvcCmd) fixsvc1(zcks *zdb.Zck8sDO) error {
 	zc.MapVal(item, "metadata.name", name)
 	zc.MapVal(item, "spec.selector.matchLabels.app", name)
 	zc.MapVal(item, "spec.template.metadata.labels.app", name)
-	zc.MapVal(item, "spec.template.metadata.annotations.[ksidecar/db.config]", ".env")
+
+	if eok := zc.MapKey(item, "spec.template.metadata.labels.ksidecar/inject"); eok == nil {
+		zc.MapVal(item, "spec.template.metadata.labels.ksidecar/inject", "enable")
+	}
+	k8sc.MapVaz(item, "spec.template.metadata.annotations.[ksidecar/db.config]", ".env")
 	// zc.MapVal(item, "spec.template.spec.containers.[0].env.[.name=EXT_CFG_HOST].value", "1234567890")
 	// 修复镜像地址
 	image := zc.MapDef(item, "spec.template.spec.containers.[0].image", "")
@@ -107,6 +112,9 @@ func (aa *FixSvcCmd) fixsvc1(zcks *zdb.Zck8sDO) error {
 		image = "dcr.dev.sims-cn.com/plus/" + image[len("registry-vpc.cn-shanghai.aliyuncs.com/fmes/"):]
 		zc.MapVal(item, "spec.template.spec.containers.[0].image", image)
 	}
+	// 修复 imagePullSecrets, docker-registry -> local-registry
+	zc.MapVal(item, "spec.template.spec.imagePullSecrets.[.name=docker-registry].name", "local-registry")
+	zc.MapVal(item, "spec.template.spec.containers.[0].name", "app")
 	// 修复 ksidecar/configmap
 	kiv := zc.MapDef(item, "spec.template.metadata.annotations.ksidecar/configmap", "")
 	if kiv != "" {
@@ -132,8 +140,16 @@ func (aa *FixSvcCmd) fixsvc1(zcks *zdb.Zck8sDO) error {
 			// 修改 selector 配置
 			zc.MapVal(item, "spec.selector", map[string]any{"app": name})
 			// 标记 anno 为不推荐使用
-			zc.MapVal(item, "metadata.annotations", map[string]any{"suggestions": "deprecated"})
+			zc.MapVal(item, "metadata.annotations", map[string]any{"suggestions": "deprecated.old"})
 			zc.MapVal(item, "metadata.labels", nil)
+			if port := k8sc.MapInt(item, "spec.ports.[.name=http].port", 0); port == 12001 {
+				// authx -> 12001 -> 12006
+				zc.MapVal(item, "spec.ports.[.name=http]", map[string]any{
+					"name":       "http",
+					"port":       12006,
+					"protocol":   "TCP",
+					"targetPort": 12006})
+			}
 			svcs = append(svcs, item)
 		}
 	}
@@ -294,8 +310,12 @@ func (aa *FixSvcCmd) fixsvc1(zcks *zdb.Zck8sDO) error {
 	return aa.zcks.UpdateByInc(nil, zcks, "ns2", "name", "yaml2", "json2", "updater", "updated")
 }
 
+func (aa *FixSvcCmd) fixsvc_() {
+	aa.fixsvc0()
+}
+
 func (aa *FixSvcCmd) fixsvc0() {
-	zcks, err := aa.zcks.Get(nil, 4406)
+	zcks, err := aa.zcks.Get(nil, 4590)
 	if err != nil {
 		fmt.Println("get zck8s error: ", err.Error())
 		return
@@ -324,8 +344,9 @@ func FixKsidecarConfigmap(kiv string) string {
 	return ""
 }
 
-func FixValueConfigMap(kk string, vv any) any {
-	switch kk {
+func FixValueConfigMap(key string, val any) any {
+	vv := val.(string)
+	switch key {
 	case "SKY_DATABASE_HOST":
 		vv = "mysqlx.base.svc"
 	case "SKY_LOGGER_SYSLOGADDR":
@@ -342,18 +363,34 @@ func FixValueConfigMap(kk string, vv any) any {
 		vv = "http://end-iam-kin.rs-iam.svc/authx"
 	case "LOGGING_SYSLOG_HOST":
 		vv = "klog.default.svc"
-	case "NATS_SPRING_SERVER":
-		vv = strings.ReplaceAll(vv.(string), "nats-svc", "natsx.base.svc")
-	case "SPRING_DATASOURCE_URL":
-		vv = strings.ReplaceAll(vv.(string), "mysql-svc", "mysqlx.base.svc")
 	case "SPRING_DATA_MONGODB_HOST":
 		vv = "mongox.base.svc"
-	case "SPRING_REDIS_HOST":
+	case "SPRING_REDIS_HOST", "REDIS_HOST":
 		vv = "redis.base.svc"
 	case "SPRING_SERVICE_IAMPAS_URL":
 		vv = "http://end-fmes-pas.rs-iam.svc"
 	case "SPRING_SERVICE_TDUCK_URL":
 		vv = "http://end-fmes-tduck.rs-iam.svc"
+	case "SPRING_SERVICE_PLATFORM_URL":
+		vv = "http://end-iam-pas.rs-iam.svc"
+	}
+	// 内容识别并进行替换
+	if strings.HasPrefix(vv, "http://end-") && strings.Contains(vv, "-svc.") {
+		vv = strings.Replace(vv, "-svc.", ".", 1)
+	}
+	switch vv {
+	case "http://end-tas.rs-iam.svc":
+		vv = "http://end-fmes-tas.rs-iam.svc"
+	case "http://end-pas.rs-iam.svc":
+		vv = "http://end-fmes-pas.rs-iam.svc"
+	default:
+		if strings.Contains(vv, "pc-uf6t3o4p8cs85fg8e.rwlb.rds.aliyuncs.com") {
+			vv = strings.Replace(vv, "pc-uf6t3o4p8cs85fg8e.rwlb.rds.aliyuncs.com", "mysqlx.base.svc", 1)
+		} else if strings.Contains(vv, "nats-svc:4222") {
+			vv = strings.Replace(vv, "nats-svc:4222", "natsx.base.svc:4222", 1)
+		} else if strings.Contains(vv, "nats:4222") {
+			vv = strings.Replace(vv, "nats:4222", "natsx.base.svc:4222", 1)
+		}
 	}
 	return vv
 }
