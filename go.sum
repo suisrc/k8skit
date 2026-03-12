@@ -113,8 +113,8 @@ github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
-github.com/suisrc/zgg v0.4.10 h1:0flUN9DX4X+xichE7Fdhc7lEdScOJY1PLV23ZinILlE=
-github.com/suisrc/zgg v0.4.10/go.mod h1:7V3V3sVwC8L2vSls0KYHY2wUS2SPVTaVNe+tW9bw79g=
+github.com/suisrc/zgg v0.4.11 h1:59p8TT7F/0IrQHwQtUMcQg5Kr01OVWfi1PY0OdgTDnM=
+github.com/suisrc/zgg v0.4.11/go.mod h1:7V3V3sVwC8L2vSls0KYHY2wUS2SPVTaVNe+tW9bw79g=
 github.com/tidwall/assert v0.1.0 h1:aWcKyRBUAdLoVebxo95N7+YZVTFF/ASTr7BN4sLP6XI=
 github.com/tidwall/assert v0.1.0/go.mod h1:QLYtGyeqse53vuELQheYl9dngGCJQ+mTtlxcktb+Kj8=
 github.com/tidwall/btree v1.4.2 h1:PpkaieETJMUxYNADsjgtNRcERX7mGc/GP2zp/r5FM3g=
