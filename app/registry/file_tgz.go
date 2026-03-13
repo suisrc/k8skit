@@ -11,6 +11,7 @@ import (
 	"strings"
 )
 
+// 创建 tgz 文件
 func CreateTgzFile(srcDir, outTgz string) error {
 	ff, err := os.Create(outTgz)
 	if err != nil {
@@ -42,18 +43,15 @@ func CreateTgzByWriter(srcDir string, writer io.Writer) error {
 		if rel == "." {
 			return nil
 		}
-
 		hdr, err := tar.FileInfoHeader(info, "")
 		if err != nil {
 			return err
 		}
 		hdr.Name = rel
 		// 可选择设置 hdr.ModTime = time.Now()
-
 		if err := tw.WriteHeader(hdr); err != nil {
 			return err
 		}
-
 		if info.Mode().IsRegular() {
 			r, err := os.Open(path)
 			if err != nil {
@@ -67,6 +65,8 @@ func CreateTgzByWriter(srcDir string, writer io.Writer) error {
 		return nil
 	})
 }
+
+// ----------------------------------------------------------------------------------------
 
 func ExtractTgzFile(srcTgz, preDir, outDir string) error {
 	ff, err := os.Open(srcTgz)
@@ -83,7 +83,6 @@ func ExtractTgzByReader(outDir, preDir string, reader io.Reader) error {
 		return err
 	}
 	defer gr.Close()
-
 	tr := tar.NewReader(gr)
 	for {
 		hdr, err := tr.Next()
@@ -152,6 +151,8 @@ func SafeJoin(outDir, entryName string) (string, error) {
 	return targetPath, nil
 }
 
+// ----------------------------------------------------------------------------------------
+
 // 获取 HTTP 响应
 func HttpGetWithAuth(rawURL string) (io.ReadCloser, error) {
 	parsedURL, err := url.Parse(rawURL)
@@ -186,9 +187,6 @@ func HttpGetWithAuth(rawURL string) (io.ReadCloser, error) {
 
 // 通过网络获取 tgz 文件并解压
 func ExtractTgzByHttp(outDir, preDir, rawURL string) error {
-	if strings.HasPrefix(rawURL, "git+") {
-		return ExtractTgzByGit(outDir, preDir, rawURL[4:])
-	}
 	body, err := HttpGetWithAuth(rawURL)
 	if err != nil {
 		return err

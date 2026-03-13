@@ -334,7 +334,7 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache)
 			if z.IsDebug() || C.Front3.Debug {
 				z.Println("[_front3_]: download by http:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String)
 			}
-			if rerr := registry.ExtractTgzByHttp(abspath, av.Version.ImagePath.String, av.Version.Image.String); rerr != nil {
+			if rerr := registry.GetFilesByGitOrTgz(abspath, av.Version.ImagePath.String, av.Version.Image.String); rerr != nil {
 				z.Println("[_front3_]: download by http error:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String, rerr.Error())
 				rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 				http.Error(rw, "application download package error: "+rr.Host+", "+rerr.Error(), http.StatusInternalServerError)
@@ -367,7 +367,7 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache)
 				}
 			}
 			// 提取镜像文件
-			if err := registry.ExportFile(&cfg); err != nil {
+			if err := registry.ExportImage(&cfg); err != nil {
 				z.Println("[_front3_]: export image file error:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String, err.Error())
 				rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 				http.Error(rw, "application pull image error: "+rr.Host+", "+err.Error(), http.StatusInternalServerError)

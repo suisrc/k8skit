@@ -56,7 +56,7 @@ func ExtractTgzResp() {
 		}
 	} else {
 		z.Println("[_extract]:", "extract tgz file: ", out)
-		err := registry.ExtractTgzByHttp(out, "", src)
+		err := registry.GetFilesByGitOrTgz(out, "", src)
 		if err != nil {
 			z.Println("[_extract]: download by http error:", err.Error())
 			return

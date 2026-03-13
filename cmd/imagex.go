@@ -23,7 +23,7 @@ func ExpImageX() {
 			z.Fatalf("mkdir out dir: %v", err)
 		}
 	}
-	if err := registry.ExportFile(&image.C.Imagex); err != nil {
+	if err := registry.ExportImage(&image.C.Imagex); err != nil {
 		z.Fatalf("extract image file: %v", err)
 	}
 	z.Println(z.ToStr2(image.C))
