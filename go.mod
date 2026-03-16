@@ -7,7 +7,7 @@ require (
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
-	github.com/suisrc/zgg v0.4.11
+	github.com/suisrc/zgg v0.4.16
 	github.com/tidwall/buntdb v1.3.2
 	go.mongodb.org/mongo-driver v1.17.9
 	go.yaml.in/yaml/v3 v3.0.4

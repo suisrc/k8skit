@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/suisrc/zgg/z"
 	"gopkg.in/yaml.v3"
 )
 
@@ -54,47 +53,4 @@ func Test_yaml(t *testing.T) {
 	bts, _ = yaml.Marshal(tmp)
 	os.WriteFile("../../_out/_temp1.yaml", bts, 0644)
 	// t.Log(tmp)
-}
-
-// go test -v app/k8sr/z_test.go -run Test_mapdef
-
-func Test_mapdef(t *testing.T) {
-	dmap := map[string]any{
-		"a": map[string]any{
-			"b": map[string]any{
-				"c": "d",
-				"d": 123,
-				"e": "456",
-				"f": 456.789,
-				"g": uint16(0),
-				"i": "N",
-				"a": map[string]any{
-					"j": "123",
-				},
-				"b": map[string]any{
-					"j": "321",
-				},
-			},
-		},
-	}
-
-	t.Log("=================== ", k8sc.MapAny(dmap, "a.b.e", false))
-	t.Log("=================== ", k8sc.MapAny(dmap, "a.b.f", false))
-	t.Log("=================== ", k8sc.MapAny(dmap, "a.b.g", true))
-	t.Log("=================== ", k8sc.MapAny(dmap, "a.b.h", false))
-	t.Log("=================== ", k8sc.MapAny(dmap, "a.b.i", true))
-	k8sc.MapVaz(dmap, "a.b.x.y.-0.v", "123")
-	t.Log("=================== ", k8sc.MapAny(dmap, "a.b.x.y.0.v", 0))
-	k8sc.MapVaz(dmap, "a.b.x.y.0.v", "456")
-	t.Log("=================== ", k8sc.MapAny(dmap, "a.b.x.y.0.v", 0))
-	// k8sc.MapVaz(dmap, "a.b.x.y.0", nil)
-	k8sc.MapVaz(dmap, "a.b.x.y.-0.-0.z", "123")
-	t.Log("=================== ", k8sc.MapAny(dmap, "a.b.x.y.0.0.z", 0))
-	k8sc.MapVaz(dmap, "a.b.x.y.-0.-0.z", "123")
-	k8sc.MapVaz(dmap, "a.b.x.y.1.-0.z", "789")
-	k8sc.MapVaz(dmap, "a.b.x.y.1.-0.z", "567")
-	k8sc.MapVaz(dmap, "a.b.x.y.-1.-0.z", "234")
-	t.Log(z.ToStr2(dmap))
-	t.Log("=================== ", k8sc.MapAny(dmap, "a.b.x.y.1.[.z=^*.6].z", 0))
-	t.Log("=================== ", k8sc.MapKey(dmap, "a.b.[.j=^*.2].j"))
 }

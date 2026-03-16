@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"k8skit/app/k8sc"
 	"k8skit/app/zdb"
 	"strings"
 	"time"
@@ -20,13 +19,11 @@ import (
 type FixSvcConfig struct {
 	User      string
 	ConfxKeys z.HM
-	ProdVer   int
 }
 
 func init() {
 	z.CMD["fsvc"] = (&FixSvcCmd{}).fixsvc
 	flag.StringVar(&C.CmdFixSvc.User, "fixuser", "fixuser", "k8s fix user")
-	flag.IntVar(&C.CmdFixSvc.ProdVer, "fixprodver", 13, "k8s fix prod version")
 }
 
 type FixSvcCmd struct {
@@ -46,14 +43,14 @@ func (aa *FixSvcCmd) fixsvc() {
 	// aa.conf.DeleteBy(nil, fmt.Sprintf("version=%d", C.CmdSync.Version))
 	// ----------------------------------------------------------
 	// 对 yaml 文件进行格式化处理
-	aa.fixsvc_() // 调试专用
+	aa.fix_() // 调试专用
 	//
-	z.Println("fixsvc, finally")
+	z.Println("process, finally")
 }
 
 func (aa *FixSvcCmd) fixsvc1(zcks *zdb.Zck8sDO) error {
 	if zcks.Kind.String != "Deployment" {
-		return fmt.Errorf("kind is Deployment: %d", zcks.ID)
+		return fmt.Errorf("kind is %s: %d", zcks.Kind.String, zcks.ID)
 	}
 	if zcks.Name.String == "" {
 		return fmt.Errorf("name is empty: %d", zcks.ID)
@@ -72,56 +69,56 @@ func (aa *FixSvcCmd) fixsvc1(zcks *zdb.Zck8sDO) error {
 	if !ok {
 		return fmt.Errorf("item[0] is not map: %d", zcks.ID)
 	}
-	oldName := zc.MapDef(item, "metadata.name", name)
 	zcks.Ns2 = zcks.Namespace
-	if C.CmdFixSvc.ProdVer > 0 {
-		if pzcks, _ := aa.zcks.GetBy(nil, nil, nil, "name=? AND version=?", oldName, C.CmdFixSvc.ProdVer); pzcks.ID > 0 {
-			zcks.Ns2 = pzcks.Namespace
-		} else if pzcks, _ := aa.zcks.GetBy(nil, nil, nil, "name=? AND version=?", name, C.CmdFixSvc.ProdVer); pzcks.ID > 0 {
-			zcks.Ns2 = pzcks.Namespace
-		}
-	}
+	// oldName := zc.MapDef(item, "metadata.name", name)
+	// if C.CmdFixSvc.ProdVer > 0 {
+	// 	if pzcks, _ := aa.zcks.GetBy(nil, nil, nil, "name=? AND version=?", oldName, C.CmdFixSvc.ProdVer); pzcks.ID > 0 {
+	// 		zcks.Ns2 = pzcks.Namespace
+	// 	} else if pzcks, _ := aa.zcks.GetBy(nil, nil, nil, "name=? AND version=?", name, C.CmdFixSvc.ProdVer); pzcks.ID > 0 {
+	// 		zcks.Ns2 = pzcks.Namespace
+	// 	}
+	// }
 	// 删除 metadata.namespace
-	// zc.MapVal(item, "metadata.namespace", nil)
-	zc.MapVal(item, "metadata.annotations", nil)
-	zc.MapVal(item, "metadata.labels", nil)
-	zc.MapVal(item, "spec.progressDeadlineSeconds", nil)
-	zc.MapVal(item, "spec.strategy", nil)
-	zc.MapVal(item, "spec.template.spec.containers.0.terminationMessagePath", nil)
-	zc.MapVal(item, "spec.template.spec.containers.0.terminationMessagePolicy", nil)
-	zc.MapVal(item, "spec.template.spec.dnsPolicy", nil)
-	zc.MapVal(item, "spec.template.spec.schedulerName", nil)
-	zc.MapVal(item, "spec.template.spec.securityContext", nil)
-	zc.MapVal(item, "spec.template.spec.terminationGracePeriodSeconds", nil)
-	zc.MapVal(item, "spec.template.spec.containers.[0].envFrom", nil)
-	zc.MapVal(item, "spec.template.spec.containers.[0].resources", nil)
-	zc.MapVal(item, "spec.template.metadata.annotations.redeploy-timestamp", nil)
+	// zc.MapSet(item, "metadata.namespace", nil)
+	zc.MapSet(item, "metadata.annotations", nil)
+	zc.MapSet(item, "metadata.labels", nil)
+	zc.MapSet(item, "spec.progressDeadlineSeconds", nil)
+	zc.MapSet(item, "spec.strategy", nil)
+	zc.MapSet(item, "spec.template.spec.containers.0.terminationMessagePath", nil)
+	zc.MapSet(item, "spec.template.spec.containers.0.terminationMessagePolicy", nil)
+	zc.MapSet(item, "spec.template.spec.dnsPolicy", nil)
+	zc.MapSet(item, "spec.template.spec.schedulerName", nil)
+	zc.MapSet(item, "spec.template.spec.securityContext", nil)
+	zc.MapSet(item, "spec.template.spec.terminationGracePeriodSeconds", nil)
+	zc.MapSet(item, "spec.template.spec.containers.[0].envFrom", nil)
+	zc.MapSet(item, "spec.template.spec.containers.[0].resources", nil)
+	zc.MapSet(item, "spec.template.metadata.annotations.redeploy-timestamp", nil)
 
-	zc.MapVal(item, "metadata.name", name)
-	zc.MapVal(item, "spec.selector.matchLabels.app", name)
-	zc.MapVal(item, "spec.template.metadata.labels.app", name)
+	zc.MapSet(item, "metadata.name", name)
+	zc.MapSet(item, "spec.selector.matchLabels.app", name)
+	zc.MapSet(item, "spec.template.metadata.labels.app", name)
 
-	if eok := zc.MapKey(item, "spec.template.metadata.labels.ksidecar/inject"); eok == nil {
-		zc.MapVal(item, "spec.template.metadata.labels.ksidecar/inject", "enable")
+	if eok := zc.MapGet(item, "spec.template.metadata.labels.ksidecar/inject"); eok == nil {
+		zc.MapSet(item, "spec.template.metadata.labels.ksidecar/inject", "enable")
 	}
-	k8sc.MapVaz(item, "spec.template.metadata.annotations.[ksidecar/db.config]", ".env")
-	// zc.MapVal(item, "spec.template.spec.containers.[0].env.[.name=EXT_CFG_HOST].value", "1234567890")
+	zc.MapNew(item, "spec.template.metadata.annotations.[ksidecar/db.config]", ".env")
+	// zc.MapSet(item, "spec.template.spec.containers.[0].env.[.name=EXT_CFG_HOST].value", "1234567890")
 	// 修复镜像地址
 	image := zc.MapDef(item, "spec.template.spec.containers.[0].image", "")
-	if strings.HasPrefix(image, "registry-vpc.cn-shanghai.aliyuncs.com/fmes/") {
-		image = "dcr.dev.sims-cn.com/plus/" + image[len("registry-vpc.cn-shanghai.aliyuncs.com/fmes/"):]
-		zc.MapVal(item, "spec.template.spec.containers.[0].image", image)
+	if strings.HasPrefix(image, imagekv[0]) {
+		image = imagekv[1] + image[len(imagekv[0]):]
+		zc.MapSet(item, "spec.template.spec.containers.[0].image", image)
 	}
 	// 修复 imagePullSecrets, docker-registry -> local-registry
-	zc.MapVal(item, "spec.template.spec.imagePullSecrets.[.name=docker-registry].name", "local-registry")
-	zc.MapVal(item, "spec.template.spec.containers.[0].name", "app")
+	zc.MapSet(item, "spec.template.spec.imagePullSecrets.[.name=docker-registry].name", "local-registry")
+	zc.MapSet(item, "spec.template.spec.containers.[0].name", "app")
 	// 修复 ksidecar/configmap
 	kiv := zc.MapDef(item, "spec.template.metadata.annotations.ksidecar/configmap", "")
 	if kiv != "" {
 		// 修正 kiv 内容
 		kin := FixKsidecarConfigmap(kiv)
 		if len(kin) > 0 {
-			zc.MapVal(item, "spec.template.metadata.annotations.ksidecar/configmap", kin)
+			zc.MapSet(item, "spec.template.metadata.annotations.ksidecar/configmap", kin)
 		}
 	}
 	// 修复 service， 如果存在 -svc的service, 需要补充一个不带-svc的service，并标记 service 过期
@@ -135,16 +132,16 @@ func (aa *FixSvcCmd) fixsvc1(zcks *zdb.Zck8sDO) error {
 		} else if svc == nil && knam == name {
 			svc = item
 			// 修改 selector 配置
-			zc.MapVal(item, "spec.selector", map[string]any{"app": name})
+			zc.MapSet(item, "spec.selector", map[string]any{"app": name})
 		} else {
 			// 修改 selector 配置
-			zc.MapVal(item, "spec.selector", map[string]any{"app": name})
+			zc.MapSet(item, "spec.selector", map[string]any{"app": name})
 			// 标记 anno 为不推荐使用
-			zc.MapVal(item, "metadata.annotations", map[string]any{"suggestions": "deprecated.old"})
-			zc.MapVal(item, "metadata.labels", nil)
-			if port := k8sc.MapInt(item, "spec.ports.[.name=http].port", 0); port == 12001 {
+			zc.MapSet(item, "metadata.annotations", map[string]any{"suggestions": "deprecated.old"})
+			zc.MapSet(item, "metadata.labels", nil)
+			if port := zc.MapInt(item, "spec.ports.[.name=http].port", 0); port == 12001 {
 				// authx -> 12001 -> 12006
-				zc.MapVal(item, "spec.ports.[.name=http]", map[string]any{
+				zc.MapSet(item, "spec.ports.[.name=http]", map[string]any{
 					"name":       "http",
 					"port":       12006,
 					"protocol":   "TCP",
@@ -236,7 +233,7 @@ func (aa *FixSvcCmd) fixsvc1(zcks *zdb.Zck8sDO) error {
 	// curl http://confx.dev1.sims-cn.com/ac/v1/content?token=123&version=v2.0.0&name=end-iam-kin-app
 	// envConfig := k8sc.MapDef(item, "spec.template.spec.containers.0.env.[.name=EXT_CFG_HOST].value", "")
 	// if envConfig != "" {
-	// 	k8sc.MapVal(item, "spec.template.spec.containers.0.env.[.name=EXT_CFG_HOST]", nil)
+	// 	zc.MapSet(item, "spec.template.spec.containers.0.env.[.name=EXT_CFG_HOST]", nil)
 	// 	z.Println("fixsvc, envConfig... ", oldName, envConfig)
 	// 	addr := "http://confx.dev1.sims-cn.com/ac/v1/content"
 	// 	token, _ := C.CmdFixSvc.ConfxKeys[oldName]
@@ -253,7 +250,7 @@ func (aa *FixSvcCmd) fixsvc1(zcks *zdb.Zck8sDO) error {
 	// 	// 处理变量替换
 	// 	vv := FixValueConfigFile(string(body))
 	// 	// ----------------------------------------------------
-	// 	k8sc.MapVal(item, "spec.template.metadata.annotations.[ksidecar/db.config]", ".yaml")
+	// 	zc.MapSet(item, "spec.template.metadata.annotations.[ksidecar/db.config]", ".yaml")
 	// 	// 将 vv 存入数据库中
 	// 	kk := "/www/application.yaml"
 	// 	conf, _ := aa.conf.GetBy(nil, nil, nil, "app=? AND kind='yaml' AND code=? AND deleted=0", name, kk)
@@ -304,18 +301,177 @@ func (aa *FixSvcCmd) fixsvc1(zcks *zdb.Zck8sDO) error {
 		return err
 	}
 	zcks.Json2 = sqlx.NewString(string(json_txt))
-
 	zcks.Updater = sqlx.NewString(C.CmdFixSvc.User)
 	zcks.Updated = sqlx.NewTime(time.Now())
-	return aa.zcks.UpdateByInc(nil, zcks, "ns2", "name", "yaml2", "json2", "updater", "updated")
+	return aa.zcks.UpdateByInc(nil, zcks, "ns2", "yaml2", "json2", "updater", "updated")
 }
 
-func (aa *FixSvcCmd) fixsvc_() {
-	aa.fixsvc0()
+func (aa *FixSvcCmd) fixing1(zcks *zdb.Zck8sDO) error {
+	if zcks.Kind.String != "Ingress" {
+		return fmt.Errorf("kind is %s: %d", zcks.Kind.String, zcks.ID)
+	}
+	if zcks.Name.String == "" {
+		return fmt.Errorf("name is empty: %d", zcks.ID)
+	}
+	nam0 := zcks.Name.String
+	nam0 = strings.TrimSuffix(nam0, "-irs")
+	nam0 = strings.TrimPrefix(nam0, "ing-")
+	nam1 := "end-" + nam0
+	// ingress 中只会有一个 ingress
+	items := []any{}
+	if err := json.Unmarshal([]byte(zcks.Json.String), &items); err != nil {
+		return err
+	}
+	item, ok := items[0].(map[string]any)
+	if !ok {
+		return fmt.Errorf("item[0] is not map: %d", zcks.ID)
+	}
+	zcks.Ns2 = zcks.Namespace
+	ings := []any{}
+	ingm := map[string]any{}
+	// 删除 metadata.namespace
+	// zc.MapSet(item, "metadata.namespace", nil)
+	zc.MapSet(item, "metadata.name", nam1)
+	zc.MapSet(item, "metadata.annotations.[cert-manager.io/cluster-issuer]", nil)
+	zc.MapSet(item, "metadata.annotations.[nginx.ingress.kubernetes.io/server-snippet]", nil)
+	if txt := zc.MapDef(item, "metadata.annotations.[nginx.ingress.kubernetes.io/configuration-snippet]", ""); txt != "" {
+		z.Println("[_warning]: configuration-snippet disabled: ", zcks.ID, zcks.Namespace.String, zcks.Name.String)
+		txt = zc.TrimYamlString(txt)
+		zc.MapSet(item, "metadata.annotations.[nginx.ingress.kubernetes.io/configuration-snippet]", txt)
+	}
+
+	rules := zc.MapKeyVal(item, "spec.rules.*.http.paths.*.backend.service[.name=^fnt].name")
+	if len(rules) > 0 {
+		tls := zc.MapGet(item, "spec.tls")
+		if tts, _ := tls.([]any); tts != nil {
+			for i, t := range tts {
+				switch t := t.(type) {
+				case map[string]any:
+					tsn, _ := t["secretName"]
+					if tsn, _ := tsn.(string); tsn != "" {
+						if idx := strings.IndexByte(tsn, '.'); idx > 0 {
+							tsn = "tls-" + tsn[idx+1:]
+							tts[i].(map[string]any)["secretName"] = tsn
+						}
+					}
+				}
+			}
+		}
+		ns := zcks.Namespace.String
+		version := zcks.Version.Int64
+		for i := len(rules) - 1; i >= 0; i-- {
+			kv := rules[i]
+			kk := kv.K
+			v0 := kv.V.(string)
+			name := strings.TrimSuffix(v0, "-svc")
+			// if strings.Contains(name, "-iam-") {
+			// 	nam1 := "end-iam-" + nam0
+			// 	zc.MapSet(item, "metadata.name", nam1)
+			// }
+			if ing, ok := ingm[v0].(map[string]any); ok {
+				// 补充一个 backend 即可
+				key1 := strings.TrimSuffix(kk, ".backend.service.name")
+				val1 := zc.MapSet(item, key1, nil).(map[string]any)
+				pre := kk
+				if idx := strings.Index(pre, ".http.paths."); idx > 0 {
+					pre = pre[:idx]
+				}
+				zc.MapSet(val1, "backed.service.name", name)
+				key2 := key1
+				if idx := strings.LastIndexByte(key2, '.'); idx > 0 {
+					key2 = key2[:idx] + ".-0"
+				}
+				zc.MapSet(ing, key2, val1)
+				// z.Println("[_backend] val:", key2, zc.ToStr2(ing))
+				continue
+			}
+			annos := map[string]any{}
+			slike := `%"name": "` + v0 + `",%`
+			if svc, err := aa.zcks.GetBy(nil, nil, nil, "kind in (?,?) and namespace=? and `json` like ? and version =?", "Deployment", "Deployment", ns, slike, version); err != nil {
+				z.Println("[_ingress]: error ================================== ", ns, v0, version, err.Error())
+				continue
+			} else {
+				svc1 := []map[string]any{}
+				json.Unmarshal([]byte(svc.Json.String), &svc1)
+				image := zc.MapDef(svc1[0], "spec.template.spec.containers.[0].image", "")
+				image = strings.TrimSuffix(image, "-cdn")
+				if strings.HasPrefix(image, imagekv[0]) {
+					image = imagekv[1] + image[len(imagekv[0]):]
+				}
+				annos["frontend/service"] = "frontend:http/"
+				annos["frontend/db.fronta"] = name
+				annos["frontend/db.frontv.image"] = image
+				annos["frontend/db.frontv.imagepath"] = "/www/data"
+			}
+			key1 := strings.TrimSuffix(kk, ".backend.service.name")
+			// z.Println("[_backend] key:", key1)
+			val1 := zc.MapSet(item, key1, nil).(map[string]any)
+			pre := kk
+			if idx := strings.Index(pre, ".http.paths."); idx > 0 {
+				pre = pre[:idx]
+			}
+			zc.MapSet(val1, "backed.service.name", name)
+			ing := map[string]any{
+				"apiVersion": "networking.k8s.io/v1",
+				"kind":       "Ingress",
+				"metadata": map[string]any{
+					"name":      name,
+					"namespace": zcks.Namespace.String,
+					"labels": map[string]any{
+						"frontend/inject": "enable",
+					},
+					"annotations": annos,
+				},
+				"spec": map[string]any{
+					"rules": []any{
+						map[string]any{
+							"host": zc.MapGet(item, pre+".host"),
+							"http": map[string]any{
+								"paths": []any{val1},
+							},
+						},
+					},
+					"tls": tls,
+				},
+			}
+			ings = append(ings, ing)
+			ingm[v0] = ing
+		}
+	}
+	yaml_str := ""
+	for _, ing := range ings {
+		if yaml_ing, err := yaml.Marshal(ing); err == nil {
+			if len(yaml_str) > 0 {
+				yaml_str = string(yaml_ing) + "\n---\n" + yaml_str
+			} else {
+				yaml_str = string(yaml_ing)
+			}
+		}
+	}
+	// 判断 rules 中的 paths 是否有 值
+	if rules = zc.MapKeyVal(item, "spec.rules.*.http.paths.0"); len(rules) > 0 {
+		if yaml_ing, err := yaml.Marshal(item); err == nil {
+			yaml_str = yaml_str + "\n---\n" + string(yaml_ing)
+		}
+		ings = append([]any{item}, ings...)
+	}
+	zcks.Yaml2 = sqlx.NewString(string(yaml_str))
+	json_txt, err := json.MarshalIndent(ings, "", "  ")
+	if err != nil {
+		return err
+	}
+	zcks.Json2 = sqlx.NewString(string(json_txt))
+	zcks.Updater = sqlx.NewString(C.CmdFixSvc.User)
+	zcks.Updated = sqlx.NewTime(time.Now())
+	return aa.zcks.UpdateByInc(nil, zcks, "ns2", "yaml2", "json2", "updater", "updated")
+}
+
+func (aa *FixSvcCmd) fix_() {
+	aa.fixing0()
 }
 
 func (aa *FixSvcCmd) fixsvc0() {
-	zcks, err := aa.zcks.Get(nil, 4590)
+	zcks, err := aa.zcks.Get(nil, 4596)
 	if err != nil {
 		fmt.Println("get zck8s error: ", err.Error())
 		return
@@ -324,6 +480,29 @@ func (aa *FixSvcCmd) fixsvc0() {
 		fmt.Println("fixsvc error: ", err.Error())
 		return
 	}
+}
+
+func (aa *FixSvcCmd) fixing0() {
+
+	if zcks, err := aa.zcks.Get(nil, 4771); err != nil {
+		fmt.Println("get zck8s error: ", err.Error())
+		return
+	} else if err := aa.fixing1(zcks); err != nil {
+		fmt.Println("fixing error: ", err.Error())
+		return
+	}
+	// if zcks, err := aa.zcks.SelectBy(nil, nil, "kind=? AND version=? AND deleted=0", "Ingress", C.CmdSync.Version); err != nil {
+	// 	fmt.Println("get zck8s error: ", err.Error())
+	// 	return
+	// } else {
+	// 	for _, z1 := range zcks {
+	// 		z.Println("[_fixing_]: ", z1.ID, z1.Namespace.String, z1.Name.String)
+	// 		if err := aa.fixing1(&z1); err != nil {
+	// 			fmt.Println("fixing error: ", err.Error())
+	// 			return
+	// 		}
+	// 	}
+	// }
 }
 
 func FixKsidecarConfigmap(kiv string) string {
@@ -407,3 +586,5 @@ func FixValueConfigFile(vv string) string {
 	vv = strings.ReplaceAll(vv, "http://end-fmes-pas-svc", "http://end-fmes-pas.rs-iam.svc")
 	return vv
 }
+
+var imagekv [2]string = [2]string{"registry-vpc.cn-shanghai.aliyuncs.com/fmes/", "plus/"}

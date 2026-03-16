@@ -118,22 +118,48 @@ func (api *K8sApi) apps(zrc *z.Ctx) {
 func (api *K8sApi) apps_(zrc *z.Ctx, ns string, oidx, pfst, psiz int, infos *[]any) int {
 	cli := api.K8sClient
 	{
-		apps, err := cli.AppsV1().Deployments(ns).List(zrc.Ctx, metav1.ListOptions{})
-		if err != nil {
-			zrc.JERR(err, 500)
-			return -2
+		{
+			svcs, err := cli.CoreV1().Services(ns).List(zrc.Ctx, metav1.ListOptions{})
+			if err != nil {
+				zrc.JERR(err, 500)
+				return -2
+			}
+			zrc.Caches["k8s-services-cache-"+ns] = svcs
+			for _, svc := range svcs.Items {
+				if svc.Spec.Type != "ExternalName" {
+					continue
+				}
+				// 只记录 ExternalName Service, 因为这种服务没有后端
+				oidx++
+				if pfst > oidx {
+					continue
+				}
+				if oidx-pfst >= psiz {
+					return -3
+				}
+				svc.Kind = "Service"
+				svc.APIVersion = "v1"
+				*infos = append(*infos, api.toAnyMap(zrc, svc))
+			}
 		}
-		for _, app := range apps.Items {
-			oidx++
-			if pfst > oidx {
-				continue
+		if oidx-pfst < psiz {
+			apps, err := cli.AppsV1().Deployments(ns).List(zrc.Ctx, metav1.ListOptions{})
+			if err != nil {
+				zrc.JERR(err, 500)
+				return -2
 			}
-			if oidx-pfst >= psiz {
-				return -3
+			for _, app := range apps.Items {
+				oidx++
+				if pfst > oidx {
+					continue
+				}
+				if oidx-pfst >= psiz {
+					return -3
+				}
+				app.Kind = "Deployment"
+				app.APIVersion = "apps/v1"
+				*infos = append(*infos, api.toAnyMap(zrc, app))
 			}
-			app.Kind = "Deployment"
-			app.APIVersion = "apps/v1"
-			*infos = append(*infos, api.toAnyMap(zrc, app))
 		}
 	}
 	if oidx-pfst < psiz {
@@ -183,16 +209,26 @@ func (api *K8sApi) app(zrc *z.Ctx) {
 	}
 	qry := zrc.Request.URL.Query()
 	ns := qry.Get("ns")
-	app := qry.Get("app")
+	name := qry.Get("name")
 	kind := qry.Get("kind")
-	if ns == "" || app == "" || kind == "" {
+	if ns == "" || name == "" || kind == "" {
 		zrc.JERR(fmt.Errorf("no namespace or application or kind"), 400)
 		return
 	}
 	cli := api.K8sClient
 	switch kind {
+	case "Service":
+		svc, err := cli.CoreV1().Services(ns).Get(zrc.Ctx, name, metav1.GetOptions{})
+		if err != nil {
+			zrc.JERR(err, 500)
+			return
+		}
+		svc.Kind = "Service"
+		svc.APIVersion = "v1"
+		item := api.toAnyMap(zrc, *svc)
+		api.ResultOne(zrc, qry, item)
 	case "Deployment":
-		app, err := cli.AppsV1().Deployments(ns).Get(zrc.Ctx, app, metav1.GetOptions{})
+		app, err := cli.AppsV1().Deployments(ns).Get(zrc.Ctx, name, metav1.GetOptions{})
 		if err != nil {
 			zrc.JERR(err, 500)
 			return
@@ -202,7 +238,7 @@ func (api *K8sApi) app(zrc *z.Ctx) {
 		item := api.toAnyMap(zrc, *app)
 		api.ResultOne(zrc, qry, item)
 	case "StatefulSet":
-		app, err := cli.AppsV1().StatefulSets(ns).Get(zrc.Ctx, app, metav1.GetOptions{})
+		app, err := cli.AppsV1().StatefulSets(ns).Get(zrc.Ctx, name, metav1.GetOptions{})
 		if err != nil {
 			zrc.JERR(err, 500)
 			return
@@ -212,7 +248,7 @@ func (api *K8sApi) app(zrc *z.Ctx) {
 		item := api.toAnyMap(zrc, *app)
 		api.ResultOne(zrc, qry, item)
 	case "DaemonSet":
-		app, err := cli.AppsV1().DaemonSets(ns).Get(zrc.Ctx, app, metav1.GetOptions{})
+		app, err := cli.AppsV1().DaemonSets(ns).Get(zrc.Ctx, name, metav1.GetOptions{})
 		if err != nil {
 			zrc.JERR(err, 500)
 			return
@@ -365,7 +401,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 			// break
 		}
 		// containers := raw["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["containers"].([]any)
-		containers, _ := zc.MapKey(raw, "spec.template.spec.containers").([]any)
+		containers, _ := zc.MapGet(raw, "spec.template.spec.containers").([]any)
 		// configmap & secret
 		for _, ctn := range containers {
 			ctn, _ := ctn.(map[string]any)
@@ -435,7 +471,7 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 			}
 			// volumes
 			// volumes, _ := raw["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["volumes"].([]any)
-			volumes, _ := zc.MapKey(raw, "spec.template.spec.volumes").([]any)
+			volumes, _ := zc.MapGet(raw, "spec.template.spec.volumes").([]any)
 			for _, vol := range volumes {
 				vol := vol.(map[string]any)
 				if ref, _ := vol["configMap"].(map[string]any); ref != nil {
