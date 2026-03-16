@@ -535,6 +535,30 @@ func (api *K8sApi) toAnyMap(zrc *z.Ctx, obj any) any {
 		}
 	}
 	// -----------------------------------------------------------------------
+	//  -> Secret
+	if auth := zc.MapDef(raw, "metadata.annotaions.[nginx.ingress.kubernetes.io/auth-secret]", ""); auth != "" {
+		// 追加 Secret 配置信息
+		cm, err := api.K8sClient.CoreV1().Secrets(namespace).Get(zrc.Ctx, auth, metav1.GetOptions{})
+		if err == nil {
+			cm.Kind = "Secret"
+			cm.APIVersion = "v1"
+			vma := map[string]any{}
+			bts, _ := json.Marshal(cm)
+			json.Unmarshal(bts, &vma)
+			api.ClearExInfo(vma)
+			jsonArr = append(jsonArr, vma)
+			bts, _ = yaml.Marshal(vma)
+			yamlTxt = fmt.Sprintf("%s\n---\n", string(bts)) + yamlTxt
+			//
+			venv, _ := ado["secret"].(map[string]string)
+			if venv == nil {
+				venv = map[string]string{}
+				ado["secret"] = venv
+			}
+			maps.Copy(venv, cm.StringData)
+		}
+	}
+
 	ado["yaml"] = yamlTxt
 	ado["json"] = jsonArr
 	return ado

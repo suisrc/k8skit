@@ -62,7 +62,7 @@ func sync() {
 
 func sync_(zck8sRepo *zdb.Zck8sRepo, key string) error {
 	fmt.Printf("sync k8s %s ... -----------------", key)
-	pageNo, pageSize := 1, 10
+	pageNo, pageSize := 1, 50
 	for {
 		uri := fmt.Sprintf("/api/k8s/sync/v1/%s?rand=%s&time=%d&pageNo=%d&pageSize=%d&", //
 			key, z.GenStr("", 6), time.Now().Unix(), pageNo, pageSize)

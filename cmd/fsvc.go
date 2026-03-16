@@ -329,6 +329,7 @@ func (aa *FixSvcCmd) fixing1(zcks *zdb.Zck8sDO) error {
 	zcks.Ns2 = zcks.Namespace
 	ings := []any{}
 	ingm := map[string]any{}
+	svcs := map[string]any{}
 	// 删除 metadata.namespace
 	// zc.MapSet(item, "metadata.namespace", nil)
 	zc.MapSet(item, "metadata.name", nam1)
@@ -339,24 +340,26 @@ func (aa *FixSvcCmd) fixing1(zcks *zdb.Zck8sDO) error {
 		txt = zc.TrimYamlString(txt)
 		zc.MapSet(item, "metadata.annotations.[nginx.ingress.kubernetes.io/configuration-snippet]", txt)
 	}
+	zc.MapItr(item, "metadata.annotations", false, func(v any) (any, int8) { return nil, zc.If[int8](v != nil && len(v.(map[string]any)) > 0, 0, -1) })
+	zc.MapSet(item, "spec.ingressClassName", "nginx")
 
-	rules := zc.MapKeyVal(item, "spec.rules.*.http.paths.*.backend.service[.name=^fnt].name")
-	if len(rules) > 0 {
-		tls := zc.MapGet(item, "spec.tls")
-		if tts, _ := tls.([]any); tts != nil {
-			for i, t := range tts {
-				switch t := t.(type) {
-				case map[string]any:
-					tsn, _ := t["secretName"]
-					if tsn, _ := tsn.(string); tsn != "" {
-						if idx := strings.IndexByte(tsn, '.'); idx > 0 {
-							tsn = "tls-" + tsn[idx+1:]
-							tts[i].(map[string]any)["secretName"] = tsn
-						}
+	tls := zc.MapGet(item, "spec.tls")
+	if tts, _ := tls.([]any); tts != nil {
+		for i, t := range tts {
+			switch t := t.(type) {
+			case map[string]any:
+				tsn, _ := t["secretName"]
+				if tsn, _ := tsn.(string); tsn != "" {
+					if idx := strings.IndexByte(tsn, '.'); idx > 0 {
+						tsn = "tls-" + tsn[idx+1:]
+						tts[i].(map[string]any)["secretName"] = tsn
 					}
 				}
 			}
 		}
+	}
+	rules := zc.MapKeyVal(item, "spec.rules.*.http.paths.*.backend.service[.name=^fnt].name")
+	if len(rules) > 0 {
 		ns := zcks.Namespace.String
 		version := zcks.Version.Int64
 		for i := len(rules) - 1; i >= 0; i-- {
@@ -387,8 +390,17 @@ func (aa *FixSvcCmd) fixing1(zcks *zdb.Zck8sDO) error {
 			}
 			annos := map[string]any{}
 			slike := `%"name": "` + v0 + `",%`
-			if svc, err := aa.zcks.GetBy(nil, nil, nil, "kind in (?,?) and namespace=? and `json` like ? and version =?", "Deployment", "Deployment", ns, slike, version); err != nil {
-				z.Println("[_ingress]: error ================================== ", ns, v0, version, err.Error())
+			if svc, err := aa.zcks.GetBy(nil, nil, nil, "kind=? and namespace=? and `json` like ? and version =?", "Deployment", ns, slike, version); err != nil {
+				if svc, err = aa.zcks.GetBy(nil, nil, nil, "kind=? and namespace=? and name=? and version =?", "Service", ns, v0, version); err != nil {
+					z.Println("[_ingress]: error ==================================", ns, v0, version, err.Error())
+				} else {
+					svc1 := []map[string]any{}
+					json.Unmarshal([]byte(svc.Json.String), &svc1)
+					// 长度 = 0 删除
+					zc.MapItr(svc1[0], "metadata.annotations", false, func(v any) (any, int8) { return nil, zc.If[int8](v != nil && len(v.(map[string]any)) > 0, 0, -1) })
+					zc.MapSet(svc1[0], "spec.sessionAffinity", nil)
+					svcs[svc.Name.String] = svc1[0]
+				}
 				continue
 			} else {
 				svc1 := []map[string]any{}
@@ -423,6 +435,7 @@ func (aa *FixSvcCmd) fixing1(zcks *zdb.Zck8sDO) error {
 					"annotations": annos,
 				},
 				"spec": map[string]any{
+					"ingressClassName": "nginx",
 					"rules": []any{
 						map[string]any{
 							"host": zc.MapGet(item, pre+".host"),
@@ -437,8 +450,21 @@ func (aa *FixSvcCmd) fixing1(zcks *zdb.Zck8sDO) error {
 			ings = append(ings, ing)
 			ingm[v0] = ing
 		}
+
+		zc.MapItr(item, "metadata.annotations", false, func(v any) (any, int8) { return nil, zc.If[int8](v != nil && len(v.(map[string]any)) > 0, 0, -1) })
 	}
+	objs := []any{}
 	yaml_str := ""
+	for _, svc := range svcs {
+		if yaml_svc, err := yaml.Marshal(svc); err == nil {
+			if len(yaml_str) > 0 {
+				yaml_str += "\n---\n" + string(yaml_svc)
+			} else {
+				yaml_str = string(yaml_svc)
+			}
+			objs = append(objs, svc)
+		}
+	}
 	for _, ing := range ings {
 		if yaml_ing, err := yaml.Marshal(ing); err == nil {
 			if len(yaml_str) > 0 {
@@ -456,7 +482,7 @@ func (aa *FixSvcCmd) fixing1(zcks *zdb.Zck8sDO) error {
 		ings = append([]any{item}, ings...)
 	}
 	zcks.Yaml2 = sqlx.NewString(string(yaml_str))
-	json_txt, err := json.MarshalIndent(ings, "", "  ")
+	json_txt, err := json.MarshalIndent(append(objs, ings...), "", "  ")
 	if err != nil {
 		return err
 	}
@@ -467,7 +493,8 @@ func (aa *FixSvcCmd) fixing1(zcks *zdb.Zck8sDO) error {
 }
 
 func (aa *FixSvcCmd) fix_() {
-	aa.fixing0()
+	// aa.fixing0()
+	aa.fixings()
 }
 
 func (aa *FixSvcCmd) fixsvc0() {
@@ -483,26 +510,28 @@ func (aa *FixSvcCmd) fixsvc0() {
 }
 
 func (aa *FixSvcCmd) fixing0() {
-
-	if zcks, err := aa.zcks.Get(nil, 4771); err != nil {
+	if zcks, err := aa.zcks.Get(nil, 5187); err != nil {
 		fmt.Println("get zck8s error: ", err.Error())
 		return
 	} else if err := aa.fixing1(zcks); err != nil {
 		fmt.Println("fixing error: ", err.Error())
 		return
 	}
-	// if zcks, err := aa.zcks.SelectBy(nil, nil, "kind=? AND version=? AND deleted=0", "Ingress", C.CmdSync.Version); err != nil {
-	// 	fmt.Println("get zck8s error: ", err.Error())
-	// 	return
-	// } else {
-	// 	for _, z1 := range zcks {
-	// 		z.Println("[_fixing_]: ", z1.ID, z1.Namespace.String, z1.Name.String)
-	// 		if err := aa.fixing1(&z1); err != nil {
-	// 			fmt.Println("fixing error: ", err.Error())
-	// 			return
-	// 		}
-	// 	}
-	// }
+}
+
+func (aa *FixSvcCmd) fixings() {
+	if zcks, err := aa.zcks.SelectBy(nil, nil, "kind=? AND version=? AND deleted=0", "Ingress", C.CmdSync.Version); err != nil {
+		fmt.Println("get zck8s error: ", err.Error())
+		return
+	} else {
+		for _, z1 := range zcks {
+			z.Println("[_fixing_]: ", z1.ID, z1.Namespace.String, z1.Name.String)
+			if err := aa.fixing1(&z1); err != nil {
+				fmt.Println("fixing error: ", err.Error())
+				return
+			}
+		}
+	}
 }
 
 func FixKsidecarConfigmap(kiv string) string {
