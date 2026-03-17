@@ -11,10 +11,11 @@ import (
 // ConfDO ...
 type ConfDO struct {
 	ID      int64          `db:"id"`
-	Tag     sql.NullString `db:"tag"`
-	Env     sql.NullString `db:"env"`
-	App     sql.NullString `db:"app"`
-	Ver     sql.NullString `db:"ver"`
+	Tag     sql.NullString `db:"tag"` // 标签
+	Env     sql.NullString `db:"env"` // 环境
+	Ens     sql.NullString `db:"ens"` // 空间
+	App     sql.NullString `db:"app"` // 应用
+	Ver     sql.NullString `db:"ver"` // 版本
 	Kind    sql.NullString `db:"kind"`
 	Code    sql.NullString `db:"code"`
 	Data    sql.NullString `db:"data"`
@@ -53,14 +54,14 @@ func (aa *ConfRepo) GetConfig1(id int64) *ConfDO {
 }
 
 // 获取配置集合
-func (aa *ConfRepo) GetConfigs(env, app, ver, kind string) []ConfDO {
+func (aa *ConfRepo) GetConfigs(env, ens, app, ver, kind string) []ConfDO {
 	cfxs := []ConfDO{}
-	aa._LoopConfig("", env, app, ver, kind, &cfxs, make(map[string]bool))
+	aa.LoopConfig("", env, ens, app, ver, kind, &cfxs, make(map[string]bool))
 	return cfxs
 }
 
 // 递归获取配置
-func (aa *ConfRepo) _LoopConfig(tag, env, app, ver, kind string, cfs *[]ConfDO, cfm map[string]bool) {
+func (aa *ConfRepo) LoopConfig(tag, env, ens, app, ver, kind string, cfs *[]ConfDO, cfm map[string]bool) {
 	if aa.Dsc == nil {
 		return // pass
 	}
@@ -82,6 +83,13 @@ func (aa *ConfRepo) _LoopConfig(tag, env, app, ver, kind string, cfs *[]ConfDO, 
 	} else {
 		cond += " AND env is null"
 	}
+	// ens
+	if ens != "" {
+		cond += " AND (ens=:ens or ens is null)"
+		args["ens"] = ens
+	} else {
+		cond += " AND ens is null"
+	}
 	// app
 	if app != "" {
 		cond += " AND app=:app"
@@ -98,7 +106,7 @@ func (aa *ConfRepo) _LoopConfig(tag, env, app, ver, kind string, cfs *[]ConfDO, 
 	// order by
 	cond += " ORDER BY ver DESC"
 	// query by named
-	rows, err := aa.SelectByExc(aa.Dsc, nil, cond, args)
+	rows, err := aa.Select(aa.Dsc, cond, args)
 	if err != nil {
 		z.Println("sql qry error:", err.Error())
 		return
@@ -109,7 +117,7 @@ func (aa *ConfRepo) _LoopConfig(tag, env, app, ver, kind string, cfs *[]ConfDO, 
 			continue // 忽略无效数据
 		}
 		if _, ok := cfm[cfx.Code.String]; ok {
-			continue // 忽略重复数据
+			continue // 忽略重复数据, ver 倒序， 意味偶先使用新版本
 		}
 		cfm[cfx.Code.String] = true
 		if !strings.HasSuffix(cfx.Kind.String, "-ref") {
@@ -120,6 +128,6 @@ func (aa *ConfRepo) _LoopConfig(tag, env, app, ver, kind string, cfs *[]ConfDO, 
 			continue // 忽略非默认标签数据
 		}
 		// 递归处理相关配置
-		aa._LoopConfig(tag, env, cfx.Code.String, cfx.Data.String, kind, cfs, cfm)
+		aa.LoopConfig(tag, env, ens, cfx.Code.String, cfx.Data.String, kind, cfs, cfm)
 	}
 }

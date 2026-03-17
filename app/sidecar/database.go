@@ -86,14 +86,15 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 			return []PatchOperation{}
 		}
 	}
+	ensName := namespace
 	envName, _ := annotations[patcher.Config.ByDBAppEnv]
-	z.Printf("Inject configuration by database, envName=[%s], appName=[%s], version=[%s]", envName, appName, version)
+	z.Printf("Inject configuration by database, envName=[%s], ensName=[%s], appName=[%s], version=[%s]", envName, ensName, appName, version)
 	// container path
 	indexPath := fmt.Sprintf("/spec/containers/%d", cidx)
 	// pathces
 	patches := []PatchOperation{}
 	// env 环境变量是必须检索
-	if datas := patcher.ConfRepo.GetConfigs(envName, appName, version, "env"); len(datas) != 0 {
+	if datas := patcher.ConfRepo.GetConfigs(envName, ensName, appName, version, "env"); len(datas) != 0 {
 		for index, data := range datas {
 			first := index == 0 && len(item.Env) == 0
 			env := corev1.EnvVar{Name: data.Code.String, Value: data.Data.String}
@@ -104,7 +105,7 @@ func (patcher *Patcher) InjectConfigByDatabase(ctx context.Context, namespace st
 	// 配置文件是可选配置
 	if kind != "" && kind != "env" {
 		// configuration file
-		if datas := patcher.ConfRepo.GetConfigs(envName, appName, version, kind); len(datas) > 0 {
+		if datas := patcher.ConfRepo.GetConfigs(envName, ensName, appName, version, kind); len(datas) > 0 {
 			bpath, _ := annotations[patcher.Config.ByDBFolder]
 			if bpath == "" {
 				bpath = "/" // 默认配置文件夹
