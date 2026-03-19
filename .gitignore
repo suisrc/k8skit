@@ -24,5 +24,7 @@ web
 www
 tmpl
 __zgg.toml
+dev
+doc/__*
 
 web
