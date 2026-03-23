@@ -2,6 +2,7 @@ package front3
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 )
 
+// frontend/db.fronta=app[:version]
 func (aa *Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (result *PatchOperation, reserr error) {
 	// 处理前端应用
 	if old != nil && len(old.GetAnnotations()) > 0 {
@@ -52,6 +54,7 @@ func (aa *Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (res
 		}
 		return nil, nil // 没有 service 是无法处理域名的
 	}
+	// host2[0] -> domain, host2[1] -> rootdir
 	patch, host2, err := aa.mutateFrontPath(ing, svc)
 	if err != nil {
 		return nil, err // 无法处理注入
@@ -59,24 +62,18 @@ func (aa *Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (res
 		result = patch // 保存处理的结果
 	}
 	// 处理数据内容, 忽略下面执行过程中的异常
-	cfg, _ := ing.GetAnnotations()["frontend/db.fronta"]
-	if cfg == "" {
+	app, _ := ing.GetAnnotations()["frontend/db.fronta"]
+	if app == "" {
 		if z.IsDebug() {
 			z.Println("[_mutate_]:", ing.Namespace, "|", ing.Name, "no frontend database")
 		}
 		return // 没有配置注解
 	}
 	// 数据库中增加或者删除应用
-	app := cfg
-	img := ""
 	ver := ""
-	if idx := strings.IndexByte(app, '@'); idx > 0 {
-		img = app[idx+1:]
-		app = app[:idx] // 获取应用名
-	}
-	if idx := strings.IndexByte(img, ':'); idx > 0 {
-		ver = img[idx+1:]
-		// img = img[:idx] // 获取镜像
+	if idx := strings.IndexByte(app, ':'); idx > 0 {
+		ver = app[idx+1:]
+		app = app[:idx] // 重置应用名
 	}
 	if app == "" {
 		if z.IsDebug() {
@@ -93,39 +90,42 @@ func (aa *Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (res
 	if rpath, _ := ing.GetAnnotations()["frontend/db.fronta.rootdir"]; rpath != "" {
 		host2[1] = strings.TrimSpace(rpath) // 特殊情况下， 需要覆盖默认的根目录
 	}
-	appInfo.App.String = app // 确保在 appInfo 不存在的使用，也可以得到一个有效的 vpp 名称
+	// 确保在 appInfo 不存在的使用，也可以得到一个有效的 vpp 名称
+	appInfo.App.String = app
 	// host2[0] -> domain, 域名是不允许覆盖的
 	err = aa.AppRepo.ModifyByInfo(appInfo, app, ver, host2[0], host2[1], ing.GetAnnotations())
 	if err != nil {
 		z.Println("[_mutate_]:", "update appinfo into database error,", err.Error())
 		return // 更新数据库发生异常
 	}
+	// 更新扩展应用信息，更新过程中忽略错误信息
+	if str := ing.GetAnnotations()["frontend/db.fronts"]; strings.TrimSpace(str) != "" {
+		infos := []map[string]string{}
+		if err := json.Unmarshal([]byte(str), &infos); err != nil {
+			z.Println("[_mutate_]:", "unmarshal db.fronts error,", err.Error())
+		} else if err := aa.VerRepo.UpdateByFrontsMap(infos); err != nil {
+			z.Println("[_mutate_]:", "update db.fronts into database error,", err.Error())
+		}
+	}
 	// 处理 version 相关信息
 	if ver == "" {
 		// 通过 "frontend/db.frontv.ver" 获取版本
 		ver = ing.GetAnnotations()["frontend/db.frontv.ver"]
-		if ver != "" && img != "" {
-			img += ":" + ver
-		}
 	}
-	if img == "" {
-		// 通过 "frontend/db.frontv.image" 获取镜像
-		img = ing.GetAnnotations()["frontend/db.frontv.image"]
-		if img != "" {
-			if strings.HasPrefix(img, "git+") || //
-				strings.HasPrefix(img, "https://") || //
-				strings.HasPrefix(img, "http://") {
-				if idx := strings.IndexByte(img, '#'); idx > 0 && ver == "" {
-					ver = img[idx+1:] // 截取版本
-				} else if idx < 0 && ver != "" {
-					img += "#" + ver // 添加版本
-				}
-			} else {
-				if idx := strings.IndexByte(img, ':'); idx > 0 && ver == "" {
-					ver = img[idx+1:] // 截取版本
-				} else if idx < 0 && ver != "" {
-					img += ":" + ver // 添加版本
-				}
+	// 通过 "frontend/db.frontv.image" 获取镜像
+	img := ing.GetAnnotations()["frontend/db.frontv.image"]
+	if img != "" {
+		if strings.HasPrefix(img, "git+") || strings.HasPrefix(img, "https://") || strings.HasPrefix(img, "http://") {
+			if idx := strings.LastIndexByte(img, '#'); idx > 0 && ver == "" {
+				ver = img[idx+1:] // 截取版本
+			} else if idx < 0 && ver != "" {
+				img += "#" + ver // 添加版本
+			}
+		} else {
+			if idx := strings.LastIndexByte(img, ':'); idx > 0 && ver == "" {
+				ver = img[idx+1:] // 截取版本
+			} else if idx < 0 && ver != "" {
+				img += ":" + ver // 添加版本
 			}
 		}
 	}
@@ -136,7 +136,7 @@ func (aa *Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (res
 		return
 	}
 	// 需要更新应用版本信息
-	vpp := appInfo.GVP() // 获取最新的 vpp 名称， 注意，修改了 vpp， 可以导致之前的应用版本不可使用
+	vpp := appInfo.GetVppName() // 获取最新的 vpp 名称， 注意，修改了 vpp， 可以导致之前的应用版本不可使用
 	verInfo, err := aa.VerRepo.GetTop1ByVppAndVerWithDelete(vpp, ver)
 	if err != nil && err != sql.ErrNoRows {
 		z.Println("[_mutate_]:", "get app version info form database error,", err.Error())

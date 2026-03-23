@@ -69,7 +69,7 @@ func (aa *Serve) UpdateImageVersion(zrc *z.Ctx) {
 			zrc.TEXT("application not found: "+app, http.StatusOK)
 			return
 		}
-		vpp := appInfo.GVP()
+		vpp := appInfo.GetVppName()
 		verInfo, err := aa.VerRepo.GetTop1ByVppAndVer(vpp, "") // 最新版
 		if err != nil {
 			zrc.TEXT("application version not found: "+app, http.StatusOK)

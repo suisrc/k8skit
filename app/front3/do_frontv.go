@@ -2,6 +2,7 @@ package front3
 
 import (
 	"database/sql"
+	"errors"
 	"strings"
 	"time"
 
@@ -127,4 +128,83 @@ func (aa *FrontvRepo) ModifyByInfo(info *FrontvDO, vpp, ver, img string, annos m
 	}
 	z.Println("[_mutate_]:", "update/insert app version info into database,", asql, z.ToStr(args))
 	return nil
+}
+
+func (aa *FrontvRepo) UpdateByFrontsMap(infos []map[string]string) error {
+	if len(infos) == 0 {
+		return nil // 无数据
+	}
+	// 使用事务更新数据
+	return aa.Dsc.WithTx(nil, func(dsc sqlx.Dsc) error {
+		for _, imap := range infos {
+			vpp, _ := imap["vpp"]
+			if vpp == "" {
+				return errors.New("no config 'vpp' for name")
+			}
+			img, _ := imap["image"]
+			if img == "" {
+				return errors.New("no config 'image'")
+			}
+			ver, _ := imap["ver"]
+			if strings.HasPrefix(img, "git+") || strings.HasPrefix(img, "https://") || strings.HasPrefix(img, "http://") {
+				if idx := strings.LastIndexByte(img, '#'); idx > 0 && ver == "" {
+					ver = img[idx+1:] // 截取版本
+				} else if idx < 0 && ver != "" {
+					img += "#" + ver // 添加版本
+				}
+			} else {
+				if idx := strings.LastIndexByte(img, ':'); idx > 0 && ver == "" {
+					ver = img[idx+1:] // 截取版本
+				} else if idx < 0 && ver != "" {
+					img += ":" + ver // 添加版本
+				}
+			}
+			if ver == "" {
+				return errors.New("no config 'ver' for version")
+			}
+			// vpp, ver, img 3个字段必须存在， 否则无法更新
+			// 确定数据是更新还是新增
+			info, err := aa.GetTop1ByVppAndVerWithDelete(vpp, ver)
+			if err != nil && err != sql.ErrNoRows {
+				return err
+			}
+			asql := "updated=?, updater=?, deleted=0, disable=0, vpp=?, ver=?, image=?"
+			args := []any{time.Now(), z.AppName, vpp, ver, img}
+			for anno, data := range imap {
+				if anno == "image" || anno == "vpp" || anno == "ver" {
+					continue
+				}
+				key := anno
+				switch data {
+				case "true":
+					asql += "," + key + "=1"
+				case "false":
+					asql += "," + key + "=0"
+				default:
+					asql += "," + key + "=?"
+					args = append(args, data)
+				}
+			}
+			if info.ID > 0 {
+				// 更新数据
+				args = append(args, info.ID)
+				_, err := aa.Dsc.Ext().Exec("UPDATE "+info.TableName()+" SET "+asql+" WHERE id=?", args...)
+				if err != nil {
+					return err // 更新数据库发生异常
+				}
+			} else {
+				// 新增数据
+				asql += ", created=?, creater=?"
+				args = append(args, time.Now(), z.AppName)
+				ret, err := aa.Dsc.Ext().Exec("INSERT "+info.TableName()+" SET "+asql, args...)
+				if err != nil {
+					return err // 插入数据库发生异常
+				}
+				info.ID, _ = ret.LastInsertId()
+				args = append(args, info.ID)
+			}
+			z.Println("[_mutate_]:", "update/insert app version info into database,", asql, z.ToStr(args))
+		}
+		return nil
+	})
 }

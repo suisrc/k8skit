@@ -34,7 +34,7 @@ func (aa FrontaDO) TableName() string {
 	return C.Front3.DB.TablePrefix + "fronta"
 }
 
-func (aa FrontaDO) GVP() string {
+func (aa FrontaDO) GetVppName() string {
 	if aa.Vpp.String != "" {
 		return aa.Vpp.String
 	}

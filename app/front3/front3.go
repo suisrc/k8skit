@@ -139,24 +139,29 @@ func (aa *Serve) ServeS3(rw http.ResponseWriter, rr *http.Request) {
 		return
 	}
 	// 浏览器指定了版本，则优先使用
-	_ver := rr.URL.Query().Get("version") // 打开特定的版本
-	if _ver == "" {
+	rver := rr.URL.Query().Get("version") // 打开特定的版本
+	if rver == "" {
 		if ref := rr.Referer(); ref == "" {
-			// pass
+			// ignore
 		} else if ref, err := url.Parse(ref); err == nil {
-			_ver = ref.Query().Get("version")
+			rver = ref.Query().Get("version")
 		}
 	}
 	// 数据库指定了版本, 则优先使用
-	if _ver == "" && app.Ver.String != "" {
-		_ver = app.Ver.String
+	if rver == "" && app.Ver.String != "" {
+		rver = app.Ver.String
+	}
+	// 指定了应用版不能，用于解析 @:xxx 路由
+	rapp := rr.Header.Get("X-Req-RouteKey")
+	if rapp == "" {
+		rapp = app.GetVppName()
 	}
 	// 如果未指定版本，使用当前系统最新版本
-	ver, err := aa.VerRepo.GetTop1ByVppAndVer(app.GVP(), _ver)
+	ver, err := aa.VerRepo.GetTop1ByVppAndVer(rapp, rver)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-			http.Error(rw, "application version not found: "+host+", "+_ver, http.StatusNotFound)
+			http.Error(rw, "application version not found: "+host+", "+rver, http.StatusNotFound)
 			return
 		}
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -278,8 +283,11 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache)
 	if av.Version.CdnName.String != "" && av.Version.CdnPush.Bool && !av.Version.CdnRenew.Bool {
 		// 直接使用 CDN 模式返回, CDN 存在，且不需要重新更新
 		handler := front2.NewApi(nil, config, fmt.Sprintf("[_front3_]-%d-%d", av.AppInfo.ID, av.Version.ID))
+		// s3cdn.InitCdnServe(handler, av.Version.CdnName.String, av.Version.CdnPath.String, av.Version.Vpp, av.Version.Ver)
+		s3url := av.Version.CdnName.String + "/" + filepath.Join(av.Version.CdnPath.String, av.Version.Vpp, av.Version.Ver)
+		handler.ActionKey = append(handler.ActionKey, "/")       // 添加默认索引
+		handler.Config.Routers["/"] = s3cdn.GetReqMode() + s3url // 增加默认路由
 		av.Handler = handler
-		s3cdn.InitCdnServe(handler, av.Version.CdnName.String, av.Version.CdnPath.String, av.Version.Vpp, av.Version.Ver)
 		return av // CDN模式， 直接返回
 	}
 	// 验证镜像文件地址
@@ -412,12 +420,15 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache)
 			http.Error(rw, "application upload cdn error: "+rr.Host+err.Error(), http.StatusInternalServerError)
 			return nil
 		}
-		s3cdn.InitCdnServe(handler, aa.CdnConfig.Domain, aa.CdnConfig.RootDir, av.Version.Vpp, av.Version.Ver)
 		// 更新CDN信息
 		av.Version.CdnName = sql.NullString{String: aa.CdnConfig.Domain, Valid: true}
 		av.Version.CdnPath = sql.NullString{String: aa.CdnConfig.RootDir, Valid: true}
 		av.Version.CdnRenew = sql.NullBool{Bool: false, Valid: true}
 		aa.VerRepo.UpdateCdnInfo(&av.Version)
+		// s3cdn.InitCdnServe(handler, av.Version.CdnName.String, av.Version.CdnPath.String, av.Version.Vpp, av.Version.Ver)
+		s3url := av.Version.CdnName.String + "/" + filepath.Join(av.Version.CdnPath.String, av.Version.Vpp, av.Version.Ver)
+		handler.ActionKey = append(handler.ActionKey, "/")       // 添加默认索引
+		handler.Config.Routers["/"] = s3cdn.GetReqMode() + s3url // 增加默认路由
 	} else {
 		av.IsLocal = true // 本地模式
 	}
