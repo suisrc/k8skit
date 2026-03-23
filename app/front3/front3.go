@@ -96,7 +96,7 @@ func (aa *Serve) Stop() {
 //=============================================================================================================================
 
 // Serve 索引服务
-func (aa *Serve) ServeS3(rw http.ResponseWriter, rr *http.Request) {
+func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 	host := rr.Host //  请求的域名
 	apps, err := aa.AppRepo.GetAllByDomain(host)
 	if err != nil {
@@ -152,12 +152,24 @@ func (aa *Serve) ServeS3(rw http.ResponseWriter, rr *http.Request) {
 		rver = app.Ver.String
 	}
 	// 指定了应用版不能，用于解析 @:xxx 路由
-	rapp := rr.Header.Get("X-Req-RouteKey")
-	if rapp == "" {
-		rapp = app.GetVppName()
+	rvpp := app.GetVppName()
+	if strings.Contains(app.Routers.String, "=@!@") {
+		// 路由中存在 @!@ 路由格式， 需要解析路由地址， 然后进行匹配， 确定前端应用
+		for rrr := range strings.SplitSeq(app.Routers.String, ",") {
+			// rkv := strings.SplitN(rrr, "=", 2)
+			idx := strings.IndexByte(rrr, '=')
+			if idx < 1 {
+				continue
+			}
+			rrk, rrv := rrr[:idx], rrr[idx+1:]
+			if strings.HasPrefix(rrv, "@!@") && strings.HasPrefix(rr.URL.Path, rrk) {
+				rvpp = rrv[3:]
+				break
+			}
+		}
 	}
 	// 如果未指定版本，使用当前系统最新版本
-	ver, err := aa.VerRepo.GetTop1ByVppAndVer(rapp, rver)
+	ver, err := aa.VerRepo.GetTop1ByVppAndVer(rvpp, rver)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -180,6 +192,7 @@ func (aa *Serve) ServeS3(rw http.ResponseWriter, rr *http.Request) {
 		}
 		return
 	}
+	// [appid]-[verid]-[version] -> 唯一索引
 	key := fmt.Sprintf("%d-%d-%s", app.ID, ver.ID, ver.Ver)
 	var api *AppCache
 	if cac, _ := aa.CacheApp.Load(key); cac != nil {

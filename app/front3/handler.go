@@ -153,7 +153,7 @@ func (aa *Serve) ServeHTTP(rw http.ResponseWriter, rr *http.Request) {
 	if rr.URL.Path == "/healthz" && rr.Method == http.MethodGet {
 		z.Healthz(z.NewCtx(nil, rr, rw, "f3s"))
 	} else {
-		aa.ServeS3(rw, rr)
+		aa.ServeMain(rw, rr)
 	}
 }
 
