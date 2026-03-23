@@ -162,7 +162,7 @@ func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 				continue
 			}
 			rrk, rrv := rrr[:idx], rrr[idx+1:]
-			if strings.HasPrefix(rrv, "@!@") && strings.HasPrefix(rr.URL.Path, rrk) {
+			if strings.HasPrefix(rrv, "@!@") && z.HasPathPrefix(rr.URL.Path, rrk) {
 				rvpp = rrv[3:]
 				break
 			}
