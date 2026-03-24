@@ -11,23 +11,23 @@ import (
 
 // Fronta ...
 type FrontaDO struct {
-	ID       int64          `db:"id"`
-	Tag      sql.NullString `db:"tag"`      // 标签
-	Name     sql.NullString `db:"name"`     // 应用名称
-	App      sql.NullString `db:"app"`      // 应用标识
-	Vpp      sql.NullString `db:"vpp"`      // 版本名, 不存在，使用app代替
-	Ver      sql.NullString `db:"ver"`      // 版本号
-	Domain   sql.NullString `db:"domain"`   // 域名
-	RootDir  sql.NullString `db:"rootdir"`  // 根目录
-	Priority sql.NullString `db:"priority"` // 优先级
-	Routers  sql.NullString `db:"routers"`  // 路由
-	Disable  bool           `db:"disable"`  // 禁用
-	Deleted  bool           `db:"deleted"`  // 删除
-	Version  sql.NullInt64  `db:"version"`
+	ID      int64          `db:"id"`
+	Tag     sql.NullString `db:"tag"`     // 标签
+	Name    sql.NullString `db:"name"`    // 应用名称
+	App     sql.NullString `db:"app"`     // 应用标识
+	Vpp     sql.NullString `db:"vpp"`     // 版本名, 不存在，使用app代替
+	Ver     sql.NullString `db:"ver"`     // 版本号
+	Domain  sql.NullString `db:"domain"`  // 域名
+	RootDir sql.NullString `db:"rootdir"` // 根目录
+	Routers sql.NullString `db:"routers"` // 路由
+	Disable bool           `db:"disable"` // 禁用
+	Deleted bool           `db:"deleted"` // 删除
+	Version sql.NullInt64  `db:"version"`
 	// Updated sql.NullTime   `db:"updated"`
 	// Updater sql.NullString `db:"updater"`
 	// Created sql.NullTime   `db:"created"`
 	// Creater sql.NullString `db:"creater"`
+	// Priority sql.NullString `db:"priority"` // 优先级, 暂不考虑
 }
 
 func (aa FrontaDO) TableName() string {

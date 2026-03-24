@@ -108,8 +108,9 @@ func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 		http.Error(rw, "application not found: "+host, http.StatusNotFound)
 		return
 	}
-	if len(apps) > 1 { // Priority 降序排序
-		slices.SortFunc(apps, func(l, r FrontaDO) int { return strings.Compare(r.Priority.String, l.Priority.String) })
+	if len(apps) > 1 { // rootdir 长度降序, 暂时不考虑优先级
+		// slices.SortFunc(apps, func(l, r FrontaDO) int { return strings.Compare(r.Priority.String, l.Priority.String) })
+		slices.SortFunc(apps, func(l, r FrontaDO) int { return len(r.RootDir.String) - len(l.RootDir.String) })
 	}
 	// 通过 rootdir 确定 path
 	path := rr.URL.Path
