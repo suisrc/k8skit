@@ -113,18 +113,10 @@ func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 		slices.SortFunc(apps, func(l, r FrontaDO) int { return len(r.RootDir.String) - len(l.RootDir.String) })
 	}
 	// 通过 rootdir 确定 path
-	path := rr.URL.Path
 	var app *FrontaDO
 	for _, vvv := range apps {
-		rootdir := vvv.RootDir.String
-		if rootdir == "" || rootdir == "/" {
-			app = &vvv
-			break
-		}
-		if rootdir[len(rootdir)-1] == '/' {
-			rootdir = rootdir[:len(rootdir)-1]
-		}
-		if rootdir == path || strings.HasPrefix(path, rootdir+"/") {
+		// 从最长匹配，检索符合要求的前缀
+		if z.HasPathPrefix(rr.URL.Path, vvv.RootDir.String) {
 			app = &vvv
 			break
 		}
