@@ -54,7 +54,7 @@ func (aa *Serve) mutateProcess(req *admissionv1.AdmissionRequest) ([]PatchOperat
 		frontend/db.fronta: sso@fmes/iam-signin:v1.0.1 如果没有版本，不进行限制
 		frontend/db.fronta.name: 登录系统
 		frontend/db.fronta.rootdir: /
-		frontend/db.frontv.tproot: /ROOT_PATH
+		frontend/db.frontv.tproot: /ROOT_PATH:/static
 		frontend/db.frontv.imagepath: /www/data
 		frontend/db.frontv.indexs: /www=,/embed=index.htm
 		frontend/db.frontv.cdnuse: 'true'

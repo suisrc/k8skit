@@ -97,8 +97,8 @@ func _UploadToS3(ctx context.Context, cli *minio.Client, fpath string, fstat fs.
 	var rbts io.Reader
 	var size int64
 	isrp := false
-	if front2.IsFixFile(fstat.Name(), ffc) {
-		tbts, err := front2.GetFixFile(file, fstat.Name(), ffc.TmplRoot, rootpath, fim)
+	if front2.CanFixFileRef(fstat.Name(), ffc) {
+		tbts, err := front2.GetFixFileRef(file, fstat.Name(), ffc.TmplRoot, rootpath, fim, false)
 		if err != nil {
 			z.Println("[_cdn_put_]: upload to s3:", fpath, ", read error:", err.Error())
 			return err

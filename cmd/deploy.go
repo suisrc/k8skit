@@ -30,7 +30,7 @@ func ExeDeploy() {
 	zc.LoadConfig(cfs)
 	// upload to s3
 	ffs := os.DirFS(www)
-	fim, err := front2.GetFileMap(ffs)
+	fim, err := front2.GetRefFileMap(ffs)
 	if err != nil {
 		z.Fatalln(err)
 	}

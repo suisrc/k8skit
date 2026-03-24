@@ -257,9 +257,8 @@ func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 
 func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache) *AppCache {
 	config := front2.Config{
-		TmplRoot:   av.Version.TPRoot.String,
-		TmplSuffix: front2.C.Front2.TmplSuffix,
-		TmplPrefix: front2.C.Front2.TmplPrefix,
+		TmplRoot: av.Version.TPRoot.String,
+		TmplFile: front2.C.Front2.TmplFile,
 	}
 	{
 		index := av.Version.IndexPath.String
