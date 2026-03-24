@@ -21,7 +21,6 @@ type FrontvDO struct {
 	IndexPath sql.NullString `db:"indexpath"` // 索引文件
 	Indexs    sql.NullString `db:"indexs"`    // 索引列表
 	ImagePath sql.NullString `db:"imagepath"` // 输入文件
-	ReCache   sql.NullBool   `db:"recache"`   // 重置缓存
 	CdnCache  sql.NullBool   `db:"cdncache"`  // cdn 缓存 解决镜像重复加载问题
 	CdnName   sql.NullString `db:"cdnname"`   // cdn 域
 	CdnPath   sql.NullString `db:"cdnpath"`   // cdn 路径
@@ -31,11 +30,12 @@ type FrontvDO struct {
 	IndexHtml sql.NullString `db:"indexhtml"` // 索引文件内容
 	Disable   bool           `db:"disable"`   // 禁用
 	Deleted   bool           `db:"deleted"`   // 删除
+	Version   sql.NullInt64  `db:"version"`
 	// Updated sql.NullTime   `db:"updated"`
 	// Updater sql.NullString `db:"updater"`
 	// Created sql.NullTime   `db:"created"`
 	// Creater sql.NullString `db:"creater"`
-	// Version int            `db:"version"`
+	// ReCache   sql.NullBool   `db:"recache"`   // 重置缓存, 废弃，使用版本号控制
 }
 
 func (FrontvDO) TableName() string {
@@ -67,9 +67,9 @@ func (aa *FrontvRepo) UpdateCdnInfo(data *FrontvDO) error {
 }
 
 // 更新缓存信息
-func (aa *FrontvRepo) UpdateCacInfo(data *FrontvDO) error {
-	return aa.UpdateByInc(aa.Dsc, data, "recache")
-}
+// func (aa *FrontvRepo) UpdateCacInfo(data *FrontvDO) error {
+// 	return aa.UpdateByInc(aa.Dsc, data, "recache")
+// }
 
 // 通过镜像名称获取版本， 确定版本是否存在
 func (aa *FrontvRepo) GetByImage(image string) ([]FrontvDO, error) {
@@ -111,12 +111,15 @@ func (aa *FrontvRepo) ModifyByInfo(info *FrontvDO, vpp, ver, img string, annos m
 		}
 	}
 	if info.ID > 0 {
-		args = append(args, info.ID)
+		// 更新数据
+		asql += ", version=?"
+		args = append(args, info.Version.Int64+1, info.ID)
 		_, err := aa.Dsc.Ext().Exec("UPDATE "+info.TableName()+" SET "+asql+" WHERE id=?", args...)
 		if err != nil {
 			return err // 更新数据库发生异常
 		}
 	} else {
+		// 插入数据
 		asql += ", created=?, creater=?"
 		args = append(args, time.Now(), z.AppName)
 		ret, err := aa.Dsc.Ext().Exec("INSERT "+info.TableName()+" SET "+asql, args...)
@@ -187,13 +190,15 @@ func (aa *FrontvRepo) UpdateByFrontsMap(infos []map[string]string) error {
 			}
 			if info.ID > 0 {
 				// 更新数据
+				asql += ", version=?"
+				args = append(args, info.Version.Int64+1, info.ID)
 				args = append(args, info.ID)
 				_, err := aa.Dsc.Ext().Exec("UPDATE "+info.TableName()+" SET "+asql+" WHERE id=?", args...)
 				if err != nil {
 					return err // 更新数据库发生异常
 				}
 			} else {
-				// 新增数据
+				// 插入数据
 				asql += ", created=?, creater=?"
 				args = append(args, time.Now(), z.AppName)
 				ret, err := aa.Dsc.Ext().Exec("INSERT "+info.TableName()+" SET "+asql, args...)

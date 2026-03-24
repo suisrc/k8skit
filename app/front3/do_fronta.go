@@ -23,11 +23,11 @@ type FrontaDO struct {
 	Routers  sql.NullString `db:"routers"`  // 路由
 	Disable  bool           `db:"disable"`  // 禁用
 	Deleted  bool           `db:"deleted"`  // 删除
+	Version  sql.NullInt64  `db:"version"`
 	// Updated sql.NullTime   `db:"updated"`
 	// Updater sql.NullString `db:"updater"`
 	// Created sql.NullTime   `db:"created"`
 	// Creater sql.NullString `db:"creater"`
-	// Version int            `db:"version"`
 }
 
 func (aa FrontaDO) TableName() string {
@@ -102,12 +102,15 @@ func (aa *FrontaRepo) ModifyByInfo(info *FrontaDO, app, ver, domain, rootdir str
 		}
 	}
 	if info.ID > 0 {
-		args = append(args, info.ID)
+		// 更新数据
+		asql += ", version=?"
+		args = append(args, info.Version.Int64+1, info.ID)
 		_, err := aa.Dsc.Ext().Exec("UPDATE "+info.TableName()+" SET "+asql+" WHERE id=?", args...)
 		if err != nil {
 			return err // 更新数据库发生异常
 		}
 	} else {
+		// 插入数据
 		asql += ", created=?, creater=?"
 		args = append(args, time.Now(), z.AppName)
 		ret, err := aa.Dsc.Ext().Exec("INSERT "+info.TableName()+" SET "+asql, args...)

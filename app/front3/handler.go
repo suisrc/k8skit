@@ -36,8 +36,8 @@ type Config struct {
 	CacheTicker  int64  `json:"cacheticker"`  // 缓存清理间隔， 0 表示不启用, 默认为1天
 	CacheTimeout int64  `json:"cachetimeout"` // 缓存存储时间， 0 默认 30 天
 	ImageMaps    z.HM   `json:"imagemaps"`    // 镜像映射
-	SyncToken    string `json:"synctoken"`    // 同步令牌，用于k8s集群多实例间配置同步
-	SyncServe    string `json:"syncserve"`    // 同步服务地址, 一般是 headless service 的地址, 也可以是 http://HOST:PORT 形式
+	// SyncToken    string `json:"synctoken"`    // 同步令牌，用于k8s集群多实例间配置同步
+	// SyncServe    string `json:"syncserve"`    // 同步服务地址, 一般是 headless service 的地址, 也可以是 http://HOST:PORT 形式
 
 	// 验证方式？简单一点，confa 提供令牌支持， 但是 role 必须是 front3.* 权限
 	WebHookPath string `json:"hookpath"` // 钩子路径, 默认为空，不启动钩子
@@ -160,11 +160,11 @@ func (aa *Serve) ServeHTTP(rw http.ResponseWriter, rr *http.Request) {
 // 默认 8080 端口， 提供第三方webhook接口，可对系统进行配置和修改， 附加到主服务上，提供外部外部访问
 func (aa *Serve) WebHook(zrc *z.Ctx) {
 	qry := zrc.Request.URL.Query()
-	if src := qry.Get("source"); src != "" && zrc.Request.Method == http.MethodPost {
-		// 节点同步, 推送到 AnswerSyncConfig 方法中完成
-		aa.AnswerSyncHook(src, qry.Get("method"), zrc) // 异步相应
-		return
-	}
+	// if src := qry.Get("source"); src != "" && zrc.Request.Method == http.MethodPost {
+	// 	// 节点同步, 推送到 AnswerSyncConfig 方法中完成
+	// 	aa.AnswerSyncHook(src, qry.Get("method"), zrc) // 异步相应
+	// 	return
+	// }
 	// 人工操作， 通过 switch 分类处理, 先判断权限
 	z.Println("[_webHook]:", zrc.Request.RequestURI)
 	switch qry.Get("method") {

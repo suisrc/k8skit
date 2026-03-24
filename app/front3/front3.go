@@ -168,84 +168,133 @@ func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 			}
 		}
 	}
-	// 如果未指定版本，使用当前系统最新版本
-	ver, err := aa.VerRepo.GetTop1ByVppAndVer(rvpp, rver)
-	if err != nil {
-		if err == sql.ErrNoRows {
+	var api *AppCache
+	if rvpp == "none" {
+		// 没有关联的应用，只提供路由服务, 没有路由相关配置，直接返回
+		if app.Routers.String == "" {
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-			http.Error(rw, "application version not found: "+host+", "+rver, http.StatusNotFound)
+			http.Error(rw, "application routers is empty: "+host+", "+rver, http.StatusNotFound)
 			return
 		}
-		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-		http.Error(rw, "application version query error: "+host+", "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	// 记录版本信息到请求头上
-	rw.Header().Set("X-Front3-Ver", ver.Vpp+"; version="+ver.Ver)
-	// 优先返回已经存在的内容
-	if ver.IndexHtml.String != "" {
-		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if ver.Started.Valid {
-			http.ServeContent(rw, rr, "index.html", ver.Started.Time, strings.NewReader(ver.IndexHtml.String))
-		} else {
-			http.ServeContent(rw, rr, "index.html", time.Now(), strings.NewReader(ver.IndexHtml.String))
-		}
-		return
-	}
-	// [appid]-[verid]-[version] -> 唯一索引
-	key := fmt.Sprintf("%d-%d-%s", app.ID, ver.ID, ver.Ver)
-	var api *AppCache
-	if cac, _ := aa.CacheApp.Load(key); cac != nil {
-		api = cac.(*AppCache)
-	}
-	cls := false
-	if api != nil {
-		if ver.ReCache.Bool {
-			// 标记强制刷新 LOC
-			z.Println("[_front3_]: LOC forc refresh, delete cache:", key)
-			aa.CacheApp.Delete(key)
-			cls = true
-			// 需要强制刷新本地缓存，如果有多实例的情况
-		} else if ver.CdnPush.Bool && ver.CdnRenew.Bool {
-			// 标记强制刷新 CDN
-			z.Println("[_front3_]: CDN mode rewrite, delete cache:", key)
-			aa.CacheApp.Delete(key)
-			cls = true
-		} else if ver.CdnPush.Bool == api.IsLocal {
-			// 确认 CDN 和 LOC 模式是否 发生了切换
-			z.Println("[_front3_]: CDN mode changed, delete cache:", key)
-			aa.CacheApp.Delete(key)
-			cls = true
-		} else if !api.IsLocal {
-			// do nohting, pass
-		} else if _, err := os.Stat(api.Abspath); err != nil {
-			// 缓存文件不存在，有可能被其他应用或者人工删除，重建, 一般同步缓存的时候，会删除该内容
-			z.Println("[_front3_]: LOC mode, cache no found:", key)
-			aa.CacheApp.Delete(key)
-			api = nil // 缓存已经没有了，不需要再次清理了
-		}
-	}
-	if api == nil || cls {
-		// 没有缓存，或者缓存已经被标记需要清理了
-		aa._CacheMU.Lock()
-		defer aa._CacheMU.Unlock()
+		// [appid]-routers -> 唯一索引
+		key := fmt.Sprintf("%d-none", app.ID)
 		if cac, _ := aa.CacheApp.Load(key); cac != nil {
-			api = cac.(*AppCache) // 缓存已经重新建立，不需要重复建立
-		} else {
-			if api != nil && api.Abspath != "" {
-				os.RemoveAll(api.Abspath) // 清理本地缓存
-			}
-			// 重新建立缓存
-			api = aa.InitApi(rw, rr, &AppCache{Key: key, AppInfo: *app, Version: *ver})
-			if api == nil {
-				return // 无法处理， 不能创建 api, InitApi 中已经返回异常内容
-			}
-			api.LastMod = time.Now().Unix() // 防止被清理
-			aa.CacheApp.Store(key, api)     // 重新建立缓存
+			api = cac.(*AppCache)
 		}
-	}
-	if z.IsDebug() || C.Front3.Debug {
-		z.Println("[_front3_]:", key, app.App.String, "[", ver.Vpp, "] ->", rr.URL.Path)
+		clc := false // 清理标记， clear local cache
+		if api != nil && api.AppInfo.Version.Int64 != app.Version.Int64 {
+			// 标记版本已过期，刷新缓存
+			z.Println("[_front3_]: APP vers expired, delete cache:", key)
+			aa.CacheApp.Delete(key)
+			clc = true
+		}
+		if api == nil || clc {
+			// 没有缓存，或者缓存已经被标记需要清理了
+			aa._CacheMU.Lock()
+			defer aa._CacheMU.Unlock()
+			if cac, _ := aa.CacheApp.Load(key); cac != nil {
+				api = cac.(*AppCache) // 缓存已经重新建立，不需要重复建立
+			} else {
+				// 重新建立缓存
+				routers := zc.StrMap{}
+				if app.Routers.String != "" {
+					routers.Set(app.Routers.String)
+				}
+				config := front2.Config{
+					TmplRoot: front2.C.Front2.TmplRoot,
+					TmplFile: front2.C.Front2.TmplFile,
+					Index:    front2.C.Front2.Index,
+					Indexs:   front2.C.Front2.Indexs,
+					Routers:  routers,
+				}
+				handler := front2.NewApi(nil, config, fmt.Sprintf("[_front3_]-%d-0", app.ID))
+				api = &AppCache{Key: key, AppInfo: *app, Handler: handler}
+				api.LastMod = time.Now().Unix() // 防止被清理
+				aa.CacheApp.Store(key, api)     // 重新建立缓存
+			}
+		}
+		if z.IsDebug() || C.Front3.Debug {
+			z.Println("[_front3_]:", key, app.App.String, "[ none ] ->", rr.URL.Path)
+		}
+	} else {
+		// 如果未指定版本，使用当前系统最新版本
+		ver, err := aa.VerRepo.GetTop1ByVppAndVer(rvpp, rver)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				rw.Header().Set("Content-Type", "text/html; charset=utf-8")
+				http.Error(rw, "application version not found: "+host+";"+rver, http.StatusNotFound)
+				return
+			}
+			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
+			http.Error(rw, "application version query error: "+host+","+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		// 记录版本信息到请求头上
+		rw.Header().Set("X-Front3-Ver", ver.Vpp+"; version="+ver.Ver)
+		// 优先返回已经存在的内容
+		if ver.IndexHtml.String != "" {
+			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
+			if ver.Started.Valid {
+				http.ServeContent(rw, rr, "index.html", ver.Started.Time, strings.NewReader(ver.IndexHtml.String))
+			} else {
+				http.ServeContent(rw, rr, "index.html", time.Now(), strings.NewReader(ver.IndexHtml.String))
+			}
+			return
+		}
+		// [appid]-[verid]-[version] -> 唯一索引
+		key := fmt.Sprintf("%d-%d-%s", app.ID, ver.ID, ver.Ver)
+		if cac, _ := aa.CacheApp.Load(key); cac != nil {
+			api = cac.(*AppCache)
+		}
+		clc := false // 清理标记， clear local cache
+		if api != nil {
+			if api.AppInfo.Version.Int64 != app.Version.Int64 || app.Version.Int64 != ver.Version.Int64 {
+				// 标记版本已过期，刷新缓存
+				z.Println("[_front3_]: APP vers expired, delete cache:", key)
+				aa.CacheApp.Delete(key)
+				clc = true
+				// 需要强制刷新本地缓存，如果有多实例的情况
+			} else if ver.CdnPush.Bool && ver.CdnRenew.Bool {
+				// 标记强制刷新 CDN
+				z.Println("[_front3_]: CDN mode rewrite, delete cache:", key)
+				aa.CacheApp.Delete(key)
+				clc = true
+			} else if ver.CdnPush.Bool == api.IsLocal {
+				// 确认 CDN 和 LOC 模式是否 发生了切换
+				z.Println("[_front3_]: CDN mode changed, delete cache:", key)
+				aa.CacheApp.Delete(key)
+				clc = true
+			} else if !api.IsLocal {
+				// do nohting, pass
+			} else if _, err := os.Stat(api.Abspath); err != nil {
+				// 缓存文件不存在，有可能被其他应用或者人工删除，重建, 一般同步缓存的时候，会删除该内容
+				z.Println("[_front3_]: LOC mode, cache no found:", key)
+				aa.CacheApp.Delete(key)
+				api = nil // 缓存已经没有了，不需要再次清理了
+			}
+		}
+		if api == nil || clc {
+			// 没有缓存，或者缓存已经被标记需要清理了
+			aa._CacheMU.Lock()
+			defer aa._CacheMU.Unlock()
+			if cac, _ := aa.CacheApp.Load(key); cac != nil {
+				api = cac.(*AppCache) // 缓存已经重新建立，不需要重复建立
+			} else {
+				if api != nil && api.Abspath != "" {
+					os.RemoveAll(api.Abspath) // 清理本地缓存
+				}
+				// 重新建立缓存
+				api = aa.InitApi(rw, rr, &AppCache{Key: key, AppInfo: *app, Version: *ver}, clc)
+				if api == nil {
+					return // 无法处理， 不能创建 api, InitApi 中已经返回异常内容
+				}
+				api.LastMod = time.Now().Unix() // 防止被清理
+				aa.CacheApp.Store(key, api)     // 重新建立缓存
+			}
+		}
+		if z.IsDebug() || C.Front3.Debug {
+			z.Println("[_front3_]:", key, app.App.String, "[", ver.Vpp, "] ->", rr.URL.Path)
+		}
 	}
 	api.LastMod = time.Now().Unix()
 	api.Handler.ServeHTTP(rw, rr)
@@ -255,7 +304,7 @@ func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 //=============================================================================================================================
 //=============================================================================================================================
 
-func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache) *AppCache {
+func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache, clearLocalCache bool) *AppCache {
 	config := front2.Config{
 		TmplRoot: av.Version.TPRoot.String,
 		TmplFile: front2.C.Front2.TmplFile,
@@ -285,11 +334,12 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache)
 		return nil // 本地缓存地址无效
 	}
 	// 强制重置缓存
-	if av.Version.ReCache.Bool {
-		os.RemoveAll(abspath) // 可以忽略错误
-		av.Version.ReCache = sql.NullBool{Bool: false, Valid: true}
-		aa.VerRepo.UpdateCacInfo(&av.Version)
-		defer aa.NoticeSyncHook("delete.cache", z.HA{"key": av.Key}) // 结束后，需要通知所有实例清理缓存
+	if clearLocalCache /* av.Version.ReCache.Bool */ {
+		os.RemoveAll(abspath) // 清理本地缓存， 可以忽略错误
+		// 通过版本控制，不需要更新刷新标记位， 也不需要通知过期清理
+		// av.Version.ReCache = sql.NullBool{Bool: false, Valid: true}
+		// aa.VerRepo.UpdateCacInfo(&av.Version)
+		// defer aa.NoticeSyncHook("delete.cache", z.HA{"key": av.Key}) // 结束后，需要通知所有实例清理缓存
 	}
 	// 确定是否为CDN模式
 	if av.Version.CdnName.String != "" && av.Version.CdnPush.Bool && !av.Version.CdnRenew.Bool {
