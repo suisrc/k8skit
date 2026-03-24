@@ -151,19 +151,15 @@ func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 	if rver == "" && app.Ver.String != "" {
 		rver = app.Ver.String
 	}
-	// 指定了应用版不能，用于解析 @:xxx 路由
+	// 指定了应用版不能，用于解析 @~/xxx=zzz 路由
 	rvpp := app.GetVppName()
-	if strings.Contains(app.Routers.String, "=@!@") {
-		// 路由中存在 @!@ 路由格式， 需要解析路由地址， 然后进行匹配， 确定前端应用
+	if strings.Contains(app.Routers.String, "@~/") {
+		// 路由中存在 @~/xxx=zzz 路由格式， 需要解析路由地址， 然后进行匹配， 确定前端应用
 		for rrr := range strings.SplitSeq(app.Routers.String, ",") {
-			// rkv := strings.SplitN(rrr, "=", 2)
-			idx := strings.IndexByte(rrr, '=')
-			if idx < 1 {
-				continue
-			}
-			rrk, rrv := rrr[:idx], rrr[idx+1:]
-			if strings.HasPrefix(rrv, "@!@") && z.HasPathPrefix(rr.URL.Path, rrk) {
-				rvpp = rrv[3:]
+			if rrk, rrv, ok := strings.Cut(rrr, "="); !ok {
+				// ignore
+			} else if strings.HasPrefix(rrk, "@~/") && z.HasPathPrefix(rr.URL.Path, rrk[2:]) {
+				rvpp = rrv
 				break
 			}
 		}
@@ -248,9 +244,12 @@ func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 		}
 		clc := false // 清理标记， clear local cache
 		if api != nil {
-			if api.AppInfo.Version.Int64 != app.Version.Int64 || app.Version.Int64 != ver.Version.Int64 {
+			if api.AppInfo.Version.Int64 != app.Version.Int64 || //
+				api.Version.Version.Int64 != ver.Version.Int64 {
 				// 标记版本已过期，刷新缓存
-				z.Println("[_front3_]: APP vers expired, delete cache:", key)
+				z.Println("[_front3_]: APP vers expired, delete cache:", key,
+					api.AppInfo.Version.Int64, app.Version.Int64, //
+					api.Version.Version.Int64, ver.Version.Int64)
 				aa.CacheApp.Delete(key)
 				clc = true
 				// 需要强制刷新本地缓存，如果有多实例的情况
@@ -347,8 +346,8 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache,
 		handler := front2.NewApi(nil, config, fmt.Sprintf("[_front3_]-%d-%d", av.AppInfo.ID, av.Version.ID))
 		// s3cdn.InitCdnServe(handler, av.Version.CdnName.String, av.Version.CdnPath.String, av.Version.Vpp, av.Version.Ver)
 		s3url := av.Version.CdnName.String + "/" + filepath.Join(av.Version.CdnPath.String, av.Version.Vpp, av.Version.Ver)
-		handler.ActionKey = append(handler.ActionKey, "/")       // 添加默认索引
-		handler.Config.Routers["/"] = s3cdn.GetReqMode() + s3url // 增加默认路由
+		handler.RouterKey = append(handler.RouterKey, "@^/") // 添加默认索引
+		handler.Config.Routers["@^/"] = "domain+" + s3url    // 增加默认路由
 		av.Handler = handler
 		return av // CDN模式， 直接返回
 	}
@@ -489,8 +488,8 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache,
 		aa.VerRepo.UpdateCdnInfo(&av.Version)
 		// s3cdn.InitCdnServe(handler, av.Version.CdnName.String, av.Version.CdnPath.String, av.Version.Vpp, av.Version.Ver)
 		s3url := av.Version.CdnName.String + "/" + filepath.Join(av.Version.CdnPath.String, av.Version.Vpp, av.Version.Ver)
-		handler.ActionKey = append(handler.ActionKey, "/")       // 添加默认索引
-		handler.Config.Routers["/"] = s3cdn.GetReqMode() + s3url // 增加默认路由
+		handler.RouterKey = append(handler.RouterKey, "@^/") // 添加默认索引
+		handler.Config.Routers["@^/"] = "domain+" + s3url    // 增加默认路由
 	} else {
 		av.IsLocal = true // 本地模式
 	}

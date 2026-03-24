@@ -34,7 +34,6 @@ type Config struct {
 	Domain   string `json:"domain"`   // CDN域名， 包含桶信息，比如 //[bucket].x.y.z or //x.y.z/[bucket]
 	Rewrite  bool   `json:"rewrite"`  // 是否覆盖, 重写前端信息到CDN上，不会删除，但是会覆盖相同的名称
 	AddrPort string `json:"addrport"` // 监听端口，不破坏源服务，独立新服务监控 CDN 索引
-	ReqMode  string `json:"reqmode"`  // 请求模式, @^~domain+(默认) or @^~(不修改域名) or @^(只支持GET请求)
 }
 
 func init() {
@@ -52,15 +51,6 @@ func init() {
 	flag.StringVar(&C.S3cdn.Domain, "s3domain", "", "S3 CDN 域名")
 	flag.Var(z.NewBoolVal(&C.S3cdn.Rewrite), "s3rewrite", "S3 是否覆盖")
 	flag.StringVar(&C.S3cdn.AddrPort, "s3addrport", "0.0.0.0:88", "CND索引监听端口")
-	flag.StringVar(&C.S3cdn.ReqMode, "s3reqmode", "@^~domain+", "请求模式，@^~domain+(默认) or @^~(不修改域名) or @^(只支持GET请求)")
-}
-
-// 获取请求模式
-func GetReqMode() string {
-	if C.S3cdn.ReqMode == "" {
-		C.S3cdn.ReqMode = "@^~domain+"
-	}
-	return C.S3cdn.ReqMode
 }
 
 // 初始化方法， 处理 api 的而外配置接口
@@ -86,8 +76,8 @@ func Front2ServeByS3(api *front2.IndexApi, zgg *z.Zgg) {
 	// 添加默认路由
 	// InitCdnServe(hdl, C.S3cdn.Domain, C.S3cdn.RootDir, z.AppName, z.Version)
 	s3url := C.S3cdn.Domain + "/" + filepath.Join(C.S3cdn.RootDir, z.AppName, z.Version)
-	hdl.ActionKey = append(hdl.ActionKey, "/")     // 添加默认索引
-	hdl.Config.Routers["/"] = GetReqMode() + s3url // 增加默认路由
+	hdl.RouterKey = append(hdl.RouterKey, "@^/")  // 添加默认索引
+	hdl.Config.Routers["@^/"] = "domain+" + s3url // 增加默认路由
 	// 增加启动服务
 	zgg.Servers["(S3CDN)"] = &http.Server{Addr: C.S3cdn.AddrPort, Handler: hdl}
 }
