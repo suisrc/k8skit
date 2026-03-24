@@ -28,3 +28,4 @@ dev
 doc/__*
 
 web
+__debug_*
