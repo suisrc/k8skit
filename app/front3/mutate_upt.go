@@ -163,7 +163,7 @@ func (aa *Serve) mutateFrontPath(ing *netv1.Ingress, svc string) (*PatchOperatio
 	}
 	serviceName := svc
 	servicePort := "http"
-	servicePath := "/"
+	servicePath := ""
 	if idx := strings.IndexByte(serviceName, ':'); idx >= 0 {
 		servicePort = serviceName[idx+1:]
 		serviceName = serviceName[:idx]
@@ -180,9 +180,16 @@ func (aa *Serve) mutateFrontPath(ing *netv1.Ingress, svc string) (*PatchOperatio
 		rule.HTTP.Paths = []netv1.HTTPIngressPath{}
 	}
 	for _, path := range rule.HTTP.Paths {
-		if path.Path == servicePath || path.Backend.Service != nil && path.Backend.Service.Name == serviceName {
-			return nil, [2]string{rule.Host, path.Path}, nil // 前端服务已经存在
+		if servicePath != "" && path.Path == servicePath || path.Backend.Service != nil && path.Backend.Service.Name == serviceName {
+			if servicePath != "" {
+				return nil, [2]string{rule.Host, servicePath}, nil // 前端服务已经存在
+			} else {
+				return nil, [2]string{rule.Host, path.Path}, nil // 前端服务已经存在
+			}
 		}
+	}
+	if servicePath == "" {
+		servicePath = "/" // 默认路径
 	}
 	// 增加一个节点, 作为前端服务的入口
 	path := netv1.HTTPIngressPath{
