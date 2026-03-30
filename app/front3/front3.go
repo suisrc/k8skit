@@ -219,7 +219,11 @@ func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 			return
 		}
 		// 记录版本信息到请求头上
-		rw.Header().Set("X-Front3-Ver", ver.Vpp+"; version="+ver.Ver)
+		if app.App.String == ver.Vpp {
+			rw.Header().Set("X-Front-Version", ver.Vpp+"; version="+ver.Ver)
+		} else {
+			rw.Header().Set("X-Front-Version", app.App.String+"/"+ver.Vpp+"; version="+ver.Ver)
+		}
 		// 优先返回已经存在的内容
 		if ver.IndexHtml.String != "" {
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
