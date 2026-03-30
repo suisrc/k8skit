@@ -306,7 +306,7 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache,
 		TmplFile: front2.C.Front2.TmplFile,
 	}
 	{
-		index := av.AppInfo.Index.String
+		index := av.AppInfo.Indexx.String
 		if index == "" {
 			index = av.Version.IndexDef.String
 		}

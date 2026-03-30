@@ -20,7 +20,7 @@ type FrontaDO struct {
 	Domain  sql.NullString `db:"domain"`  // 域名
 	RootDir sql.NullString `db:"rootdir"` // 根目录
 	Routers sql.NullString `db:"routers"` // 路由
-	Index   sql.NullString `db:"index"`   // 首页
+	Indexx  sql.NullString `db:"indexx"`  // 首页
 	Disable bool           `db:"disable"` // 禁用
 	Deleted bool           `db:"deleted"` // 删除
 	Version sql.NullInt64  `db:"version"`
