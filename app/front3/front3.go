@@ -302,24 +302,27 @@ func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 
 func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache, clearLocalCache bool) *AppCache {
 	config := front2.Config{
-		TmplRoot: av.Version.TPRoot.String,
+		TmplRoot: av.Version.TmplRoot.String,
 		TmplFile: front2.C.Front2.TmplFile,
 	}
 	{
-		index := av.Version.IndexPath.String
+		index := av.AppInfo.Index.String
+		if index == "" {
+			index = av.Version.IndexDef.String
+		}
 		if index == "" {
 			index = front2.C.Front2.Index // 默认值
 		}
-		indexs := zc.StrMap{}
-		if av.Version.Indexs.String != "" {
-			indexs.Set(av.Version.Indexs.String)
+		indexes := zc.StrMap{}
+		if av.Version.IndexMap.String != "" {
+			indexes.Set(av.Version.IndexMap.String)
 		}
 		routers := zc.StrMap{}
 		if av.AppInfo.Routers.String != "" {
 			routers.Set(av.AppInfo.Routers.String)
 		}
 		config.Index = index
-		config.Indexs = indexs
+		config.Indexs = indexes
 		config.Routers = routers
 	}
 	// 处理本地缓存目录
@@ -400,7 +403,7 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache,
 			if z.IsDebug() || C.Front3.Debug {
 				z.Println("[_front3_]: download by http:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String)
 			}
-			if rerr := registry.GetFilesByGitOrTgz(abspath, av.Version.ImagePath.String, av.Version.Image.String); rerr != nil {
+			if rerr := registry.GetFilesByGitOrTgz(abspath, av.Version.ImageDir.String, av.Version.Image.String); rerr != nil {
 				z.Println("[_front3_]: download by http error:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String, rerr.Error())
 				rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 				http.Error(rw, "application download package error: "+rr.Host+", "+rerr.Error(), http.StatusInternalServerError)
@@ -420,7 +423,7 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache,
 				Password: aa.RegConfig.Password,
 				DcrAuths: aa.RegConfig.DcrAuths,
 				Image:    av.Version.Image.String,
-				SrcPath:  av.Version.ImagePath.String,
+				SrcPath:  av.Version.ImageDir.String,
 				OutPath:  abspath,
 			}
 			// 替换镜像地址

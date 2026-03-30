@@ -20,14 +20,14 @@ type FrontaDO struct {
 	Domain  sql.NullString `db:"domain"`  // 域名
 	RootDir sql.NullString `db:"rootdir"` // 根目录
 	Routers sql.NullString `db:"routers"` // 路由
+	Index   sql.NullString `db:"index"`   // 首页
 	Disable bool           `db:"disable"` // 禁用
 	Deleted bool           `db:"deleted"` // 删除
 	Version sql.NullInt64  `db:"version"`
-	// Updated sql.NullTime   `db:"updated"`
-	// Updater sql.NullString `db:"updater"`
-	// Created sql.NullTime   `db:"created"`
-	// Creater sql.NullString `db:"creater"`
-	// Priority sql.NullString `db:"priority"` // 优先级, 暂不考虑
+	// Updated sql.NullTime    `db:"updated"`
+	// Updater sql.NullString  `db:"updater"`
+	// Created sql.NullTime    `db:"created"`
+	// Creater sql.NullString  `db:"creater"`
 }
 
 func (aa FrontaDO) TableName() string {

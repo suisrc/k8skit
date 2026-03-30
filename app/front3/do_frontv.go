@@ -17,10 +17,10 @@ type FrontvDO struct {
 	Vpp       string         `db:"vpp"`       // 版本名
 	Ver       string         `db:"ver"`       // 版本号
 	Image     sql.NullString `db:"image"`     // 镜像
-	TPRoot    sql.NullString `db:"tproot"`    // 替换根目录
-	IndexPath sql.NullString `db:"indexpath"` // 索引文件
-	Indexs    sql.NullString `db:"indexs"`    // 索引列表
-	ImagePath sql.NullString `db:"imagepath"` // 输入文件
+	TmplRoot  sql.NullString `db:"tproot"`    // 根目录
+	IndexDef  sql.NullString `db:"indexdef"`  // 索引文件
+	IndexMap  sql.NullString `db:"indexmap"`  // 索引列表
+	ImageDir  sql.NullString `db:"imagedir"`  // 输入文件, 镜像中的文件
 	CdnCache  sql.NullBool   `db:"cdncache"`  // cdn 缓存 解决镜像重复加载问题
 	CdnName   sql.NullString `db:"cdnname"`   // cdn 域
 	CdnPath   sql.NullString `db:"cdnpath"`   // cdn 路径
@@ -35,7 +35,7 @@ type FrontvDO struct {
 	// Updater sql.NullString `db:"updater"`
 	// Created sql.NullTime   `db:"created"`
 	// Creater sql.NullString `db:"creater"`
-	// ReCache   sql.NullBool   `db:"recache"`   // 重置缓存, 废弃，使用版本号控制
+	// ReCache sql.NullBool   `db:"recache"`   // 重置缓存, 废弃，使用版本号控制
 }
 
 func (FrontvDO) TableName() string {
