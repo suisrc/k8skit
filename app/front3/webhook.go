@@ -72,7 +72,7 @@ func (aa *Serve) UpdateImageVersion(zrc *z.Ctx) {
 		verInfo.ID = 0
 		verInfo.CdnName.Valid = false
 		verInfo.CdnPath.Valid = false
-		verInfo.CdnPush.Valid = false
+		verInfo.CdnCheck.Valid = false
 		verInfo.CdnRenew.Valid = false
 		verInfo.Image = sql.NullString{String: image, Valid: true}
 		verInfo.Vpp = vpp
@@ -91,7 +91,7 @@ func (aa *Serve) UpdateImageVersion(zrc *z.Ctx) {
 			ver.ID = 0
 			ver.CdnName.Valid = false
 			ver.CdnPath.Valid = false
-			ver.CdnPush.Valid = false
+			ver.CdnCheck.Valid = false
 			ver.CdnRenew.Valid = false
 			ver.Image = sql.NullString{String: image, Valid: true}
 			ver.Ver = iver // 只更新版本和镜像

@@ -24,7 +24,7 @@ type FrontvDO struct {
 	CdnCache  sql.NullBool   `db:"cdncache"`  // cdn 缓存 解决镜像重复加载问题
 	CdnName   sql.NullString `db:"cdnname"`   // cdn 域
 	CdnPath   sql.NullString `db:"cdnpath"`   // cdn 路径
-	CdnPush   sql.NullBool   `db:"cdnpush"`   // cdn 使用
+	CdnCheck  sql.NullBool   `db:"cdncheck"`  // cdn 使用
 	CdnRenew  sql.NullBool   `db:"cdnrenew"`  // nil or true 启用cdn重写
 	Started   sql.NullTime   `db:"started"`   // 生效时间
 	IndexHtml sql.NullString `db:"indexhtml"` // 索引文件内容
@@ -93,12 +93,20 @@ func (aa *FrontvRepo) ModifyByInfo(info *FrontvDO, vpp, ver, img string, annos m
 	args := []any{time.Now(), z.AppName, vpp, ver, img}
 	pre_ := "frontend/db.frontv."
 	len_ := len(pre_)
+
+	emap := map[string]int{}
+	for i, col := range aa.Cols().Cols {
+		emap[col.CName] = i
+	}
 	for anno, data := range annos {
 		if anno == pre_+"image" || anno == pre_+"vpp" || anno == pre_+"ver" {
 			continue
 		}
 		if strings.HasPrefix(anno, pre_) {
 			key := anno[len_:]
+			if _, ok := emap[key]; !ok {
+				continue // 不存在的字段， 忽略
+			}
 			switch data {
 			case "true":
 				asql += "," + key + "=1"
@@ -139,6 +147,10 @@ func (aa *FrontvRepo) UpdateByFrontsMap(infos []map[string]string) error {
 	}
 	// 使用事务更新数据
 	return aa.Dsc.WithTx(nil, func(dsc sqlx.Dsc) error {
+		emap := map[string]int{}
+		for i, col := range aa.Cols().Cols {
+			emap[col.CName] = i
+		}
 		for _, imap := range infos {
 			vpp, _ := imap["vpp"]
 			if vpp == "" {
@@ -173,11 +185,13 @@ func (aa *FrontvRepo) UpdateByFrontsMap(infos []map[string]string) error {
 			}
 			asql := "updated=?, updater=?, deleted=0, disable=0, vpp=?, ver=?, image=?"
 			args := []any{time.Now(), z.AppName, vpp, ver, img}
-			for anno, data := range imap {
-				if anno == "image" || anno == "vpp" || anno == "ver" {
+			for key, data := range imap {
+				if key == "image" || key == "vpp" || key == "ver" {
 					continue
 				}
-				key := anno
+				if _, ok := emap[key]; !ok {
+					continue // 不存在的字段， 忽略
+				}
 				switch data {
 				case "true":
 					asql += "," + key + "=1"

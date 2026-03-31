@@ -81,12 +81,20 @@ func (aa *FrontaRepo) ModifyByInfo(info *FrontaDO, app, ver, domain, rootdir str
 	args := []any{time.Now(), z.AppName, app, ver, domain, rootdir}
 	pre_ := "frontend/db.fronta."
 	len_ := len(pre_)
+
+	emap := map[string]int{}
+	for i, col := range aa.Cols().Cols {
+		emap[col.CName] = i
+	}
 	for anno, data := range annos {
 		if anno == pre_+"app" || anno == pre_+"ver" || anno == pre_+"domain" || anno == pre_+"rootdir" {
 			continue
 		}
 		if strings.HasPrefix(anno, pre_) {
 			key := anno[len_:]
+			if _, ok := emap[key]; !ok {
+				continue // 不存在的字段， 忽略
+			}
 			if key == "vpp" {
 				info.Vpp.String = data // 更新应用名，后面需要使用最新的
 			}

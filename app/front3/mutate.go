@@ -55,9 +55,9 @@ func (aa *Serve) mutateProcess(req *admissionv1.AdmissionRequest) ([]PatchOperat
 		frontend/db.fronta.name: 登录系统
 		frontend/db.fronta.rootdir: /
 		frontend/db.frontv.tproot: /ROOT_PATH:/static
-		frontend/db.frontv.imagepath: /www/data
-		frontend/db.frontv.indexs: /www=,/embed=index.htm
-		frontend/db.frontv.cdnuse: 'true'
+		frontend/db.frontv.imagedir: /www/data
+		frontend/db.frontv.indexmap: /www=,/embed=index.htm
+		frontend/db.frontv.cdnpush: 'true'
 		------------------------------------------------------------------
 		frontend/service: frontend:http/path # 如果不存在，不执行注入
 		http:

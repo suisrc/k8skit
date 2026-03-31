@@ -250,12 +250,12 @@ func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 				aa.CacheApp.Delete(key)
 				clc = true
 				// 需要强制刷新本地缓存，如果有多实例的情况
-			} else if ver.CdnPush.Bool && ver.CdnRenew.Bool {
+			} else if ver.CdnCheck.Bool && ver.CdnRenew.Bool {
 				// 标记强制刷新 CDN
 				z.Println("[_front3_]: CDN mode rewrite, delete cache:", key)
 				aa.CacheApp.Delete(key)
 				clc = true
-			} else if ver.CdnPush.Bool == api.IsLocal {
+			} else if ver.CdnCheck.Bool == api.IsLocal {
 				// 确认 CDN 和 LOC 模式是否 发生了切换
 				z.Println("[_front3_]: CDN mode changed, delete cache:", key)
 				aa.CacheApp.Delete(key)
@@ -341,7 +341,7 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache,
 		// defer aa.NoticeSyncHook("delete.cache", z.HA{"key": av.Key}) // 结束后，需要通知所有实例清理缓存
 	}
 	// 确定是否为CDN模式
-	if av.Version.CdnName.String != "" && av.Version.CdnPush.Bool && !av.Version.CdnRenew.Bool {
+	if av.Version.CdnCheck.Bool && av.Version.CdnName.String != "" && !av.Version.CdnRenew.Bool {
 		// 直接使用 CDN 模式返回, CDN 存在，且不需要重新更新
 		handler := front2.NewApi(nil, config, fmt.Sprintf("[_front3_]-%d-%d", av.AppInfo.ID, av.Version.ID))
 		// s3cdn.InitCdnServe(handler, av.Version.CdnName.String, av.Version.CdnPath.String, av.Version.Vpp, av.Version.Ver)
@@ -470,7 +470,7 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache,
 	handler := front2.NewApi(os.DirFS(abspath), config, fmt.Sprintf("[_front3_]-%d-%d", av.AppInfo.ID, av.Version.ID))
 	av.Handler = handler
 	// 使用 CDN 内容返回
-	if av.Version.CdnPush.Bool {
+	if av.Version.CdnCheck.Bool {
 		// 上传到 cdn， 部署CDN
 		cfg := aa.CdnConfig // 赋值了新对象
 		cfg.Rewrite = av.Version.CdnRenew.Bool
