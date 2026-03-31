@@ -36,7 +36,7 @@ type Config struct {
 	CacheTicker  int64             `json:"cacheticker"`  // 缓存清理间隔， 0 表示不启用, 默认为1天
 	CacheTimeout int64             `json:"cachetimeout"` // 缓存存储时间， 0 默认 30 天
 	ImageMaps    map[string]string `json:"imagemaps"`    // 镜像映射
-	DefaultURL   string            `json:"defaultsvc"`   // 前端服务地址， 默认 frontend---default:80
+	DefaultURL   string            `json:"defaulturl"`   // 前端服务地址， 默认 frontend---default:80
 
 	// 验证方式？简单一点，confa 提供令牌支持， 但是 role 必须是 front3.* 权限
 	WebHookPath string `json:"hookpath"` // 钩子路径, 默认为空，不启动钩子
