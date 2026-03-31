@@ -151,6 +151,10 @@ func (aa *Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (res
 }
 
 func (aa *Serve) mutateFrontPath(ing *netv1.Ingress, svc string) (*PatchOperation, [2]string, error) {
+	svc = strings.TrimSpace(svc)
+	if svc == "" {
+		return nil, [2]string{}, errors.New("frontend service is empty")
+	}
 	// 由于后面要处理服务和域名已经路径问题，所以要求 len(rules) == 1 必须成立
 	if len(ing.Spec.Rules) == 0 {
 		return nil, [2]string{}, errors.New("ingress no rules")
@@ -162,15 +166,24 @@ func (aa *Serve) mutateFrontPath(ing *netv1.Ingress, svc string) (*PatchOperatio
 		return nil, [2]string{}, errors.New("ingress no host")
 	}
 	serviceName := svc
-	servicePort := "http"
+	servicePort := "http" // 默认端口
 	servicePath := ""
-	if idx := strings.IndexByte(serviceName, ':'); idx >= 0 {
-		servicePort = serviceName[idx+1:]
-		serviceName = serviceName[:idx]
-	}
-	if idx := strings.IndexByte(servicePort, '/'); idx >= 0 {
-		servicePath = servicePort[idx:]
-		servicePort = servicePort[:idx]
+	if svc[0] == '/' {
+		serviceName = C.Front3.DefaultURL // 使用默认的前端服务地址
+		servicePath = svc                 // 直接使用 svc 作为路径
+		if idx := strings.IndexByte(serviceName, ':'); idx >= 0 {
+			servicePort = serviceName[idx+1:]
+			serviceName = serviceName[:idx]
+		}
+	} else {
+		if idx := strings.IndexByte(serviceName, ':'); idx >= 0 {
+			servicePort = serviceName[idx+1:]
+			serviceName = serviceName[:idx]
+		}
+		if idx := strings.IndexByte(servicePort, '/'); idx >= 0 {
+			servicePath = servicePort[idx:]
+			servicePort = servicePort[:idx]
+		}
 	}
 	// 检查和注入 rules 信息
 	if rule.HTTP == nil {
@@ -202,7 +215,9 @@ func (aa *Serve) mutateFrontPath(ing *netv1.Ingress, svc string) (*PatchOperatio
 			},
 		},
 	}
-	if port, err := strconv.Atoi(servicePort); err == nil {
+	if servicePort == "http" { // 大部分特殊情况，优先处理
+		path.Backend.Service.Port.Name = servicePort // 端点名称
+	} else if port, err := strconv.Atoi(servicePort); err == nil {
 		path.Backend.Service.Port.Number = int32(port) // 端口号
 	} else {
 		path.Backend.Service.Port.Name = servicePort // 端点名称

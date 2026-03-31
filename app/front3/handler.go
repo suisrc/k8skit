@@ -30,14 +30,13 @@ var (
 type Config struct {
 	DB sqlx.DatabaseConfig `json:"database"`
 
-	Enable       bool   `json:"enable"`       // 禁用
-	Debug        bool   `json:"debug"`        // 调试模式
-	AddrPort     string `json:"addrport"`     // 监听端口，不破坏源服务，独立新服务监控 CDN 索引
-	CacheTicker  int64  `json:"cacheticker"`  // 缓存清理间隔， 0 表示不启用, 默认为1天
-	CacheTimeout int64  `json:"cachetimeout"` // 缓存存储时间， 0 默认 30 天
-	ImageMaps    z.HM   `json:"imagemaps"`    // 镜像映射
-	// SyncToken    string `json:"synctoken"`    // 同步令牌，用于k8s集群多实例间配置同步
-	// SyncServe    string `json:"syncserve"`    // 同步服务地址, 一般是 headless service 的地址, 也可以是 http://HOST:PORT 形式
+	Enable       bool              `json:"enable"`       // 禁用
+	Debug        bool              `json:"debug"`        // 调试模式
+	AddrPort     string            `json:"addrport"`     // 监听端口，不破坏源服务，独立新服务监控 CDN 索引
+	CacheTicker  int64             `json:"cacheticker"`  // 缓存清理间隔， 0 表示不启用, 默认为1天
+	CacheTimeout int64             `json:"cachetimeout"` // 缓存存储时间， 0 默认 30 天
+	ImageMaps    map[string]string `json:"imagemaps"`    // 镜像映射
+	DefaultURL   string            `json:"defaultsvc"`   // 前端服务地址， 默认 frontend---default:80
 
 	// 验证方式？简单一点，confa 提供令牌支持， 但是 role 必须是 front3.* 权限
 	WebHookPath string `json:"hookpath"` // 钩子路径, 默认为空，不启动钩子
@@ -46,9 +45,12 @@ type Config struct {
 
 	MutatePath     string   `json:"mutatepath"` // 对于 ingress 的原生补丁， 默认不开启， 需要指定地址
 	LogIngress     bool     `json:"logingress" default:"false"`
-	RecordPath     string   `json:"recordpath"` // 记录全部模版, 默认为空，不启动记录
-	RecordPassMeta []string `json:"recordpassmeta"`
-	RecordPassSpec []string `json:"recordpassspec"`
+	RecordPath     string   `json:"recordpath"`     // 记录全部模版, 默认为空，不启动记录
+	RecordPassMeta []string `json:"recordpassmeta"` //
+	RecordPassSpec []string `json:"recordpassspec"` //
+
+	// SyncToken    string `json:"synctoken"`    // 同步令牌，用于k8s集群多实例间配置同步
+	// SyncServe    string `json:"syncserve"`    // 同步服务地址, 一般是 headless service 的地址, 也可以是 http://HOST:PORT 形式
 }
 
 func init() {
@@ -60,6 +62,8 @@ func init() {
 	flag.StringVar(&C.Front3.DB.Driver, "f3driver", "mysql", "front3 数据库驱动")
 	flag.Int64Var(&C.Front3.CacheTicker, "f3ticker", 86400, "front3 缓存清理间隔, 0 禁用, 默认 1 天")
 	flag.Int64Var(&C.Front3.CacheTimeout, "f3cachetimeout", 2592000, "front3 缓存存储时间, 0 默认 30 天")
+	flag.Var(z.NewStrMap(&C.Front3.ImageMaps, z.HM{}), "f3imagemaps", "front3 镜像映射")
+	flag.StringVar(&C.Front3.DefaultURL, "f3defaultsvc", "frontend", "front3 前端服务名称")
 
 	flag.StringVar(&C.Front3.MutateAddr, "mutateaddr", "0.0.0.0:443", "钩子地址")
 	flag.StringVar(&C.Front3.MutateCert, "mutatecert", "mutatecert", "钩子路径")

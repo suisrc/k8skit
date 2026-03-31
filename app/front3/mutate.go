@@ -59,7 +59,7 @@ func (aa *Serve) mutateProcess(req *admissionv1.AdmissionRequest) ([]PatchOperat
 		frontend/db.frontv.indexmap: /www=,/embed=index.htm
 		frontend/db.frontv.cdnpush: 'true'
 		------------------------------------------------------------------
-		frontend/service: frontend:http/path # 如果不存在，不执行注入
+		frontend/service: frontend:http/path # 如果不存在，不执行注入（default, 特殊处理， 直接注入默认值）
 		http:
 		  paths:
 		    - backend:
