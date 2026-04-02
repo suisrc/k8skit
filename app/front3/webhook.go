@@ -132,39 +132,39 @@ func (aa *Serve) DeleteLocalCache(zrc *z.Ctx) {
 // func (aa *Serve) AnswerSyncHook(source, method string, zrc *z.Ctx) {
 // 	data := map[string]any{}
 // 	if C.Front3.SyncToken == "" {
-// 		z.Println("[_syncfg_]:", "answer sync token is empty") // 未配置同步秘钥
+// 		z.Logn("[_syncfg_]:", "answer sync token is empty") // 未配置同步秘钥
 // 		zrc.TEXT("answer sync token is empty", http.StatusOK)
 // 		return
 // 	} else if _, err := z.ReadBody(zrc.Request, &data); err != nil {
-// 		z.Println("[_syncfg_]:", "read body error: "+err.Error()) // 解析 body 异常
+// 		z.Logn("[_syncfg_]:", "read body error: "+err.Error()) // 解析 body 异常
 // 		zrc.TEXT("read body error", http.StatusOK)
 // 		return
 // 	} else if token, _ := data["token"]; token != C.Front3.SyncToken {
-// 		z.Println("[_syncfg_]:", "answer sync token is not equal") // 同步秘钥不一致
+// 		z.Logn("[_syncfg_]:", "answer sync token is not equal") // 同步秘钥不一致
 // 		zrc.TEXT("answer sync token is not equal", http.StatusOK)
 // 		return
 // 	}
-// 	z.Println("[_syncfg_]:", "answer sync config,", source, "-> ", method)
+// 	z.Logn("[_syncfg_]:", "answer sync config,", source, "-> ", method)
 // 	switch method {
 // 	case "delete.cache":
 // 		key, _ := data["key"].(string)
 // 		if key == "" {
-// 			z.Println("[_syncfg_]: answer sync config, key is empty,", key)
+// 			z.Logn("[_syncfg_]: answer sync config, key is empty,", key)
 // 			zrc.TEXT("ok", http.StatusOK)
 // 			return
 // 		}
 // 		api, _ := aa.CacheApp.LoadAndDelete(key)
 // 		if api == nil {
-// 			z.Println("[_syncfg_]: answer sync config, app cache not found,", key)
+// 			z.Logn("[_syncfg_]: answer sync config, app cache not found,", key)
 // 			zrc.TEXT("ok", http.StatusOK)
 // 			return
 // 		}
 // 		if abspath := api.(*AppCache).Abspath; abspath != "" {
 // 			os.RemoveAll(abspath)
-// 			z.Println("[_syncfg_]: answer sync config, clear path, ", abspath)
+// 			z.Logn("[_syncfg_]: answer sync config, clear path, ", abspath)
 // 		}
 // 	default:
-// 		z.Println("[_syncfg_]: answer sync config, method not found,", method)
+// 		z.Logn("[_syncfg_]: answer sync config, method not found,", method)
 // 	}
 // 	zrc.TEXT("ok", http.StatusOK)
 // }
@@ -180,13 +180,13 @@ func (aa *Serve) DeleteLocalCache(zrc *z.Ctx) {
 // // 通过消息总线可以，这里是为了减少外部依赖配置
 // func NoticeASyncHook_(key string, data map[string]any) {
 // 	if C.Front3.SyncToken == "" {
-// 		z.Println("[_syncfg_]: sync token is empty")
+// 		z.Logn("[_syncfg_]: sync token is empty")
 // 		return
 // 	} else if C.Front3.SyncServe == "" {
-// 		z.Println("[_syncfg_]: sync serve is empty")
+// 		z.Logn("[_syncfg_]: sync serve is empty")
 // 		return
 // 	} else if C.Front3.WebHookPath == "" {
-// 		z.Println("[_syncfg_]: sync path(WebHookPath) is empty")
+// 		z.Logn("[_syncfg_]: sync path(WebHookPath) is empty")
 // 		return
 // 	}
 // 	data["token"] = C.Front3.SyncToken
@@ -203,7 +203,7 @@ func (aa *Serve) DeleteLocalCache(zrc *z.Ctx) {
 // 		// 直接指定了同步地址
 // 		syncnode = strings.Fields(C.Front3.SyncServe)
 // 	} else if ips, err := net.LookupIP(C.Front3.SyncServe); err != nil {
-// 		z.Println("[_syncfg_]: sync serve lookup [", C.Front3.SyncServe, "] error:", err.Error())
+// 		z.Logn("[_syncfg_]: sync serve lookup [", C.Front3.SyncServe, "] error:", err.Error())
 // 		return
 // 	} else {
 // 		// 通过DNS服务，查询同步地址，注意必须使用 headless 服务
@@ -213,7 +213,7 @@ func (aa *Serve) DeleteLocalCache(zrc *z.Ctx) {
 // 			}
 // 		}
 // 	}
-// 	z.Println("[_syncfg_]: notice sync config to ", syncnode)
+// 	z.Logn("[_syncfg_]: notice sync config to ", syncnode)
 // 	// 进行端点同步
 // 	for _, uripath := range syncnode {
 // 		if idx := strings.IndexByte(uripath, '?'); idx > 0 {
@@ -223,13 +223,13 @@ func (aa *Serve) DeleteLocalCache(zrc *z.Ctx) {
 // 		}
 // 		uripath += "&source=" + selfhost // 同步来源
 // 		if bts, err := json.Marshal(data); err != nil {
-// 			z.Printf("[_syncfg_]: json.Marshal error, %s, %v", err.Error(), data)
+// 			z.Logf("[_syncfg_]: json.Marshal error, %s, %v", err.Error(), data)
 // 		} else if resp, err := http.Post(uripath, "application/json", bytes.NewBuffer(bts)); err != nil {
-// 			z.Printf("[_syncfg_]: http.Post error, %s, %s", err.Error(), uripath)
+// 			z.Logf("[_syncfg_]: http.Post error, %s, %s", err.Error(), uripath)
 // 		} else {
 // 			bts, _ = io.ReadAll(resp.Body)
 // 			resp.Body.Close()
-// 			z.Printf("[_syncfg_]: sync success, %s, %d, %s", uripath, resp.StatusCode, string(bts))
+// 			z.Logf("[_syncfg_]: sync success, %s, %d, %s", uripath, resp.StatusCode, string(bts))
 // 		}
 // 	}
 // }

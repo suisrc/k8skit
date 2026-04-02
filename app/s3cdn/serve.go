@@ -53,10 +53,10 @@ package s3cdn
 // 	path = aa.Domain + "/" + filepath.Join(aa.RootDir, aa.AppName, aa.Version, path)
 // 	resp, err := http.Get(path)
 // 	if err != nil {
-// 		z.Println(aa.LogKey+": error, redirect to:", path, r.URL.Path, err.Error())
+// 		z.Logn(aa.LogKey+": error, redirect to:", path, r.URL.Path, err.Error())
 // 		http.Redirect(w, r, path, http.StatusMovedPermanently)
 // 	} else {
-// 		// z.Println(aa.LogKey+": redirect to:", path, r.URL.Path)
+// 		// z.Logn(aa.LogKey+": redirect to:", path, r.URL.Path)
 // 		if ctype := resp.Header.Get("Content-Type"); strings.HasPrefix(ctype, "application/octet-stream") {
 // 			resp.Header.Set("Content-Type", "text/html; charset=utf-8")
 // 		}

@@ -10,35 +10,35 @@ import (
 
 func CreateTgzFile() {
 	if len(os.Args) != 3 {
-		z.Println("Usage: tgzc src out")
+		z.Logn("Usage: tgzc src out")
 		return
 	}
 	src := os.Args[1]
 	out := os.Args[2]
-	z.Println("[_create_]:", "create tgz file: ", src)
+	z.Logn("[_create_]:", "create tgz file: ", src)
 	err := registry.CreateTgzFile(src, out)
 	if err != nil {
-		z.Println(err)
+		z.Logn(err)
 	}
 }
 
 func ExtractTgzFile() {
 	if len(os.Args) != 3 {
-		z.Println("Usage: tgzx src out")
+		z.Logn("Usage: tgzx src out")
 		return
 	}
 	src := os.Args[1]
 	out := os.Args[2]
-	z.Println("[_extract]:", "extract tgz file: ", src)
+	z.Logn("[_extract]:", "extract tgz file: ", src)
 	err := registry.ExtractTgzFile(src, "", out)
 	if err != nil {
-		z.Println(err)
+		z.Logn(err)
 	}
 }
 
 func ExtractTgzResp() {
 	if len(os.Args) < 3 {
-		z.Println("Usage: tgzx src out tar")
+		z.Logn("Usage: tgzx src out tar")
 		return
 	}
 	src := os.Args[1]
@@ -48,19 +48,19 @@ func ExtractTgzResp() {
 		tar = true
 	}
 	if tar && strings.HasPrefix(src, "git+") {
-		z.Println("[_extract]:", "create tgz file: ", out+".tgz")
+		z.Logn("[_extract]:", "create tgz file: ", out+".tgz")
 		err := registry.CreateTgzFileByGit(out+".tgz", "", "", src[4:])
 		if err != nil {
-			z.Println("[_extract]: download by git error:", err.Error())
+			z.Logn("[_extract]: download by git error:", err.Error())
 			return
 		}
 	} else {
-		z.Println("[_extract]:", "extract tgz file: ", out)
+		z.Logn("[_extract]:", "extract tgz file: ", out)
 		err := registry.GetFilesByGitOrTgz(out, "", src)
 		if err != nil {
-			z.Println("[_extract]: download by http error:", err.Error())
+			z.Logn("[_extract]: download by http error:", err.Error())
 			return
 		}
 	}
-	z.Println("[_extract]: success")
+	z.Logn("[_extract]: success")
 }

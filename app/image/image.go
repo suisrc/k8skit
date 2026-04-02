@@ -27,11 +27,11 @@ func init() {
 
 	z.Register("11-app.init", func(zgg *z.Zgg) z.Closed {
 		if C.Imagex.Image == "" {
-			z.Println("[_imagex_]: image name is empty, disable imagex")
+			z.Logn("[_imagex_]: image name is empty, disable imagex")
 		} else if C.Imagex.Disable {
-			z.Println("[_imagex_]: imagex is disable", zc.CFG_ENV+"_IMAGEX_DISABLE=true")
+			z.Logn("[_imagex_]: imagex is disable", zc.CFG_ENV+"_IMAGEX_DISABLE=true")
 		} else {
-			z.Println("[_imagex_]: pull", C.Imagex.Image)
+			z.Logn("[_imagex_]: pull", C.Imagex.Image)
 			// 创建输出目录
 			if C.Imagex.OutPath != "" && C.Imagex.OutPath != "none" {
 				if err := os.MkdirAll(C.Imagex.OutPath, 0666); err != nil {

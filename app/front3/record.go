@@ -15,32 +15,32 @@ import (
 
 func (aa *Serve) Record(rw http.ResponseWriter, rr *http.Request) {
 	if err := checkPostJson(rr); err != nil {
-		z.Println("[_record_]:", err.Error())
+		z.Logn("[_record_]:", err.Error())
 		writeErrorAdmissionReview(http.StatusBadRequest, err.Error(), rw)
 		return
 	}
 	admReview, err := z.ReadBody(rr, &admissionv1.AdmissionReview{})
 	if err != nil {
-		z.Printf("[_record_]: Could not decode body: %v", err)
+		z.Logf("[_record_]: Could not decode body: %v", err)
 		writeErrorAdmissionReview(http.StatusInternalServerError, err.Error(), rw)
 		return
 	}
 	req := admReview.Request
 
-	z.Printf("[_record_]: AdmissionReview for Kind=%v, Namespace=%v Name=%v UID=%v patchOperation=%v UserInfo=%v", //
+	z.Logf("[_record_]: AdmissionReview for Kind=%v, Namespace=%v Name=%v UID=%v patchOperation=%v UserInfo=%v", //
 		req.Kind, req.Namespace, req.Name, req.UID, req.Operation, req.UserInfo)
 
 	if patchOperations, err := aa.recordProcess(req); err != nil {
 		message := fmt.Sprintf("request for object '%s' with name '%s' in namespace '%s' denied: %v", //
 			req.Kind.String(), req.Name, req.Namespace, err)
-		z.Println("[_record_]:", message)
+		z.Logn("[_record_]:", message)
 		writeDeniedAdmissionResponse(admReview, message, rw)
 	} else if /*len(patchOperations) == 0*/ patchOperations == nil {
 		writeAllowedAdmissionReview(admReview, nil, rw)
 	} else if patchBytes, err := json.Marshal(patchOperations); err != nil {
 		message := fmt.Sprintf("request for object '%s' with name '%s' in namespace '%s' denied: %v", //
 			req.Kind.String(), req.Name, req.Namespace, err)
-		z.Println("[_record_]:", message)
+		z.Logn("[_record_]:", message)
 		writeDeniedAdmissionResponse(admReview, message, rw)
 	} else {
 		writeAllowedAdmissionReview(admReview, patchBytes, rw)
@@ -85,23 +85,23 @@ func (aa *Serve) recordSave(old, raw map[string]any) { // 记录网关数据
 	if old != nil {
 		// 删除旧版本
 		if kind, ok := old["kind"].(string); !ok {
-			z.Println("[_record_]:", "get old kind is not found.")
+			z.Logn("[_record_]:", "get old kind is not found.")
 			return
 		} else if apiv, ok := old["apiVersion"].(string); !ok {
-			z.Println("[_record_]:", "get old apiVersion is not found.")
+			z.Logn("[_record_]:", "get old apiVersion is not found.")
 			return
 		} else if mateold, ok := old["metadata"].(map[string]any); !ok {
-			z.Println("[_record_]:", "get old metadata is not found.")
+			z.Logn("[_record_]:", "get old metadata is not found.")
 			return
 		} else if namespace, ok := mateold["namespace"].(string); !ok {
-			z.Println("[_record_]:", "get old metadata.namespace is not found.")
+			z.Logn("[_record_]:", "get old metadata.namespace is not found.")
 			return
 		} else if name, ok := mateold["name"].(string); !ok {
-			z.Println("[_record_]:", "get old metadata.name is not found.")
+			z.Logn("[_record_]:", "get old metadata.name is not found.")
 			return
 		} else if ads, err := aa.RecRepo.LstRecordBy( //
 			kind, apiv, namespace, name, false); err != nil && err != sql.ErrNoRows {
-			z.Println("[_record_]:", "get object form database error,", err.Error())
+			z.Logn("[_record_]:", "get object form database error,", err.Error())
 			return // 数据库异常
 		} else if len(ads) > 0 {
 			for _, ado := range ads {
@@ -129,7 +129,7 @@ func (aa *Serve) recordSave(old, raw map[string]any) { // 记录网关数据
 		rawna, _ = mate["name"].(string)
 		rawns, _ = mate["namespace"].(string)
 	} else {
-		z.Println("[_record_]:", "get new metadata is not found.")
+		z.Logn("[_record_]:", "get new metadata is not found.")
 		return
 	}
 	ado := &RecordDO{}
@@ -150,7 +150,7 @@ func (aa *Serve) recordSave(old, raw map[string]any) { // 记录网关数据
 	if apiv, ok := raw["apiVersion"].(string); ok {
 		ado.ApiVersion = sql.NullString{String: apiv, Valid: true}
 	}
-	z.Println("[_record_]: log record to database,", ado.Kind.String, "|", rawns, "|", rawna, "|", ado.ApiVersion.String)
+	z.Logn("[_record_]: log record to database,", ado.Kind.String, "|", rawns, "|", rawna, "|", ado.ApiVersion.String)
 
 	delete(raw, "status") // 删除状态字段
 	if mate, ok := raw["metadata"].(map[string]any); ok {

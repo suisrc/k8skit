@@ -31,18 +31,18 @@ func (aa *Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (res
 			if oldapp != newapp {
 				// 删除应用
 				if err := aa.AppRepo.DelByApp(oldapp); err != nil {
-					z.Println("[_mutate_]:", "get appinfo form database error,", err.Error())
+					z.Logn("[_mutate_]:", "get appinfo form database error,", err.Error())
 				} else {
-					z.Println("[_mutate_]:", "delete app from database,", oldapp)
+					z.Logn("[_mutate_]:", "delete app from database,", oldapp)
 				}
 			} else {
-				z.Println("[_mutate_]:", "appinfo field [app] no change,", oldapp)
+				z.Logn("[_mutate_]:", "appinfo field [app] no change,", oldapp)
 			}
 		}
 	}
 	if ing == nil || len(ing.GetAnnotations()) == 0 {
 		if ing != nil && z.IsDebug() {
-			z.Println("[_mutate_]:", ing.Namespace, "|", ing.Name, "no annotations")
+			z.Logn("[_mutate_]:", ing.Namespace, "|", ing.Name, "no annotations")
 		}
 		return nil, nil // 没有新的配置
 	}
@@ -50,7 +50,7 @@ func (aa *Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (res
 	svc, _ := ing.GetAnnotations()["frontend/service"]
 	if svc == "" {
 		if z.IsDebug() {
-			z.Println("[_mutate_]:", ing.Namespace, "|", ing.Name, "no frontend service")
+			z.Logn("[_mutate_]:", ing.Namespace, "|", ing.Name, "no frontend service")
 		}
 		return nil, nil // 没有 service 是无法处理域名的
 	}
@@ -65,7 +65,7 @@ func (aa *Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (res
 	app, _ := ing.GetAnnotations()["frontend/db.fronta"]
 	if app == "" {
 		if z.IsDebug() {
-			z.Println("[_mutate_]:", ing.Namespace, "|", ing.Name, "no frontend database")
+			z.Logn("[_mutate_]:", ing.Namespace, "|", ing.Name, "no frontend database")
 		}
 		return // 没有配置注解
 	}
@@ -77,14 +77,14 @@ func (aa *Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (res
 	}
 	if app == "" {
 		if z.IsDebug() {
-			z.Println("[_mutate_]:", ing.Namespace, "|", ing.Name, "no frontend database app")
+			z.Logn("[_mutate_]:", ing.Namespace, "|", ing.Name, "no frontend database app")
 		}
 		return
 	}
 	// 通过数据库获取应用信息， 包括已经删除的应用
 	appInfo, err := aa.AppRepo.GetByAppWithDelete(app)
 	if err != nil && err != sql.ErrNoRows {
-		z.Println("[_mutate_]:", "get appinfo form database error,", err.Error())
+		z.Logn("[_mutate_]:", "get appinfo form database error,", err.Error())
 		return // 查询数据库发生异常
 	}
 	if rpath, _ := ing.GetAnnotations()["frontend/db.fronta.rootdir"]; rpath != "" {
@@ -95,16 +95,16 @@ func (aa *Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (res
 	// host2[0] -> domain, 域名是不允许覆盖的
 	err = aa.AppRepo.ModifyByInfo(appInfo, app, ver, host2[0], host2[1], ing.GetAnnotations())
 	if err != nil {
-		z.Println("[_mutate_]:", "update appinfo into database error,", err.Error())
+		z.Logn("[_mutate_]:", "update appinfo into database error,", err.Error())
 		return // 更新数据库发生异常
 	}
 	// 更新扩展应用信息，更新过程中忽略错误信息
 	if str := ing.GetAnnotations()["frontend/db.fronts"]; strings.TrimSpace(str) != "" {
 		infos := []map[string]string{}
 		if err := json.Unmarshal([]byte(str), &infos); err != nil {
-			z.Println("[_mutate_]:", "unmarshal db.fronts error,", err.Error())
+			z.Logn("[_mutate_]:", "unmarshal db.fronts error,", err.Error())
 		} else if err := aa.VerRepo.UpdateByFrontsMap(infos); err != nil {
-			z.Println("[_mutate_]:", "update db.fronts into database error,", err.Error())
+			z.Logn("[_mutate_]:", "update db.fronts into database error,", err.Error())
 		}
 	}
 	// 处理 version 相关信息
@@ -131,7 +131,7 @@ func (aa *Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (res
 	}
 	if ver == "" || img == "" {
 		if z.IsDebug() {
-			z.Println("[_mutate_]:", ing.Namespace, "|", ing.Name, "no frontend database version or image")
+			z.Logn("[_mutate_]:", ing.Namespace, "|", ing.Name, "no frontend database version or image")
 		}
 		return
 	}
@@ -139,12 +139,12 @@ func (aa *Serve) mutateUpdateFronta(old *netv1.Ingress, ing *netv1.Ingress) (res
 	vpp := appInfo.GetVppName() // 获取最新的 vpp 名称， 注意，修改了 vpp， 可以导致之前的应用版本不可使用
 	verInfo, err := aa.VerRepo.GetTop1ByVppAndVerWithDelete(vpp, ver)
 	if err != nil && err != sql.ErrNoRows {
-		z.Println("[_mutate_]:", "get app version info form database error,", err.Error())
+		z.Logn("[_mutate_]:", "get app version info form database error,", err.Error())
 		return // 获取数据库发生异常
 	}
 	err = aa.VerRepo.ModifyByInfo(verInfo, vpp, ver, img, ing.GetAnnotations())
 	if err != nil {
-		z.Println("[_mutate_]:", "update app version into database error,", err.Error())
+		z.Logn("[_mutate_]:", "update app version into database error,", err.Error())
 		return // 更新数据库发生异常
 	}
 	return

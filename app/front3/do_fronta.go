@@ -128,6 +128,6 @@ func (aa *FrontaRepo) ModifyByInfo(info *FrontaDO, app, ver, domain, rootdir str
 		info.ID, _ = ret.LastInsertId()
 		args = append(args, info.ID)
 	}
-	z.Println("[_mutate_]:", "update/insert appinfo into database,", asql, z.ToStr(args))
+	z.Logn("[_mutate_]:", "update/insert appinfo into database,", asql, z.ToStr(args))
 	return nil
 }

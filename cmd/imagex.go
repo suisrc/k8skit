@@ -20,11 +20,11 @@ func ExpImageX() {
 	zc.LoadConfig(cfs)
 	if image.C.Imagex.OutPath != "" && image.C.Imagex.OutPath != "none" {
 		if err := os.MkdirAll(image.C.Imagex.OutPath, 0666); err != nil {
-			z.Fatalf("mkdir out dir: %v", err)
+			z.Exit("mkdir out dir:", err)
 		}
 	}
 	if err := registry.ExportImage(&image.C.Imagex); err != nil {
-		z.Fatalf("extract image file: %v", err)
+		z.Exit("extract image file:", err)
 	}
-	z.Println(z.ToStr2(image.C))
+	z.Logn(z.ToStr2(image.C))
 }

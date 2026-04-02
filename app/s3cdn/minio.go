@@ -57,7 +57,7 @@ func init() {
 func Front2ServeByS3(api *front2.IndexApi, zgg *z.Zgg) {
 	z.RegKey(zgg.SvcKit, false, "front2", api) // 注入服务
 	if !C.S3cdn.Enable {
-		z.Println("[_cdnskip]: s3cdn is disable", zc.CFG_ENV+"_S3CDN_ENABLE=false")
+		z.Logn("[_cdnskip]: s3cdn is disable", zc.CFG_ENV+"_S3CDN_ENABLE=false")
 		return
 	}
 	if C.S3cdn.Endpoint != "" {
@@ -107,13 +107,13 @@ func GetClient(ctx context.Context, cfg *Config) (*minio.Client, error) {
 		Secure: useSSL,
 	})
 	if err != nil {
-		z.Println("[_cdnskip]: minio client error:", err.Error())
+		z.Logn("[_cdnskip]: minio client error:", err.Error())
 		return nil, err
 	}
 
 	exists, err := cli.BucketExists(ctx, cfg.Bucket)
 	if err != nil {
-		z.Println("[_cdnskip]: bucket exists error, [", cfg.Bucket, "]", err.Error())
+		z.Logn("[_cdnskip]: bucket exists error, [", cfg.Bucket, "]", err.Error())
 		return nil, err
 	} else if !exists {
 		// err = minioClient.MakeBucket(ctx, cfg.Bucket, minio.MakeBucketOptions{Region: cfg.Region})

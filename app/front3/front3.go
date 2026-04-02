@@ -36,7 +36,7 @@ type AppCache struct {
 }
 
 func (aa *Serve) CleanCaches() {
-	z.Println("[_front3_]: clean caches ================", aa._CacheCC)
+	z.Logn("[_front3_]: clean caches ================", aa._CacheCC)
 	aa._CacheMU.Lock()
 	defer aa._CacheMU.Unlock()
 	now := time.Now().Unix()
@@ -46,7 +46,7 @@ func (aa *Serve) CleanCaches() {
 	aa.CacheApp.Range(func(key, value any) bool {
 		api := value.(*AppCache)
 		if now-api.LastMod > aa.Interval {
-			z.Println("[_front3_]: clean cache1 ================", key, api.AppInfo.App.String, api.Version.Ver)
+			z.Logn("[_front3_]: clean cache1 ================", key, api.AppInfo.App.String, api.Version.Ver)
 			aa.CacheApp.Delete(key)
 			if api.Abspath != "" {
 				clsmap[api.Abspath] = true
@@ -61,7 +61,7 @@ func (aa *Serve) CleanCaches() {
 		if has, _ := extmap[path]; has {
 			continue // 路径对象的缓存，还有应用使用，不能删除
 		}
-		z.Println("[_front3_]: clean cache2 ================", path)
+		z.Logn("[_front3_]: clean cache2 ================", path)
 		os.RemoveAll(path)
 	}
 }
@@ -173,7 +173,7 @@ func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 		clc := false // 清理标记， clear local cache
 		if api != nil && api.AppInfo.Version.Int64 != app.Version.Int64 {
 			// 标记版本已过期，刷新缓存
-			z.Println("[_front3_]: APP vers expired, delete cache:", key)
+			z.Logn("[_front3_]: APP vers expired, delete cache:", key)
 			aa.CacheApp.Delete(key)
 			clc = true
 		}
@@ -203,7 +203,7 @@ func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 			}
 		}
 		if z.IsDebug() || C.Front3.Debug {
-			z.Println("[_front3_]:", key, app.App.String, "[ none ] ->", rr.URL.Path)
+			z.Logn("[_front3_]:", key, app.App.String, "[ none ] ->", rr.URL.Path)
 		}
 	} else {
 		// 如果未指定版本，使用当前系统最新版本
@@ -244,7 +244,7 @@ func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 			if api.AppInfo.Version.Int64 != app.Version.Int64 || //
 				api.Version.Version.Int64 != ver.Version.Int64 {
 				// 标记版本已过期，刷新缓存
-				z.Println("[_front3_]: APP vers expired, delete cache:", key,
+				z.Logn("[_front3_]: APP vers expired, delete cache:", key,
 					api.AppInfo.Version.Int64, app.Version.Int64, //
 					api.Version.Version.Int64, ver.Version.Int64)
 				aa.CacheApp.Delete(key)
@@ -252,19 +252,19 @@ func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 				// 需要强制刷新本地缓存，如果有多实例的情况
 			} else if ver.CdnCheck.Bool && ver.CdnRenew.Bool {
 				// 标记强制刷新 CDN
-				z.Println("[_front3_]: CDN mode rewrite, delete cache:", key)
+				z.Logn("[_front3_]: CDN mode rewrite, delete cache:", key)
 				aa.CacheApp.Delete(key)
 				clc = true
 			} else if ver.CdnCheck.Bool == api.IsLocal {
 				// 确认 CDN 和 LOC 模式是否 发生了切换
-				z.Println("[_front3_]: CDN mode changed, delete cache:", key)
+				z.Logn("[_front3_]: CDN mode changed, delete cache:", key)
 				aa.CacheApp.Delete(key)
 				clc = true
 			} else if !api.IsLocal {
 				// do nohting, pass
 			} else if _, err := os.Stat(api.Abspath); err != nil {
 				// 缓存文件不存在，有可能被其他应用或者人工删除，重建, 一般同步缓存的时候，会删除该内容
-				z.Println("[_front3_]: LOC mode, cache no found:", key)
+				z.Logn("[_front3_]: LOC mode, cache no found:", key)
 				aa.CacheApp.Delete(key)
 				api = nil // 缓存已经没有了，不需要再次清理了
 			}
@@ -289,7 +289,7 @@ func (aa *Serve) ServeMain(rw http.ResponseWriter, rr *http.Request) {
 			}
 		}
 		if z.IsDebug() || C.Front3.Debug {
-			z.Println("[_front3_]:", key, app.App.String, "[", ver.Vpp, "] ->", rr.URL.Path)
+			z.Logn("[_front3_]:", key, app.App.String, "[", ver.Vpp, "] ->", rr.URL.Path)
 		}
 	}
 	api.LastMod = time.Now().Unix()
@@ -360,7 +360,7 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache,
 	// 获取前端文件镜像, 在本地部署前端资源文件 //os.WriteFile(filepath.Join(abspath, "aname"), []byte(time.Now().Format(time.RFC3339)), 0644)
 	if _, err := os.Stat(abspath); err == nil {
 		// 缓存文件存在
-		z.Println("[_front3_]: local path, exist:", abspath)
+		z.Logn("[_front3_]: local path, exist:", abspath)
 	} else if !os.IsNotExist(err) {
 		rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 		http.Error(rw, "application local path error: "+rr.Host+" ["+abspath+"] "+err.Error(), http.StatusInternalServerError)
@@ -381,16 +381,16 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache,
 		} else if av.Version.CdnCache.Bool {
 			// 优先尝试使用 cdn 缓存
 			if z.IsDebug() || C.Front3.Debug {
-				z.Println("[_front3_]: CDN mode cache:", tgzobject)
+				z.Logn("[_front3_]: CDN mode cache:", tgzobject)
 			}
 			if s3cli, err = s3cdn.GetClient(context.Background(), &aa.CdnConfig); err != nil {
-				z.Println("[_front3_]: used cdn cache error:", tgzobject, err.Error())
+				z.Logn("[_front3_]: used cdn cache error:", tgzobject, err.Error())
 			} else if obj, err := s3cli.GetObject(context.TODO(), aa.CdnConfig.Bucket, tgzobject, minio.GetObjectOptions{}); err != nil {
-				z.Println("[_front3_]: used cdn cache error:", tgzobject, err.Error())
+				z.Logn("[_front3_]: used cdn cache error:", tgzobject, err.Error())
 			} else if err := registry.ExtractTgzByReader(abspath, "", obj); err != nil {
-				z.Println("[_front3_]: used cdn cache error:", tgzobject, err.Error())
+				z.Logn("[_front3_]: used cdn cache error:", tgzobject, err.Error())
 			} else {
-				z.Println("[_front3_]: used cdn cache success:", tgzobject)
+				z.Logn("[_front3_]: used cdn cache success:", tgzobject)
 				completed = true
 				s3cli = nil // 使用 cdn 缓存， 因此不需要更新 cdn
 			}
@@ -401,10 +401,10 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache,
 			strings.HasPrefix(av.Version.Image.String, "http://")) {
 			// 使用 http 获取镜像文件
 			if z.IsDebug() || C.Front3.Debug {
-				z.Println("[_front3_]: download by http:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String)
+				z.Logn("[_front3_]: download by http:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String)
 			}
 			if rerr := registry.GetFilesByGitOrTgz(abspath, av.Version.ImageDir.String, av.Version.Image.String); rerr != nil {
-				z.Println("[_front3_]: download by http error:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String, rerr.Error())
+				z.Logn("[_front3_]: download by http error:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String, rerr.Error())
 				rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 				http.Error(rw, "application download package error: "+rr.Host+", "+rerr.Error(), http.StatusInternalServerError)
 				os.RemoveAll(abspath) // 删除本地缓存文件夹
@@ -416,7 +416,7 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache,
 		if !completed {
 			// 使用 registry 获取镜像文件
 			if z.IsDebug() || C.Front3.Debug {
-				z.Println("[_front3_]: download by registry:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String)
+				z.Logn("[_front3_]: download by registry:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String)
 			}
 			cfg := registry.Config{
 				Username: aa.RegConfig.Username,
@@ -437,7 +437,7 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache,
 			}
 			// 提取镜像文件
 			if err := registry.ExportImage(&cfg); err != nil {
-				z.Println("[_front3_]: export image file error:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String, err.Error())
+				z.Logn("[_front3_]: export image file error:", av.Version.Vpp, av.Version.Ver, av.Version.Image.String, err.Error())
 				rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 				http.Error(rw, "application pull image error: "+rr.Host+", "+err.Error(), http.StatusInternalServerError)
 				os.RemoveAll(abspath) // 删除本地缓存文件夹
@@ -456,10 +456,10 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache,
 				_ = pw.Close()
 			}()
 			if _, err := s3cli.PutObject(context.TODO(), aa.CdnConfig.Bucket, tgzobject, pr, -1, minio.PutObjectOptions{}); err != nil {
-				z.Println("[_front3_]: error, upload cdn cache error:", tgzobject, err.Error())
+				z.Logn("[_front3_]: error, upload cdn cache error:", tgzobject, err.Error())
 				_ = pr.CloseWithError(err)
 			} else {
-				z.Println("[_front3_]: upload cdn cache success:", tgzobject)
+				z.Logn("[_front3_]: upload cdn cache success:", tgzobject)
 				_ = pr.Close()
 			}
 			// s3cli.Close()
@@ -476,7 +476,7 @@ func (aa *Serve) InitApi(rw http.ResponseWriter, rr *http.Request, av *AppCache,
 		cfg.Rewrite = av.Version.CdnRenew.Bool
 		err = s3cdn.UploadToS3(handler.HttpFS, handler.FileFS, &handler.Config, &cfg, av.Version.Vpp, av.Version.Ver)
 		if err != nil {
-			z.Println("[_f3serve]: error, upload cdn err:", err.Error())
+			z.Logn("[_f3serve]: error, upload cdn err:", err.Error())
 			rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 			http.Error(rw, "application upload cdn error: "+rr.Host+err.Error(), http.StatusInternalServerError)
 			return nil

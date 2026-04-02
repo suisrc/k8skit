@@ -18,7 +18,7 @@ func (aa *Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw []
 	if old != nil && (ing == nil || ing.Name != old.Name) {
 		// 删除所有的旧版本
 		if ados, err := aa.IngRepo.GetBySpaceAndNames(old.Namespace, old.Name); err != nil && err != sql.ErrNoRows {
-			z.Println("[_mutate_]:", "get ingress form database error,", err.Error())
+			z.Logn("[_mutate_]:", "get ingress form database error,", err.Error())
 			return // 数据库异常
 		} else if len(ados) > 0 {
 			for _, ado := range ados {
@@ -30,10 +30,10 @@ func (aa *Serve) mutateLogIngress(old *netv1.Ingress, ing *netv1.Ingress, raw []
 	if ing == nil {
 		return // 删除时该字段不存在
 	}
-	z.Println("[_mutate_]: log ingress to database,", ing.Namespace, "|", ing.Name)
+	z.Logn("[_mutate_]: log ingress to database,", ing.Namespace, "|", ing.Name)
 	ado, err := aa.IngRepo.GetBySpaceAndName(ing.Namespace, ing.Name)
 	if err != nil && err != sql.ErrNoRows {
-		z.Println("[_mutate_]:", "get ingress form database error,", err.Error())
+		z.Logn("[_mutate_]:", "get ingress form database error,", err.Error())
 		return // 数据库异常
 	}
 	clzz := ""

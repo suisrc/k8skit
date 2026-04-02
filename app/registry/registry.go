@@ -57,7 +57,7 @@ func PullImpage(cfg *Config) (v1.Image, error) {
 		} else if auth, ok := auths[hcr]; ok {
 			// 通过域名获取访问令牌
 			auz = authn.FromConfig(auth)
-			// z.Println(z.ToStr(auth))
+			// z.Logn(z.ToStr(auth))
 		} // else 没有匹配的，使用匿名访问
 	}
 	// 解析镜像
@@ -65,7 +65,7 @@ func PullImpage(cfg *Config) (v1.Image, error) {
 	if err != nil {
 		return nil, errors.New("parse image reference: " + err.Error())
 	}
-	z.Printf("[registry]: fetching image %s\n", ref.Name())
+	z.Logf("[registry]: fetching image %s\n", ref.Name())
 	// 拉取镜像
 	img, err := remote.Image(ref, remote.WithAuth(auz))
 	if err != nil {
@@ -210,7 +210,7 @@ func ExportImage(cfg *Config) error {
 	if idx := strings.LastIndexByte(key_, '/'); idx > 0 {
 		key_ = key_[idx+1:]
 	}
-	z.Printf("[registry]: (%s) fetching layers %d | %s -> %s\n", key_, len(layers), cfg.SrcPath, cfg.OutPath)
+	z.Logf("[registry]: (%s) fetching layers %d | %s -> %s\n", key_, len(layers), cfg.SrcPath, cfg.OutPath)
 	for i, layer := range layers {
 		rc, err := layer.Uncompressed()
 		if err != nil {
@@ -221,9 +221,9 @@ func ExportImage(cfg *Config) error {
 			return fmt.Errorf("apply layer[%d]: %v", i, err)
 		}
 		rc.Close()
-		z.Printf("[registry]: (%s) applied layer %d/%d\n", key_, i+1, len(layers))
+		z.Logf("[registry]: (%s) applied layer %d/%d\n", key_, i+1, len(layers))
 	}
-	z.Printf("[registry]: completed done %s\n", cfg.Image)
+	z.Logf("[registry]: completed done %s\n", cfg.Image)
 
 	return nil
 }

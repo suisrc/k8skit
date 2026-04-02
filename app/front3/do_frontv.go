@@ -137,7 +137,7 @@ func (aa *FrontvRepo) ModifyByInfo(info *FrontvDO, vpp, ver, img string, annos m
 		info.ID, _ = ret.LastInsertId()
 		args = append(args, info.ID)
 	}
-	z.Println("[_mutate_]:", "update/insert app version info into database,", asql, z.ToStr(args))
+	z.Logn("[_mutate_]:", "update/insert app version info into database,", asql, z.ToStr(args))
 	return nil
 }
 
@@ -222,7 +222,7 @@ func (aa *FrontvRepo) UpdateByFrontsMap(infos []map[string]string) error {
 				info.ID, _ = ret.LastInsertId()
 				args = append(args, info.ID)
 			}
-			z.Println("[_mutate_]:", "update/insert app version info into database,", asql, z.ToStr(args))
+			z.Logn("[_mutate_]:", "update/insert app version info into database,", asql, z.ToStr(args))
 		}
 		return nil
 	})

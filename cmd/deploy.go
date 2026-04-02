@@ -32,12 +32,12 @@ func ExeDeploy() {
 	ffs := os.DirFS(www)
 	fim, err := front2.GetRefFileMap(ffs)
 	if err != nil {
-		z.Fatalln(err)
+		z.Exit(err)
 	}
 	hfs := http.FS(ffs)
 	err = s3cdn.UploadToS3(hfs, fim, &front2.C.Front2, &s3cdn.C.S3cdn, z.AppName, z.Version)
 	if err != nil {
-		z.Fatalln(err)
+		z.Exit(err)
 	}
-	z.Println("[_deploy_]:", "upload to S3 success")
+	z.Logn("[_deploy_]:", "upload to S3 success")
 }

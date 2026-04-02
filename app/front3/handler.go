@@ -70,10 +70,10 @@ func init() {
 
 	z.Register("88-front3", func(zgg *z.Zgg) z.Closed {
 		if !C.Front3.Enable {
-			z.Println("[_front3_]: front3 is disable", zc.CFG_ENV+"_FRONT3_ENABLE=false")
+			z.Logn("[_front3_]: front3 is disable", zc.CFG_ENV+"_FRONT3_ENABLE=false")
 			return nil
 		}
-		dsc, err := sqlx.ConnectDB(&C.Front3.DB, z.Println)
+		dsc, err := sqlx.ConnectDB(&C.Front3.DB, z.Logn)
 		if err != nil {
 			zgg.ServeStop(err.Error())
 			return nil
@@ -105,17 +105,17 @@ func init() {
 			zgg.Servers["(MUTAT)"] = &http.Server{Addr: C.Front3.MutateAddr, Handler: hdl, TLSConfig: tlc}
 
 			if C.Front3.MutatePath != "" {
-				z.Println("[_front3_]: mutate path =", C.Front3.MutateAddr+C.Front3.MutatePath)
+				z.Logn("[_front3_]: mutate path =", C.Front3.MutateAddr+C.Front3.MutatePath)
 			}
 			if C.Front3.RecordPath != "" {
-				z.Println("[_front3_]: record path =", C.Front3.MutateAddr+C.Front3.RecordPath)
+				z.Logn("[_front3_]: record path =", C.Front3.MutateAddr+C.Front3.RecordPath)
 			}
 		}
 		// 外部钩子， 原生钩子和外部钩子分开， 以便于权限控制和配置分流
 		if C.Front3.WebHookPath != "" {
 			z.GET(C.Front3.WebHookPath, srv.WebHook, zgg)
 			z.POST(C.Front3.WebHookPath, srv.WebHook, zgg)
-			z.Println("[_front3_]: webhook path =", C.Front3.WebHookPath)
+			z.Logn("[_front3_]: webhook path =", C.Front3.WebHookPath)
 		}
 		// 本身服务
 		if C.Front3.AddrPort != "none" {
@@ -170,7 +170,7 @@ func (aa *Serve) WebHook(zrc *z.Ctx) {
 	// 	return
 	// }
 	// 人工操作， 通过 switch 分类处理, 先判断权限
-	z.Println("[_webHook]:", zrc.Request.RequestURI)
+	z.Logn("[_webHook]:", zrc.Request.RequestURI)
 	switch qry.Get("method") {
 	case "update.image":
 		aa.UpdateImageVersion(zrc)
@@ -185,14 +185,14 @@ func (aa *Serve) WebHook(zrc *z.Ctx) {
 func (aa *Serve) MutateHook(rw http.ResponseWriter, rr *http.Request) {
 	switch rr.URL.Path {
 	case "":
-		z.Println("[_mutate_]: serve endpoint, mutate path is empty")
+		z.Logn("[_mutate_]: serve endpoint, mutate path is empty")
 		writeErrorAdmissionReview(http.StatusBadRequest, "mutate path is empty", rw)
 	case C.Front3.MutatePath:
 		aa.Mutate(rw, rr) // 对 ingress 原生修改， 提供 ServeS3 配置的原生支持
 	case C.Front3.RecordPath:
 		aa.Record(rw, rr) // 可记录 k8s 所有的原生模版信息
 	default:
-		z.Println("[_mutate_]: serve endpoint, mutate path is invalid:", rr.URL.Path)
+		z.Logn("[_mutate_]: serve endpoint, mutate path is invalid:", rr.URL.Path)
 		writeErrorAdmissionReview(http.StatusBadRequest, "mutate path is invalid: "+rr.URL.Path, rw)
 	}
 }
